@@ -27,7 +27,7 @@ function createPlanetGeometry(seed: string): MeshBuilder {
     const SIZE = 1;
     const planet = icosahedron({
         size: SIZE,
-        subdivisions: 5,
+        subdivisions: 3,
     });
 
     const rng = new RandomNumberGenerator(seed);

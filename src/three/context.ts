@@ -10,7 +10,12 @@ export type SceneRendererContext = {
     setMainCamera: (c: Camera) => void;
 
     scene: () => Scene;
+
+    addRepainter: (f: Repainter) => number;
+    removeRepainter: (id: number) => void;
 };
+
+export type Repainter = (t: number, dt: number) => void;
 
 const outOfContext = () => {
     throw new Error('SceneRendererContext: tried to render three component outside of SceneRenderer!');
@@ -23,6 +28,8 @@ export const SceneRendererContext = createContext<SceneRendererContext>({
     getMainCamera: outOfContext,
     setMainCamera: outOfContext,
     scene: outOfContext,
+    addRepainter: outOfContext,
+    removeRepainter: outOfContext,
 });
 
 export const useSceneRenderer = () => useContext(SceneRendererContext);

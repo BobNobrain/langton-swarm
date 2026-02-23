@@ -1,7 +1,7 @@
 import { onMount, onCleanup, createEffect, createSignal, type ParentComponent, untrack } from 'solid-js';
 import { Scene, WebGLRenderer, type Camera, type ColorRepresentation } from 'three';
 import { createBoundsTracker } from '@/lib/BoundsTracker';
-import { SceneRendererContext } from '../context';
+import { SceneRendererContext, type Repainter } from '../context';
 import styles from './SceneRenderer.module.css';
 
 type SceneRendererProps = {
@@ -15,6 +15,9 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
     const scene = new Scene();
     let renderer: WebGLRenderer | null = null;
     const [getMainCamera, setMainCamera] = createSignal<Camera | null>(null);
+
+    const repainters: Record<number, Repainter> = {};
+    let repainterId = 0;
 
     onMount(() => {
         if (!canvas) {
@@ -31,9 +34,9 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
         });
 
         let active = true;
-        // let lastTime = -1;
+        let lastTime = -1;
 
-        const animate = (_time: DOMHighResTimeStamp) => {
+        const animate = (time: DOMHighResTimeStamp) => {
             if (!active || !renderer) {
                 return;
             }
@@ -43,8 +46,11 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
                 return;
             }
 
-            // const dt = lastTime === -1 ? 0 : time - lastTime;
-            // lastTime = time;
+            const dt = lastTime === -1 ? 0 : time - lastTime;
+            lastTime = time;
+            for (const repainter of Object.values(repainters)) {
+                repainter(time, dt);
+            }
             renderer.render(scene, cam);
 
             requestAnimationFrame(animate);
@@ -84,6 +90,15 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
         getBounds,
         getMainCamera,
         setMainCamera,
+        addRepainter: (f) => {
+            const id = repainterId;
+            ++repainterId;
+            repainters[id] = f;
+            return id;
+        },
+        removeRepainter: (id) => {
+            delete repainters[id];
+        },
     };
 
     return (
