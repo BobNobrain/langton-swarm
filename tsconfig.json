@@ -4,6 +4,9 @@
         "jsx": "preserve",
         "jsxImportSource": "solid-js",
         "target": "ESNext",
+        "paths": {
+            "@/*": ["./src/*"]
+        },
 
         // Modules
         "allowSyntheticDefaultImports": true,
