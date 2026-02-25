@@ -1,0 +1,39 @@
+.deck {
+    padding: 0;
+    margin: 0;
+    margin-top: 16px;
+    list-style-type: none;
+}
+
+.blueprint {
+    padding: 8px 16px;
+    border: solid var(--c-gray-m);
+    border-width: 1px 2px 0;
+    cursor: pointer;
+}
+.blueprint:last-child {
+    border-bottom-width: 1px;
+}
+.blueprint:hover:not(.selected) {
+    border-left-color: var(--c-primary);
+    border-right-color: var(--c-primary);
+}
+.blueprint.selected {
+    border-left-color: var(--c-primary);
+    border-right-color: var(--c-primary);
+    background-color: var(--c-white);
+    cursor: default;
+}
+
+.blueprintName {
+    font-weight: 400;
+}
+.blueprintVersion {
+    font-weight: 300;
+    color: var(--c-gray-l);
+    margin-left: 8px;
+}
+
+.selected .blueprintName {
+    color: var(--c-primary);
+}

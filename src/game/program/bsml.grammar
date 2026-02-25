@@ -1,0 +1,71 @@
+@top Program { Declaration* }
+
+Declaration {
+    CommandDeclaration |
+    StateDeclaration |
+    EventDeclaration
+}
+
+CommandDeclaration { @specialize[@name=Declkw]<Identifier, "command"> ~amb2 Identifier ArgumentsDeclaration? StatementBlock }
+
+StateDeclaration { @specialize[@name=Declkw]<Identifier, "state"> ~amb2 Identifier ArgumentsDeclaration? StatementBlock }
+
+EventDeclaration { @specialize[@name=Declkw]<Identifier, "when"> ~amb2 NestedIdentifier StatementBlock }
+
+StatementBlock { "{" Statement* "}" }
+
+Statement {
+    SetStateCommand |
+    ProcedureCall |
+    VariableAssignment |
+    ConditionalStatement
+}
+
+SetStateCommand { @specialize[@name=Declkw]<Identifier, "state"> Identifier }
+
+ConditionalStatement { @specialize[@name=Declkw]<Identifier, "when"> Expression StatementBlock }
+
+ProcedureCall { NestedIdentifier ~amb1 ArgumentsList? }
+
+VariableRead { NestedIdentifier ~amb1 }
+
+VariableAssignment { Identifier "=" Expression }
+
+NestedIdentifier { Identifier ("." Identifier)* }
+
+ArgumentsList { "(" (Expression ("," Expression)* )? ")" }
+
+ArgumentsDeclaration { "(" ArgumentDeclaration ("," ArgumentDeclaration)* ")" }
+
+ArgumentDeclaration { Typename Identifier }
+
+Typename { Identifier }
+
+Expression {
+    ProcedureCall |
+    VariableRead |
+    BoolLiteral |
+    StringLiteral |
+    IntegerLiteral |
+    NestedExpression
+}
+
+NestedExpression { "(" Expression ")" }
+
+BoolLiteral {
+    @specialize[@name=Boolkw]<Identifier, "true" | "false">
+}
+
+@tokens {
+    Identifier { $[a-zA-Z_]+ }
+    StringLiteral { '"' (!["\\] | "\\" _)* '"' }
+    IntegerLiteral { "-"? $[0-9]+ }
+    LineComment { "#" ![\n]* }
+    whitespace { $[ \t\n\r]+ }
+    "(" ")"
+    "{" "}"
+}
+
+@skip { whitespace | LineComment }
+
+@detectDelim

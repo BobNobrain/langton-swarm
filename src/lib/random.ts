@@ -73,3 +73,16 @@ export function pick<T>(seq: RandomSequence, vals: T[]): T {
 export function drawInteger(seq: RandomSequence, limits: { min: number; max: number }): number {
     return Math.floor(seq() * (limits.max - limits.min) + limits.min);
 }
+
+export function randomElement<T>(seq: RandomSequence, from: Set<T>): T {
+    const r = Math.floor(seq() * from.size);
+    let i = 0;
+    for (const x of from.values()) {
+        if (i === r) {
+            return x;
+        }
+        ++i;
+    }
+
+    throw new Error('unreachable');
+}

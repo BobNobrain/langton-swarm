@@ -1,0 +1,11 @@
+.header {
+    all: reset;
+
+    font-size: 40px;
+    line-height: 48px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+
+    color: var(--c-primary);
+    font-weight: 500;
+}

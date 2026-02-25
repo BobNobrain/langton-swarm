@@ -7,8 +7,24 @@ html, body {
     margin: 0;
     height: 100dvh;
     overflow: hidden;
+
+    background-color: #000;
+    color: #f7f7f7;
+
+    font-family: "Overpass Mono", monospace;
+    font-weight: 300;
 }
 
 #root {
     height: 100dvh;
+}
+
+:root {
+    --c-white: #f7f7f7;
+    --c-gray-l: #b7b7b7;
+    --c-gray-m: #878787;
+    --c-gray-d: #535353;
+    --c-black: #303030;
+
+    --c-primary: #67b740;
 }

@@ -1,30 +1,24 @@
-import { createSignal } from 'solid-js';
-import type { Planet } from './types';
-import { generatePlanet } from './planet';
+import { createBlueprintDeck, type BlueprintDeck } from './deck';
+import type { Engine } from './engine';
+import { createGameSwarms, type GameSwarms } from './swarms';
+import { createGameWorld, type GameWorld } from './world';
 
 export type GameState = {
-    seed: () => string;
-    world: () => Planet | null;
+    readonly world: GameWorld;
+    readonly swarms: GameSwarms;
+    readonly deck: BlueprintDeck;
 };
 
-export type GameStateController = {
-    createWorld: (seed: string) => void;
-};
-
-export const createGameState = (): [GameState, GameStateController] => {
-    const [getSeed, setSeed] = createSignal('');
-    const [getWorld, setWorld] = createSignal<Planet | null>(null);
+export const createGameState = (engine: Engine): GameState => {
+    const world = createGameWorld();
+    const deck = createBlueprintDeck();
+    const swarms = createGameSwarms(deck, engine, world);
 
     const state: GameState = {
-        seed: getSeed,
-        world: getWorld,
-    };
-    const controller: GameStateController = {
-        createWorld: (seed) => {
-            setSeed(seed);
-            setWorld(generatePlanet(seed));
-        },
+        world,
+        swarms,
+        deck,
     };
 
-    return [state, controller];
+    return state;
 };

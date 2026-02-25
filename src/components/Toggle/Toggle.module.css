@@ -1,0 +1,16 @@
+.toggle {
+    cursor: pointer;
+}
+.toggle:hover {
+    outline: solid 1px var(--c-primary);
+}
+
+.input {
+    display: none;
+}
+
+.icon {
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-right: 8px;
+}
