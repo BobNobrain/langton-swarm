@@ -1,6 +1,6 @@
-@top Program { Declaration* }
+@top Program { declaration* }
 
-Declaration {
+declaration {
     CommandDeclaration |
     StateDeclaration |
     EventDeclaration
@@ -8,20 +8,20 @@ Declaration {
 
 CommandDeclaration { @specialize[@name=Declkw]<Identifier, "command"> ~amb2 Identifier ArgumentsDeclaration? StatementBlock }
 
-StateDeclaration { @specialize[@name=Declkw]<Identifier, "state"> ~amb2 Identifier ArgumentsDeclaration? StatementBlock }
+StateDeclaration { @specialize[@name=Declkw]<Identifier, "state"> ~amb2 Identifier ArgumentsDeclaration? @specialize[@name=Defaultkw]<Identifier, "default">? StatementBlock }
 
 EventDeclaration { @specialize[@name=Declkw]<Identifier, "when"> ~amb2 NestedIdentifier StatementBlock }
 
-StatementBlock { "{" Statement* "}" }
+StatementBlock { "{" statement* "}" }
 
-Statement {
+statement {
     SetStateCommand |
     ProcedureCall |
     VariableAssignment |
     ConditionalStatement
 }
 
-SetStateCommand { @specialize[@name=Declkw]<Identifier, "state"> Identifier }
+SetStateCommand { @specialize[@name=Declkw]<Identifier, "state"> Expression }
 
 ConditionalStatement { @specialize[@name=Declkw]<Identifier, "when"> Expression StatementBlock }
 
@@ -47,17 +47,19 @@ Expression {
     BoolLiteral |
     StringLiteral |
     IntegerLiteral |
-    NestedExpression
+    StateNameLiteral |
+    nestedExpression
 }
 
-NestedExpression { "(" Expression ")" }
+nestedExpression { "(" Expression ")" }
 
 BoolLiteral {
-    @specialize[@name=Boolkw]<Identifier, "true" | "false">
+    @specialize[@name=Boolkw]<Identifier, "yes" | "no">
 }
 
 @tokens {
     Identifier { $[a-zA-Z_]+ }
+    StateNameLiteral { ":" $[a-zA-Z_]+ }
     StringLiteral { '"' (!["\\] | "\\" _)* '"' }
     IntegerLiteral { "-"? $[0-9]+ }
     LineComment { "#" ![\n]* }

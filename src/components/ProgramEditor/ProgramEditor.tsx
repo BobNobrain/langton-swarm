@@ -24,6 +24,7 @@ import {
 } from '@codemirror/view';
 import { bsml, bsmlHighlight } from './language';
 import styles from './ProgramEditor.module.css';
+import { bsmlLinter } from './linter';
 
 export const ProgramEditor: Component<{
     program: string;
@@ -71,6 +72,7 @@ export const ProgramEditor: Component<{
                 ]),
 
                 bsml(),
+                bsmlLinter,
             ],
         });
 

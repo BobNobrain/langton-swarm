@@ -12,9 +12,6 @@ export const GameUI: ParentComponent = (props) => {
     onMount(() => {
         game.start();
 
-        game.deck.createBlueprint('roamer');
-        game.deck.createBlueprint('miner');
-        game.deck.createBlueprint('soldier');
         const bp = game.deck.createBlueprint('test');
         console.log(bp);
 

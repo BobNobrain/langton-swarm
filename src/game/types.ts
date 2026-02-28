@@ -1,4 +1,5 @@
 import type { Vector3 } from 'three';
+import type { BsmlValue } from './program/value';
 
 export type NodeId = number;
 
@@ -29,14 +30,27 @@ export type BotEnvironment = {
     // TBD: other bots locations?
 };
 
+export type BehaviourTickContext = {
+    behaviourState: Readonly<BehaviourState>;
+    botState: Readonly<BotState>;
+    config: Readonly<BotConfiguration>;
+    env: Readonly<BotEnvironment>;
+
+    updateBot: (patch: Partial<BotState>) => void;
+    setState: (state: string, data: Record<string, BsmlValue>) => void;
+    setData: (name: string, value: BsmlValue) => void;
+    setInstructionPointer: (newValue: number) => void;
+};
+
 export type BotBehaviour = {
     setup: () => BehaviourState;
-    tick: (bot: BotData, env: BotEnvironment) => BotDataPatch | null;
+    tick: (ctx: BehaviourTickContext) => void;
 };
 
 export type BehaviourState = {
     state: string;
-    data: Record<string, unknown>;
+    instructionPointer: number;
+    data: Record<string, BsmlValue>;
 };
 
 export type BotState = {

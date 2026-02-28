@@ -2,6 +2,7 @@ import { createSignal, Show, type Component } from 'solid-js';
 import styles from './GameControlPanel.module.css';
 import { WorldBrowser } from '../WorldBrowser/WorldBrowser';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
+import { BotBrowser } from '../BotBrowser/BotBrowser';
 
 type Tab = 'world' | 'deck' | 'bots';
 
@@ -41,7 +42,9 @@ export const GameControlPanel: Component = () => {
                 <Show when={getTab() === 'deck'}>
                     <DeckBrowser />
                 </Show>
-                <Show when={getTab() === 'bots'}>Bot browser</Show>
+                <Show when={getTab() === 'bots'}>
+                    <BotBrowser />
+                </Show>
             </div>
         </div>
     );

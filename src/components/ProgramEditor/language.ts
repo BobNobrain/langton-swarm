@@ -7,14 +7,7 @@ import {
     HighlightStyle,
     syntaxTree,
 } from '@codemirror/language';
-import {
-    completeFromList,
-    ifIn,
-    ifNotIn,
-    type Completion,
-    type CompletionContext,
-    type CompletionResult,
-} from '@codemirror/autocomplete';
+import { completeFromList, type Completion, type CompletionContext } from '@codemirror/autocomplete';
 import { styleTags, tags } from '@lezer/highlight';
 import { parser } from '@/game/program/bsml';
 
@@ -27,6 +20,8 @@ const parserWithMetadata = parser.configure({
             IntegerLiteral: tags.number,
             StringLiteral: tags.string,
             LineComment: tags.lineComment,
+            StateNameLiteral: tags.atom,
+            'random zero': tags.standard(tags.name),
             // 'ProcedureCall/NestedIdentifier/Identifier': tags.function(tags.variableName),
             'Typename/Identifier': tags.typeName,
             '( )': tags.paren,
@@ -125,7 +120,8 @@ const bsmlCompletion = bsmlLanguage.data.of({
         }
         if (rules.suggestExpressions) {
             list.push(
-                { label: 'random', type: 'function' },
+                { label: 'random', type: 'variable' },
+                { label: 'zero', type: 'variable' },
                 { label: 'navigator', type: 'namespace' },
                 { label: 'drill', type: 'namespace' },
                 { label: 'scanner', type: 'namespace' },
@@ -170,4 +166,6 @@ export const bsmlHighlight = HighlightStyle.define([
     { tag: tags.separator, color: Color.Pink },
     { tag: tags.typeName, color: Color.Cyan },
     { tag: tags.function(tags.variableName), color: Color.Yellow, fontWeight: 500 },
+    { tag: tags.atom, color: Color.Pink, fontWeight: 500 },
+    { tag: tags.standard(tags.name), color: Color.Pink },
 ]);
