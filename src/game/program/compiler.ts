@@ -1,20 +1,13 @@
-import { type SyntaxNode, type SyntaxNodeRef, type Tree, type TreeCursor } from '@lezer/common';
+import { type SyntaxNode, type Tree } from '@lezer/common';
 import type {
     BsmlArgument,
-    BsmlBoolLiteral,
     BsmlCommandDeclaration,
     BsmlEventListener,
     BsmlExpression,
     BsmlFunctionCall,
-    BsmlIdentifierExpression,
     BsmlInstruction,
-    BsmlNumberLiteral,
     BsmlProgram,
-    BsmlSetStateInstruction,
     BsmlStateDeclaration,
-    BsmlStateNameIdentifier,
-    BsmlStateNameLiteral,
-    BsmlStringLiteral,
     CodePosition,
 } from './program';
 

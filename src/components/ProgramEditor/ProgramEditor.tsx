@@ -10,7 +10,7 @@ import {
     indentUnit,
 } from '@codemirror/language';
 import { highlightSelectionMatches } from '@codemirror/search';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import {
     EditorView,
     keymap,
@@ -23,15 +23,23 @@ import {
     highlightActiveLineGutter,
 } from '@codemirror/view';
 import { bsml, bsmlHighlight } from './language';
-import styles from './ProgramEditor.module.css';
 import { bsmlLinter } from './linter';
+import styles from './ProgramEditor.module.css';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
+
+export type ProgramEditorController = {
+    getProgramText: () => string;
+};
 
 export const ProgramEditor: Component<{
     program: string;
-    retrieverRef: (retrieveProgramText: () => string) => void;
+    readonly: boolean;
+    controllerRef: ControllerRef<ProgramEditorController>;
+    onChanged: (hasChanges: boolean) => void;
 }> = (props) => {
     let editorWrapper!: HTMLDivElement;
     let view: EditorView | null = null;
+    const readonlyCompartment = new Compartment();
 
     onMount(() => {
         view = new EditorView({
@@ -71,6 +79,13 @@ export const ProgramEditor: Component<{
                     indentWithTab,
                 ]),
 
+                readonlyCompartment.of(EditorState.readOnly.of(props.readonly)),
+                EditorView.updateListener.of((update) => {
+                    if (update.docChanged) {
+                        props.onChanged(true);
+                    }
+                }),
+
                 bsml(),
                 bsmlLinter,
             ],
@@ -80,8 +95,6 @@ export const ProgramEditor: Component<{
             view?.destroy();
             view = null;
         });
-
-        props.retrieverRef(() => view?.state.doc.toString() ?? '');
     });
 
     createEffect(() => {
@@ -90,16 +103,38 @@ export const ProgramEditor: Component<{
             return;
         }
 
+        if (view.state.doc.toString() !== program) {
+            view.dispatch({
+                changes: [
+                    {
+                        from: 0,
+                        to: view.state.doc.length,
+                        insert: program,
+                    },
+                ],
+            });
+        }
+
+        props.onChanged(false);
+    });
+
+    createEffect(() => {
+        const isReadonly = props.readonly;
+        if (!view) {
+            return;
+        }
+
         view.dispatch({
-            changes: [
-                {
-                    from: 0,
-                    to: view.state.doc.length,
-                    insert: program,
-                },
-            ],
+            effects: readonlyCompartment.reconfigure(EditorState.readOnly.of(isReadonly)),
         });
     });
+
+    provideController<ProgramEditorController>(
+        {
+            getProgramText: () => view?.state.doc.toString() ?? '',
+        },
+        () => props.controllerRef,
+    );
 
     return (
         <div
@@ -110,3 +145,9 @@ export const ProgramEditor: Component<{
         ></div>
     );
 };
+
+export function useProgramEditorController() {
+    return createControllerRef<ProgramEditorController>({
+        getProgramText: () => '',
+    });
+}

@@ -1,7 +1,6 @@
 import { createEffect, createMemo, type Component } from 'solid-js';
 import {
     DynamicDrawUsage,
-    Euler,
     InstancedMesh,
     Object3D,
     Quaternion,
@@ -11,7 +10,8 @@ import {
 } from 'three';
 import type { SurfaceNode } from '@/game/types';
 import { useInScene } from '../hooks/useInScene';
-import { onBeforeRepaint } from '../hooks/onBeforeRepaint';
+import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
+import { MouseButton } from '@/lib/input';
 
 type GridObjectState = {
     nodeId: number;
@@ -30,6 +30,7 @@ export const GridObjects: Component<{
     nodeIds: number[];
     allNodes: SurfaceNode[];
     maxCount?: number;
+    onClick?: (index: number) => void;
 }> = (props) => {
     const mesh = createMemo(() => {
         const instanced = new InstancedMesh(props.geom, props.material, props.maxCount ?? DEFAULT_MAX_COUNT);
@@ -37,6 +38,21 @@ export const GridObjects: Component<{
         instanced.count = 0;
         return instanced;
     });
+
+    if (props.onClick) {
+        useClickableMesh({
+            object: mesh,
+            button: MouseButton.Left,
+            handler: ({ intersection }) => {
+                const instanceIndex = intersection.instanceId;
+                if (instanceIndex === undefined) {
+                    return;
+                }
+
+                props.onClick!(instanceIndex);
+            },
+        });
+    }
 
     const states: GridObjectState[] = [];
     createEffect(() => {

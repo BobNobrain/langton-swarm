@@ -1,76 +1,111 @@
-import { createEffect, createMemo, createSignal, type Component } from 'solid-js';
-import type { BotBlueprint, BotConfiguration } from '@/game';
-import { ProgramEditor } from '../ProgramEditor/ProgramEditor';
-import styles from './BlueprintEditor.module.css';
+import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
+import type { UnitConfiguration, BlueprintController } from '@/game';
+import { Button } from '../Button/Button';
+import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
 import { Toggle } from '../Toggle/Toggle';
+import styles from './BlueprintEditor.module.css';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
+import { Configurator } from '../Configurator/Configurator';
+
+export type BlueprintEditorController = {
+    rHasChanges: () => boolean;
+    rCanSave: () => boolean;
+    getCurrentState: () => UnitConfiguration | null;
+    markSaved: () => void;
+};
 
 export const BlueprintEditor: Component<{
-    selected: BotBlueprint[];
-    onSave: (program: string, configuration: BotConfiguration) => void;
-    onClose: () => void;
+    blueprint: BlueprintController | null;
+    controllerRef?: ControllerRef<BlueprintEditorController>;
 }> = (props) => {
-    const [selectedVersionNumber, setSelectedVersionNumber] = createSignal(props.selected.length - 1);
+    const [rProgramChanged, setProgramChanged] = createSignal(false);
+    const [rConfigChanged, setConfigChanged] = createSignal(false);
+
+    const [selectedVersionNumber, setSelectedVersionNumber] = createSignal(
+        props.blueprint?.rLastVersion().version ?? -1,
+    );
     createEffect(() => {
-        const newLength = props.selected.length;
-        setSelectedVersionNumber(newLength);
+        const newLastVersion = props.blueprint?.rLastVersion().version;
+        if (newLastVersion !== undefined) {
+            setSelectedVersionNumber(newLastVersion);
+            setProgramChanged(false);
+            setConfigChanged(false);
+        }
     });
 
     const selectedVersion = createMemo(() => {
-        if (!props.selected.length) {
+        const blueprint = props.blueprint;
+        if (!blueprint) {
             return null;
         }
 
-        return props.selected[selectedVersionNumber() - 1];
+        const version = blueprint.rVersions()[selectedVersionNumber()];
+        if (!version) {
+            return null;
+        }
+
+        return version;
+    });
+    const isReadonly = createMemo(() => {
+        if (!props.blueprint) {
+            return true;
+        }
+        return selectedVersionNumber() !== props.blueprint.rLastVersion().version;
     });
 
-    let retrieveProgramText: (() => string) | null = null;
+    const programEditor = useProgramEditorController();
 
-    const [b, setB] = createSignal(true);
+    provideController(
+        {
+            getCurrentState() {
+                if (isReadonly()) {
+                    return null;
+                }
 
-    const save = () => {
-        if (!retrieveProgramText) {
-            return;
-        }
-        const selected = selectedVersion();
-        if (!selected) {
-            return;
-        }
+                const selected = selectedVersion();
+                if (!selected) {
+                    return null;
+                }
 
-        const program = retrieveProgramText();
-        props.onSave(program, selected.config);
-    };
+                const program = programEditor.rGet().getProgramText();
+                const newConfig: UnitConfiguration = { ...selected.config, program };
+                return newConfig;
+            },
+            rCanSave: createMemo(() => {
+                return !isReadonly();
+            }),
+            rHasChanges: createMemo(() => rProgramChanged() || rConfigChanged()),
+            markSaved() {
+                setProgramChanged(false);
+                setConfigChanged(false);
+            },
+        },
+        () => props.controllerRef,
+    );
 
     return (
         <div class={styles.editor}>
-            <div class={styles.editorTitleBar}>
-                <div class={styles.editorTitle}>{selectedVersion()?.name ?? '--'}</div>
-                <div class={styles.editorButtons}>
-                    <button class={styles.editorButton} onClick={save}>
-                        Save
-                    </button>
-                    <button
-                        class={styles.editorButton}
-                        onClick={() => {
-                            save();
-                            props.onClose();
-                        }}
-                    >
-                        Save & close
-                    </button>
-                </div>
-            </div>
-            <div class={styles.configurator}>
-                <Toggle value={b()} onUpdate={setB} label="Navigator" />
-                <Toggle value={b()} onUpdate={setB} label="Drill" />
-                <Toggle value={b()} onUpdate={setB} label="Receiver" />
-                <Toggle value={b()} onUpdate={setB} label="Bigger Storage" />
-            </div>
-            <ProgramEditor
-                program={selectedVersion()?.program ?? ''}
-                retrieverRef={(r) => {
-                    retrieveProgramText = r;
+            <Configurator
+                value={selectedVersion()?.config ?? null}
+                onUpdate={() => {
+                    // TODO
                 }}
+            />
+            <ProgramEditor
+                program={selectedVersion()?.config.program ?? ''}
+                readonly={isReadonly()}
+                controllerRef={programEditor.ref}
+                onChanged={setProgramChanged}
             />
         </div>
     );
 };
+
+export function useBlueprintEditorController() {
+    return createControllerRef<BlueprintEditorController>({
+        getCurrentState: () => null,
+        rCanSave: () => false,
+        rHasChanges: () => false,
+        markSaved: () => {},
+    });
+}

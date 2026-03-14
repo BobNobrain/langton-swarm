@@ -37,3 +37,14 @@
 .selected .blueprintName {
     color: var(--c-primary);
 }
+
+.toolbar {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+
+    margin-left: calc(-1 * var(--container-padding-l, 0));
+    margin-right: calc(-1 * var(--container-padding-r, 0));
+    margin-bottom: calc(-1 * var(--container-padding-b, 0));
+}

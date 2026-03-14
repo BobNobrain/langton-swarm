@@ -112,7 +112,7 @@ type RelaxOptions = {
     seq: RandomSequence;
 };
 
-export function relaxMesh(
+function relaxMesh(
     builder: MeshBuilder,
     { targetEdgeLength, maxPasses = 100, minChange = 1e-4, eps = 1e-4, changeRate = 0.01, seq }: RelaxOptions,
 ): void {

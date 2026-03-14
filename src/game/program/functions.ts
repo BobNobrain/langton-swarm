@@ -13,14 +13,14 @@ export const FNS: Record<string, BuiltinFn> = {
         returnType: null,
         call: ([position], ctx) => {
             const pos = position.value as number; // we expect position
-            const node = ctx.env.world.nodes[ctx.botState.location];
+            const node = ctx.env.world.nodes[ctx.unitState.location];
 
             if (!node.connections.has(pos)) {
                 // TODO: report error somehow?
                 return null;
             }
 
-            ctx.updateBot({ location: pos });
+            ctx.updateUnit({ location: pos });
             return null;
         },
     },

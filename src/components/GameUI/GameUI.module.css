@@ -2,24 +2,10 @@
     padding-right: 400px;
     height: 100%;
     position: relative;
+
+    --top-bar-height: 48px;
 }
 
 .scene {
     height: 100%;
-}
-
-.ui {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 400px;
-    transition: width ease-in-out 0.2s;
-
-    background-color: rgba(from var(--c-gray-m) r g b / 30%);
-    border-left: 3px solid var(--c-gray-l);
-    color: var(--c-white);
-}
-.ui.expanded {
-    width: 600px;
 }

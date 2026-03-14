@@ -7,7 +7,6 @@ type LintState = {
 };
 
 export function lintProgram(p: BsmlProgram): Diagnostic[] {
-    console.log('linter', p);
     const state: LintState = { result: [] };
     // TODO: typecheck, etc.
 

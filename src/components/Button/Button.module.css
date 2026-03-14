@@ -1,0 +1,55 @@
+.button {
+    border: none transparent;
+    background: none transparent;
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+
+    padding: 6px 12px;
+
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+
+    &.disabled {
+        cursor: not-allowed;
+    }
+    &:active {
+        transform: scale(0.95);
+    }
+    &:focus {
+        outline: 1px dashed var(--c-primary);
+    }
+
+    &.btnSecondary {
+        background-color: var(--c-gray-d);
+        color: var(--c-primary);
+
+        &:hover {
+            background-color: var(--c-white);
+            color: var(--c-primary);
+        }
+    }
+
+    &.btnPrimary {
+        background-color: var(--c-primary);
+        color: var(--c-gray-d);
+
+        &:hover {
+            background-color: var(--c-white);
+            color: var(--c-primary);
+        }
+
+        &:focus {
+            outline-color: var(--c-white);
+        }
+    }
+
+    &.btnText {
+        color: var(--c-primary);
+
+        &:hover {
+            color: var(--c-white);
+        }
+    }
+}

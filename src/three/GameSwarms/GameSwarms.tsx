@@ -1,12 +1,57 @@
 import { createEffect, createMemo, createSignal, For, type Component } from 'solid-js';
-import type { Swarm, SurfaceNode } from '@/game';
+import type { SurfaceNode, NodeId, SwarmId, SwarmBotId } from '@/game';
+import { useGame } from '@/gameContext';
 import { GridObjects } from '../GridObjects/GridObjects';
 import { botModel } from '../models/bot';
-import { useGame } from '../../gameContext';
+import { onBeforeRepaint } from '../hooks/handlers';
 
-const Swarm: Component<{ swarm: Swarm; nodes: SurfaceNode[] }> = (props) => {
-    const nodeIds = createMemo(() => {
-        return props.swarm.states().map((state) => state.bot.location);
+const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => {
+    const { swarms } = useGame();
+    const [getPositions, setPositions] = createSignal<NodeId[]>([]);
+    let lastTickUpdated = 0;
+
+    createEffect(() => {
+        const swarm = swarms.getSwarmData(props.swarmId);
+        if (!swarm) {
+            return [];
+        }
+
+        const result: NodeId[] = [];
+        for (const botId of swarm.rUnitIds()) {
+            const state = swarm.botStates[botId];
+            if (!state) {
+                continue;
+            }
+
+            result.push(state.unit.location);
+        }
+
+        setPositions(result);
+    });
+
+    onBeforeRepaint(() => {
+        const swarm = swarms.getSwarmData(props.swarmId);
+        if (!swarm) {
+            return;
+        }
+
+        const currentPositions: NodeId[] = [];
+        const signalUpdatedTo = lastTickUpdated;
+
+        // TODO: rBotIds() does not care about bot ordering
+        for (const botId of swarm.rUnitIds()) {
+            const state = swarm.botStates[botId];
+            if (!state) {
+                continue;
+            }
+
+            currentPositions.push(state.unit.location);
+            lastTickUpdated = Math.max(lastTickUpdated, state.lastTickId);
+        }
+
+        if (signalUpdatedTo !== lastTickUpdated) {
+            setPositions(currentPositions);
+        }
     });
 
     return (
@@ -14,52 +59,20 @@ const Swarm: Component<{ swarm: Swarm; nodes: SurfaceNode[] }> = (props) => {
             geom={botModel.model}
             material={botModel.mat}
             allNodes={props.nodes}
-            nodeIds={nodeIds()}
+            nodeIds={getPositions()}
             maxCount={200}
         />
     );
 };
 
 export const GameSwarms: Component = () => {
-    // const [nodeIds, setNodeIds] = createSignal<number[]>([]);
     const game = useGame();
-
-    // createEffect(() => {
-    //     const nodes = game.state.world()?.nodes ?? [];
-    //     if (!nodes.length) {
-    //         return;
-    //     }
-
-    //     const n = 300;
-    //     const result = new Array<number>(n);
-    //     for (let i = 0; i < n; i++) {
-    //         result[i] = Math.floor(Math.random() * nodes.length);
-    //     }
-    //     setNodeIds(result);
-    // });
-
-    // setInterval(() => {
-    //     setNodeIds((old) => {
-    //         const i = Math.floor(Math.random() * old.length);
-    //         const copy = old.slice();
-
-    //         const nodes = game.state.world()?.nodes ?? [];
-    //         if (!nodes.length) {
-    //             return old;
-    //         }
-
-    //         const neighbours = Array.from(nodes[copy[i]].connections.values());
-    //         copy[i] = neighbours[Math.floor(Math.random() * neighbours.length)];
-    //         return copy;
-    //     });
-    // }, 100);
-
     const nodes = createMemo(() => game.world.planet()?.nodes ?? []);
 
     return (
-        <For each={game.swarms.list()}>
-            {(swarm) => {
-                return <Swarm nodes={nodes()} swarm={swarm} />;
+        <For each={game.swarms.rSwarmIds()}>
+            {(swarmId) => {
+                return <Swarm nodes={nodes()} swarmId={swarmId} />;
             }}
         </For>
     );

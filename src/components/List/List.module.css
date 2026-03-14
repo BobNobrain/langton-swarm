@@ -1,0 +1,83 @@
+.list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+
+    &.hasBorder {
+        border: 3px double var(--c-gray-l);
+    }
+
+    &.insetH {
+        margin-left: calc(-1 * var(--container-padding-l, 0));
+        margin-right: calc(-1 * var(--container-padding-r, 0));
+    }
+}
+
+.item {
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid var(--c-gray-l);
+    display: flex;
+    gap: 8px;
+
+    &:last-child {
+        border-bottom: 0 none;
+    }
+
+    > :first-child {
+        padding-left: 8px;
+
+        .inset & {
+            padding-left: calc(8px + var(--container-padding-l, 0));
+        }
+    }
+    > :last-child {
+        padding-right: 8px;
+
+        .inset & {
+            padding-right: calc(8px + var(--container-padding-r, 0));
+        }
+    }
+
+    &.clickable {
+        cursor: pointer;
+
+        &:hover {
+            background-color: var(--c-gray-d);
+        }
+    }
+}
+
+.main {
+    flex: 1 1 auto;
+    padding: 4px 0;
+    align-content: center;
+
+    .item.clickable:hover & {
+        color: var(--c-primary);
+    }
+}
+
+.right {
+    flex: 0 0 auto;
+    padding: 4px 0;
+    min-width: 32px;
+    text-align: right;
+}
+
+.check {
+    padding: 4px 0;
+}
+
+.checkboxInput {
+    display: none;
+}
+
+.empty {
+    padding: 8px 16px;
+
+    .inset & {
+        padding-left: calc(16px + var(--container-padding-l, 0));
+        padding-right: calc(16px + var(--container-padding-r, 0));
+    }
+}

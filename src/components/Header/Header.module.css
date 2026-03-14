@@ -1,11 +1,41 @@
 .header {
-    all: reset;
-
-    font-size: 40px;
-    line-height: 48px;
-    margin-top: 16px;
-    margin-bottom: 8px;
+    margin: 0;
+    padding: 0;
 
     color: var(--c-primary);
     font-weight: 500;
+
+    &.withMargin:not(:first-child) {
+        margin-top: calc(2 * var(--header-margin-size, 6px));
+    }
+    &.withMargin:not(:last-child) {
+        margin-bottom: var(--header-margin-size, 6px);
+    }
+}
+
+.sizeLg {
+    font-size: 40px;
+    line-height: 48px;
+
+    &.withMargin {
+        --header-margin-size: 8px;
+    }
+}
+
+.sizeMd {
+    font-size: 30px;
+    line-height: 36px;
+
+    &.withMargin {
+        --header-margin-size: 6px;
+    }
+}
+
+.sizeSm {
+    font-size: 20px;
+    line-height: 24px;
+
+    &.withMargin {
+        --header-margin-size: 4px;
+    }
 }

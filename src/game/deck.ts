@@ -1,137 +1,136 @@
 import { createMemo, createSignal } from 'solid-js';
-import type { BotBehaviour, BotBlueprint } from './types';
-import { createDefaultBotConfig } from './config';
-import { compileBotProgram, createDefaultProgramText } from './program';
+import type { UnitConfiguration } from './types';
+import { createDefaultUnitConfig } from './config';
 
-export type BlueprintDeckCard = {
-    versions: {
-        blueprint: BotBlueprint;
-        compiled: BotBehaviour | null;
-        locked: boolean;
-    }[];
+export type BlueprintId = number;
+
+export type BlueprintVersion = {
+    version: number;
+    config: UnitConfiguration;
+    locked: boolean;
+};
+
+export type BlueprintController = {
+    readonly id: BlueprintId;
+    rName: () => string;
+    rVersions: () => Record<number, BlueprintVersion>;
+    rLastVersion: () => BlueprintVersion;
+
+    lockVersion(v: number): void;
+    updateConfiguration(patch: UnitConfiguration): void;
+};
+
+type BlueprintControllerFull = BlueprintController & {
+    rSetName: (name: string) => void;
+    getConfiguration(v: number): UnitConfiguration | null;
 };
 
 export type BlueprintDeck = {
-    blueprints: () => Record<string, BotBlueprint[]>;
-    createBlueprint: (name: string) => BotBlueprint;
-    createBlueprintVersion: (version: BotBlueprint) => void;
-    archiveBlueprint: (name: string) => void;
+    rBlueprints: () => BlueprintController[];
 
-    updateBlueprint: (name: string, blueprint: Pick<BotBlueprint, 'program' | 'config'>) => void;
-
-    getBehaviour: (name: string, version: number) => BotBehaviour | null;
-    getBlueprint: (name: string, version: number) => BotBlueprint | null;
+    create(name: string): BlueprintController;
+    getBlueprint(id: BlueprintId): BlueprintController | null;
+    rename(id: BlueprintId, newName: string): void;
+    getConfiguration(id: BlueprintId, version: number): UnitConfiguration | null;
 };
 
 export function createBlueprintDeck(): BlueprintDeck {
-    const [getCards, setCards] = createSignal<Record<string, BlueprintDeckCard>>({});
+    const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>({});
+    let idSeq = 1;
 
     return {
-        blueprints: createMemo(() => {
-            const bps = getCards();
-            const result: Record<string, BotBlueprint[]> = {};
+        rBlueprints: createMemo(() => Object.values(rCards())),
 
-            for (const [name, { versions }] of Object.entries(bps)) {
-                result[name] = versions.map((v) => v.blueprint);
+        getBlueprint(id) {
+            return rCards()[id];
+        },
+
+        create(name) {
+            const blueprint = createBlueprintController(idSeq++, name);
+            rSetCards((old) => ({ ...old, [blueprint.id]: blueprint }));
+            return blueprint;
+        },
+
+        rename(id, newName) {
+            const blueprint = rCards()[id];
+            if (!blueprint) {
+                return;
             }
 
-            return result;
-        }),
-        createBlueprint: (name) => {
-            const result: BotBlueprint = {
-                name,
-                version: 0,
-                archived: false,
-                config: createDefaultBotConfig(),
-                program: createDefaultProgramText(name),
-            };
-
-            const compiled = compileBotProgram(result);
-
-            setCards((old) => ({
-                ...old,
-                [name]: {
-                    versions: [
-                        {
-                            blueprint: result,
-                            compiled: compiled.ok ? compiled.result : null,
-                            locked: false,
-                        },
-                    ],
-                },
-            }));
-            return result;
-        },
-        createBlueprintVersion: (version) => {
-            // TODO
-            throw new Error('not implemented');
-        },
-        archiveBlueprint: (name) => {
-            // TODO
-            throw new Error('not implemented');
+            blueprint.rSetName(newName);
         },
 
-        updateBlueprint: (name, blueprint) => {
-            setCards((old) => {
-                if (!old[name]) {
-                    return old;
-                }
+        getConfiguration(id, version) {
+            const blueprint = rCards()[id];
+            if (!blueprint) {
+                return null;
+            }
+            return blueprint.getConfiguration(version);
+        },
+    };
+}
 
-                const copy = { ...old };
-                const card: BlueprintDeckCard = {
-                    versions: copy[name].versions.slice(),
-                };
-                copy[name] = card;
+function createBlueprintController(id: BlueprintId, name: string): BlueprintControllerFull {
+    const [rName, rSetName] = createSignal(name);
+    let lastVersion = 0;
 
-                const lastVersion = card.versions[card.versions.length - 1];
-                const newVersion: typeof lastVersion = {
-                    blueprint: {
-                        name: lastVersion.blueprint.name,
-                        version: lastVersion.blueprint.version,
-                        archived: false,
-                        config: blueprint.config,
-                        program: blueprint.program,
-                    },
-                    compiled: null,
+    const firstVersion: BlueprintVersion = {
+        version: lastVersion,
+        config: createDefaultUnitConfig(),
+        locked: false,
+    };
+
+    const [rVersions, setRVersions] = createSignal<Record<number, BlueprintVersion>>({
+        [lastVersion]: firstVersion,
+    });
+
+    const rLastVersion = createMemo(() => {
+        return rVersions()[lastVersion];
+    });
+
+    return {
+        id,
+        rName,
+        rSetName,
+        rVersions,
+        rLastVersion,
+
+        updateConfiguration(patch) {
+            setRVersions((all) => {
+                const last = all[lastVersion];
+                const copy: BlueprintVersion = {
+                    version: last.version,
+                    config: { ...last.config, ...patch },
                     locked: false,
                 };
 
-                if (lastVersion.locked) {
-                    card.versions.push(newVersion);
-                } else {
-                    card.versions[card.versions.length - 1] = newVersion;
+                if (last.locked) {
+                    ++lastVersion;
+                    copy.version = lastVersion;
                 }
 
-                return copy;
+                return { ...all, [lastVersion]: copy };
             });
         },
 
-        getBehaviour: (name, version) => {
-            const card = getCards()[name];
-            if (!card) {
-                return null;
-            }
+        lockVersion(v) {
+            setRVersions((all) => {
+                const version = all[v];
+                if (!version || version.locked) {
+                    return all;
+                }
 
-            const v = card.versions[version];
-            if (!v) {
-                return null;
-            }
+                const copy: BlueprintVersion = {
+                    ...version,
+                    locked: true,
+                };
 
-            return v.compiled;
+                return { ...all, [v]: copy };
+            });
         },
 
-        getBlueprint: (name, version) => {
-            const card = getCards()[name];
-            if (!card) {
-                return null;
-            }
-
-            const v = card.versions[version];
-            if (!v) {
-                return null;
-            }
-
-            return v.blueprint;
+        getConfiguration(v) {
+            return rVersions()[v]?.config ?? null;
         },
     };
 }

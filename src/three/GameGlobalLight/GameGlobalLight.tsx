@@ -1,7 +1,8 @@
 import type { Component } from 'solid-js';
 import { AmbientLight, DirectionalLight } from 'three';
-import { onBeforeRepaint } from '../hooks/onBeforeRepaint';
+import { onBeforeRepaint } from '../hooks/handlers';
 import { useInScene } from '../hooks/useInScene';
+import { useGame } from '@/gameContext';
 
 const SUN_SPEED = Math.PI / 30_000; // 1 rpm
 const SUN_HEIGHT = 0.2;
@@ -14,7 +15,10 @@ export const GameGlobalLight: Component = () => {
     useInScene(() => ambient);
     useInScene(() => sunlight);
 
-    onBeforeRepaint((t) => {
+    const { time } = useGame();
+
+    onBeforeRepaint(() => {
+        const t = time.getGameMonotonicTime();
         sunlight.position.set(Math.cos(t * SUN_SPEED), SUN_HEIGHT, Math.sin(t * SUN_SPEED));
     });
 

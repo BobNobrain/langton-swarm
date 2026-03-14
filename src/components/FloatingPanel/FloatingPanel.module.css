@@ -1,0 +1,70 @@
+.panel {
+    position: absolute;
+    z-index: 1;
+
+    background-color: rgba(from var(--c-gray-m) r g b / 30%);
+    color: var(--c-white);
+    border: 0 double var(--c-gray-l);
+
+    width: 400px;
+    transition: width ease-in-out 0.2s;
+    overflow: auto;
+
+    padding: 8px;
+    --panel-margin: 0px;
+    --container-padding-l: 8px;
+    --container-padding-r: 8px;
+    --container-padding-t: 8px;
+    --container-padding-b: 8px;
+
+    &.expanded {
+        width: 600px;
+    }
+
+    &.withMargin {
+        --panel-margin: 8px;
+        border-width: 3px;
+    }
+
+    &.pinLeft {
+        left: var(--panel-margin);
+        border-right-width: 3px;
+    }
+    &.pinRight {
+        right: var(--panel-margin);
+        border-left-width: 3px;
+    }
+    &.pinTop {
+        top: calc(var(--panel-margin) + var(--top-bar-height, 0));
+    }
+    &.pinBottom {
+        bottom: var(--panel-margin);
+    }
+
+    &.withMaxHeight {
+        max-height: calc(50dvw - 16px);
+    }
+}
+
+.header {
+    margin-top: calc(-1 * var(--container-padding-t, 0));
+    margin-left: calc(-1 * var(--container-padding-l, 0));
+    margin-right: calc(-1 * var(--container-padding-r, 0));
+
+    padding: 4px;
+    border-bottom: 1px solid var(--c-gray-m);
+    margin-bottom: 8px;
+    background-color: rgba(from var(--c-gray-d) r g b / 75%);
+
+    & > * {
+        --container-padding-t: 4px;
+        --container-padding-b: 4px;
+        --container-padding-r: 4px;
+        --container-padding-l: 4px;
+    }
+
+    &.sticky {
+        position: sticky;
+        top: calc(-1 * var(--container-padding-t, 0));
+    }
+}

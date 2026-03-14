@@ -1,5 +1,5 @@
 import type { Vector3 } from 'three';
-import type { BsmlValue } from './program/value';
+import type { BsmlValue, BsmlValueType } from './program/value';
 
 export type NodeId = number;
 
@@ -14,37 +14,43 @@ export type Planet = {
     resources: Map<NodeId, unknown>;
 };
 
-export type BotData = {
+export type UnitData = {
     behaviourState: BehaviourState;
-    botState: BotState;
-    config: BotConfiguration;
+    botState: UnitState;
+    config: UnitConfiguration;
 };
 
-export type BotDataPatch = {
-    botState?: Partial<BotState>;
-    behaviourState?: Partial<BehaviourState>;
-};
-
-export type BotEnvironment = {
+export type UnitEnvironment = {
     world: Planet;
     // TBD: other bots locations?
 };
 
 export type BehaviourTickContext = {
     behaviourState: Readonly<BehaviourState>;
-    botState: Readonly<BotState>;
-    config: Readonly<BotConfiguration>;
-    env: Readonly<BotEnvironment>;
+    unitState: Readonly<UnitState>;
+    env: Readonly<UnitEnvironment>;
 
-    updateBot: (patch: Partial<BotState>) => void;
+    updateUnit: (patch: Partial<UnitState>) => void;
     setState: (state: string, data: Record<string, BsmlValue>) => void;
     setData: (name: string, value: BsmlValue) => void;
     setInstructionPointer: (newValue: number) => void;
 };
 
-export type BotBehaviour = {
+export type UnitBehaviour = {
     setup: () => BehaviourState;
     tick: (ctx: BehaviourTickContext) => void;
+    getCommands: (ctx: Pick<BehaviourTickContext, 'behaviourState' | 'unitState' | 'env'>) => UnitCommand[];
+    executeCommand: (name: string, args: BsmlValue[], ctx: BehaviourTickContext) => void;
+};
+
+export type UnitCommand = {
+    name: string;
+    args: UnitCommandArg[];
+};
+export type UnitCommandArg = {
+    name: string;
+    type: BsmlValueType;
+    defaultValue: BsmlValue | null;
 };
 
 export type BehaviourState = {
@@ -53,25 +59,19 @@ export type BehaviourState = {
     data: Record<string, BsmlValue>;
 };
 
-export type BotState = {
+export type UnitState = {
     location: NodeId;
 };
 
-export type BotConfiguration = {
+export type UnitConfiguration = {
+    program?: string;
     navigator?: boolean;
     receiver?: boolean;
+    scanner?: boolean;
     storage?: {
-        size: number;
+        readonly size: number;
     };
     battery: {
-        capacity: number;
+        readonly capacity: number;
     };
-};
-
-export type BotBlueprint = {
-    name: string;
-    version: number;
-    config: BotConfiguration;
-    program: string;
-    archived: boolean;
 };

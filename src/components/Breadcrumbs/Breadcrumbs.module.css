@@ -1,0 +1,50 @@
+.trail {}
+
+.list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+.crumb {
+    flex: 0 0 auto;
+}
+
+.divider {
+    color: var(--c-gray-m);
+    margin-inline: 8px;
+}
+
+.link {
+    color: var(--c-gray-l);
+    text-decoration: none;
+    cursor: text;
+}
+.link.clickable {
+    cursor: pointer;
+
+    .label {
+        text-decoration: underline;
+    }
+
+    &:hover .label {
+        color: var(--c-primary);
+    }
+}
+
+.link.active {
+    color: var(--c-white);
+    cursor: text;
+}
+.link.clickable.active .label {
+    text-decoration: none;
+}
+
+.icon {
+    margin-right: 4px;
+    color: var(--c-gray-m);
+}
+.active .icon {
+    color: var(--c-gray-l);
+}

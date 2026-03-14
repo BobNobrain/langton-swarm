@@ -1,0 +1,5 @@
+.configurator {
+    padding: 8px 16px;
+    display: flex;
+    flex-flow: column wrap;
+}

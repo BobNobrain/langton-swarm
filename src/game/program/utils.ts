@@ -1,5 +1,5 @@
 import { randomElement } from '@/lib/random';
-import type { BotEnvironment, BotState } from '../types';
+import type { UnitEnvironment, UnitState } from '../types';
 import type { BsmlExpression } from './program';
 import type { BsmlValue, BsmlValueType } from './value';
 
@@ -11,8 +11,8 @@ export type EvalOptions = {
     fns?: Set<string>;
     call?: (name: string, args: BsmlValue[]) => BsmlValue | null;
 
-    env?: BotEnvironment;
-    bot?: BotState;
+    env?: UnitEnvironment;
+    bot?: UnitState;
 };
 
 export function evaluateExpression(expr: BsmlExpression, opts: EvalOptions = {}): BsmlValue | null {

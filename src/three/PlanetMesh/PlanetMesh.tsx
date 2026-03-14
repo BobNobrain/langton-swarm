@@ -1,15 +1,31 @@
 import { createMemo, type Component } from 'solid-js';
-import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial } from 'three';
-import type { SurfaceNode } from '@/game/types';
-import { calcCenter, normz } from '@/lib/3d';
+import {
+    BufferAttribute,
+    BufferGeometry,
+    Float32BufferAttribute,
+    Line,
+    LineBasicMaterial,
+    LineSegments,
+    Mesh,
+    MeshStandardMaterial,
+} from 'three';
+import type { NodeId, SurfaceNode } from '@/game/types';
+import { calcCenter, normz, scale } from '@/lib/3d';
 import { getInvertedMesh, MeshBuilder, type MaterialData, type RawFace } from '@/lib/MeshBuilder';
 import { MeshPainter } from '@/lib/MeshPainter';
 import { useInScene } from '../hooks/useInScene';
+import { useClickableMesh } from '../hooks/handlers';
+import { MouseButton } from '@/lib/input';
 
 const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.3, linewidth: 2, transparent: true });
+const selectionMat = new LineBasicMaterial({ color: 0x67b740, transparent: true, linewidth: 3 });
 const SCALE_UP = 1.001;
 
-export const PlanetMesh: Component<{ planetNodes: SurfaceNode[] }> = (props) => {
+export const PlanetMesh: Component<{
+    planetNodes: SurfaceNode[];
+    selectedTileId?: NodeId | null;
+    onTileClick: (tileId: NodeId) => void;
+}> = (props) => {
     const graphBuilder = createMemo(() => {
         const nodes = props.planetNodes;
         if (!nodes.length) {
@@ -88,7 +104,23 @@ export const PlanetMesh: Component<{ planetNodes: SurfaceNode[] }> = (props) => 
 
         const mesh = new Mesh(surfaceGeom, surfaceMat);
         mesh.name = 'planetMesh';
+        mesh.userData.faceIndexMap = triangulated.faceIndexMap;
         return mesh;
+    });
+    useClickableMesh({
+        object: planetMesh,
+        button: MouseButton.Left,
+        handler: ({ intersection }) => {
+            const faceIndexMap = intersection.object.userData.faceIndexMap as Record<number, number> | undefined;
+            if (!faceIndexMap) {
+                return;
+            }
+
+            const originalFaceIndex = faceIndexMap[intersection.faceIndex ?? -1] ?? -1;
+            if (originalFaceIndex !== -1) {
+                props.onTileClick(originalFaceIndex);
+            }
+        },
     });
 
     const gridEdgesMesh = createMemo(() => {
@@ -122,8 +154,37 @@ export const PlanetMesh: Component<{ planetNodes: SurfaceNode[] }> = (props) => 
         return result;
     });
 
+    const activeTileMesh = createMemo(() => {
+        const surface = invertedMesh();
+        if (!surface) {
+            return null;
+        }
+
+        const index = props.selectedTileId ?? -1;
+        if (index === -1) {
+            return null;
+        }
+
+        const verticies = surface
+            .face(index)
+            .map((vi) => surface.coords(vi))
+            .map(scale(1.001));
+
+        verticies.push(verticies[0]);
+
+        const polyGeometry = new BufferGeometry();
+        polyGeometry.setAttribute('position', new Float32BufferAttribute(verticies.flat(), 3));
+
+        const borderLine = new Line(polyGeometry, selectionMat);
+        borderLine.renderOrder = -1;
+        borderLine.name = 'activeTileBorder';
+
+        return borderLine;
+    });
+
     useInScene(planetMesh);
     useInScene(gridEdgesMesh);
+    useInScene(activeTileMesh);
 
     return null;
 };

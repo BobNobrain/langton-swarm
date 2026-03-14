@@ -1,8 +1,8 @@
 import { type Component, createEffect, onCleanup, onMount } from 'solid-js';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { useSceneRenderer } from '../context';
-import { onBeforeRepaint } from '../hooks/onBeforeRepaint';
-import { KeyCodes } from '@/lib/keyboard';
+import { onBeforeRepaint } from '../hooks/handlers';
+import { KeyCodes } from '@/lib/input';
 
 export type GameCameraProps = {
     ref?: (cam: PerspectiveCamera) => void;

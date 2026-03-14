@@ -1,4 +1,4 @@
-import type { BehaviourTickContext, BotBehaviour } from '../types';
+import type { BehaviourTickContext, UnitBehaviour, UnitCommand, UnitCommandArg } from '../types';
 import { FNS, typecheck } from './functions';
 import type { BsmlExpression, BsmlInstruction, BsmlProgram, BsmlStateDeclaration } from './program';
 import { evaluateExpression, isTruthy, renderValue, type EvalOptions } from './utils';
@@ -13,7 +13,7 @@ type StateProgramData = {
     jumpPoints: Record<number, number>;
 };
 
-export function createRunner(program: BsmlProgram): BotBehaviour {
+export function createRunner(program: BsmlProgram): UnitBehaviour {
     const statesByName: Record<string, StateProgramData> = {
         idle: { argNames: [], argTypes: [], instructionsFlat: [], jumpPoints: {} },
         error: { argNames: [], argTypes: [], instructionsFlat: [], jumpPoints: {} },
@@ -58,7 +58,7 @@ export function createRunner(program: BsmlProgram): BotBehaviour {
                 return f.call(args, ctx);
             },
             expectedType,
-            bot: ctx.botState,
+            bot: ctx.unitState,
             env: ctx.env,
         });
     };
@@ -84,8 +84,23 @@ export function createRunner(program: BsmlProgram): BotBehaviour {
         return { ok: true, argv };
     };
 
+    const programCommands = program.commandDeclarations.map((decl): UnitCommand => {
+        return {
+            name: decl.name,
+            args: decl.args.map(
+                (arg): UnitCommandArg => ({
+                    name: arg.name,
+                    type: arg.type as BsmlValueType,
+                    defaultValue: null, // TBD
+                }),
+            ),
+        };
+    });
+
     return {
+        getCommands: () => programCommands,
         setup: () => ({ state: defaultState, instructionPointer: 0, data: {} }),
+
         tick: (ctx) => {
             const stateData = statesByName[ctx.behaviourState.state];
             if (!stateData) {
@@ -183,6 +198,11 @@ export function createRunner(program: BsmlProgram): BotBehaviour {
                     break;
                 }
             }
+        },
+
+        executeCommand(name, args, ctx) {
+            // TODO
+            console.log(name, args);
         },
     };
 }

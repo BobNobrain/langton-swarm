@@ -38,7 +38,13 @@ export function createGame({ tickTime = DEFAULT_TICK_TIME, worldSeed = DEFAULT_S
 export type { GameState };
 export type { Engine, Ticker };
 
-export type { BlueprintDeck, BlueprintDeckCard } from './deck';
-export type { Swarm, SwarmBotData, SwarmBotId, GameSwarms } from './swarms';
+export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
+export type {
+    SwarmData,
+    SwarmId,
+    SwarmUnitData as SwarmBotData,
+    SwarmUnitId as SwarmBotId,
+    GameSwarms,
+} from './swarms';
 export type * from './types';
 export type { GameWorld } from './world';

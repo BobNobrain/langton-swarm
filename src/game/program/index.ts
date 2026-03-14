@@ -1,10 +1,10 @@
-import type { BotBehaviour, BotBlueprint } from '../types';
+import type { UnitBehaviour, UnitConfiguration } from '../types';
 import { parser } from './bsml';
 import { compile } from './compiler';
 import { createRunner } from './runner';
 
-export const createDefaultProgramText = (name: string) =>
-    `# Behaviour for all ${name} bots
+export const createDefaultProgramText = () =>
+    `# Unit's program is a state machine
 
 command move(position to) {
     #navigator.navigate(to)
@@ -28,9 +28,9 @@ state roaming default {
 `;
 
 export function compileBotProgram(
-    blueprint: BotBlueprint,
-): { ok: true; result: BotBehaviour } | { ok: false; message: string } {
-    const program = blueprint.program;
+    config: UnitConfiguration,
+): { ok: true; result: UnitBehaviour } | { ok: false; message: string } {
+    const program = config.program;
     if (!program) {
         return { ok: false, message: 'The program is empty' };
     }
