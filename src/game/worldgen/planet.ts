@@ -3,7 +3,8 @@ import { diff, mul, normz, size, sizeSquared, sum, ZERO, type RawVertex } from '
 import { icosahedron } from '@/lib/icosa';
 import type { MeshBuilder } from '@/lib/MeshBuilder';
 import { drawInteger, RandomNumberGenerator, type RandomSequence } from '@/lib/random';
-import { SurfaceNode, type Planet } from './types';
+import { SurfaceNode, type Planet } from '../types';
+import { generateResourceDeposits } from './resources';
 
 export function generatePlanet(seed: string): Planet {
     const mb = createPlanetGeometry(seed);
@@ -17,10 +18,14 @@ export function generatePlanet(seed: string): Planet {
         };
     }
 
-    return {
+    const planet: Planet = {
         nodes,
         resources: new Map(),
     };
+
+    generateResourceDeposits(seed, planet);
+
+    return planet;
 }
 
 function createPlanetGeometry(seed: string): MeshBuilder {

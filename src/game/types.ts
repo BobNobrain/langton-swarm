@@ -11,7 +11,12 @@ export type SurfaceNode = {
 
 export type Planet = {
     nodes: SurfaceNode[];
-    resources: Map<NodeId, unknown>;
+    resources: Map<NodeId, ResourceDeposit>;
+};
+
+export type ResourceDeposit = {
+    resource: string;
+    amount: number;
 };
 
 export type UnitData = {

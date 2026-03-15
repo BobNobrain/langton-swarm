@@ -6,6 +6,7 @@ import { GameCamera } from '../GameCamera/GameCamera';
 import { GameGlobalLight } from '../GameGlobalLight/GameGlobalLight';
 import { PlanetMesh } from '../PlanetMesh/PlanetMesh';
 import { onSceneEmptyClick } from '../hooks/handlers';
+import { PlanetResources } from '../PlanetResources/PlanetResources';
 
 export const GameScene: Component = () => {
     const game = useGame();
@@ -27,6 +28,7 @@ export const GameScene: Component = () => {
                     game.ui.selectTile(tileId);
                 }}
             />
+            <PlanetResources />
             <GameSwarms />
             <GameGlobalLight />
             <GameCamera fov={75} far={10} near={0.1} />

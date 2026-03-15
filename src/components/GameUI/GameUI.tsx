@@ -5,7 +5,7 @@ import { createGlobalListener, KeyCode } from '@/lib/input';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
 import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
 import { GameTopBar } from '../GameTopBar/GameTopBar';
-import { SelectionPanelContent } from '../SelectionPanelContent/SelectionPanelContent';
+import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
 import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
 import { GameUIContextProvider } from './context';
 import styles from './GameUI.module.css';
@@ -46,9 +46,7 @@ export const GameUI: ParentComponent = (props) => {
                 <main class={styles.wrapper}>
                     <section class={styles.scene}>{props.children}</section>
                     <GameTopBar />
-                    <FloatingPanel pinLeft pinTop withMargin>
-                        <SelectionPanelContent />
-                    </FloatingPanel>
+                    <SelectedTilePanel />
                     <SelectedUnitsPanel />
                     <FloatingPanel pinRight pinBottom pinTop expandedWidth={isExpanded()}>
                         <DeckBrowser />

@@ -3,10 +3,10 @@ import { useGame } from '@/gameContext';
 import { DefList, DefListItem } from '../DefList/DefList';
 import { Header } from '../Header/Header';
 import { WorldInfo } from '../WorldInfo/WorldInfo';
-import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
+import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
 
-export const SelectionPanelContent: Component = () => {
-    const { ui } = useGame();
+export const SelectedTilePanel: Component = () => {
+    const { ui, world } = useGame();
 
     const tileInfo = createMemo(() => {
         const selectedTile = ui.rSelectedTile();
@@ -14,14 +14,16 @@ export const SelectionPanelContent: Component = () => {
             return null;
         }
 
+        const deposit = world.planet()!.resources.get(selectedTile);
+
         return {
             id: selectedTile.toString(16).padStart(3, '0'),
-            resources: [],
+            resources: deposit,
         };
     });
 
     return (
-        <>
+        <FloatingPanel pinLeft pinTop withMargin>
             <FloatingPanelHeader>
                 <Header size="sm">
                     <Show when={tileInfo()} fallback="World">
@@ -32,9 +34,14 @@ export const SelectionPanelContent: Component = () => {
             <Show when={tileInfo()} fallback={<WorldInfo />}>
                 <DefList>
                     <DefListItem name="ID">{tileInfo()!.id}</DefListItem>
-                    <DefListItem name="Resources">{tileInfo()!.resources.length ? '??' : '--'}</DefListItem>
+
+                    <DefListItem name="Resources">
+                        <Show when={tileInfo()!.resources}>
+                            {tileInfo()!.resources!.resource} ({tileInfo()!.resources!.amount.toString()})
+                        </Show>
+                    </DefListItem>
                 </DefList>
             </Show>
-        </>
+        </FloatingPanel>
     );
 };

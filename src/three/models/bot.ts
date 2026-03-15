@@ -1,4 +1,4 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial } from 'three';
+import { BoxGeometry, MeshStandardMaterial } from 'three';
 
 const mat = new MeshStandardMaterial({
     color: '#bbddff',

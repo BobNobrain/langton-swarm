@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { generatePlanet } from './planet';
+import { generatePlanet } from './worldgen/planet';
 import type { Planet } from './types';
 
 export type GameWorld = {
