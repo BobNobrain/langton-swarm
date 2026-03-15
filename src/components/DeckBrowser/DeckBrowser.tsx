@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
-import type { BlueprintController, BlueprintId } from '@/game';
+import type { BlueprintController, BlueprintId, SwarmUnitId } from '@/game';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { Button } from '../Button/Button';
 import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
@@ -8,22 +8,72 @@ import { useExpandedPanel } from '../GameUI';
 import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import styles from './DeckBrowser.module.css';
+import { rGetUnitIdsByBlueprint } from '@/game/utils';
+
+const DeckListItem: Component<{
+    item: BlueprintController;
+    onSelect: (id: BlueprintId) => void;
+}> = (props) => {
+    const { swarms, ui } = useGame();
+
+    const unitCounts = createMemo(() => {
+        const swarmIds = swarms.findSwarms(props.item.id);
+        let totalUnits = 0;
+        let currentVersionUnits = 0;
+
+        for (const swarmId of swarmIds) {
+            const swarm = swarms.getSwarmData(swarmId);
+            if (!swarm) {
+                continue;
+            }
+
+            const nUnits = swarm.rUnitIds().length;
+            totalUnits += nUnits;
+            if (swarm.blueprintVersion === props.item.rLastVersion().version) {
+                currentVersionUnits += nUnits;
+            }
+        }
+
+        if (totalUnits === currentVersionUnits) {
+            return currentVersionUnits.toString();
+        }
+
+        return `${currentVersionUnits} (+${totalUnits - currentVersionUnits})`;
+    });
+
+    return (
+        <ListItem
+            right={
+                <Button
+                    onClick={() => {
+                        ui.selectUnits(
+                            rGetUnitIdsByBlueprint({
+                                id: props.item.id,
+                                swarms,
+                            }),
+                        );
+                    }}
+                >
+                    Select {unitCounts()}
+                </Button>
+            }
+            onMainClick={() => props.onSelect(props.item.id)}
+        >
+            <span class={styles.blueprintName}>{props.item.rName()}</span>
+            <span class={styles.blueprintVersion}>v.{props.item.rLastVersion().version}</span>
+        </ListItem>
+    );
+};
 
 const DeckList: Component<{
     items: BlueprintController[];
-    selected: BlueprintId | null;
     onSelect: (id: BlueprintId) => void;
 }> = (props) => {
     return (
         <List insetH>
             <For each={props.items} fallback={<ListEmptyContent>You have no blueprints</ListEmptyContent>}>
                 {(deckItem) => {
-                    return (
-                        <ListItem right={<Button>Edit</Button>} onClick={() => props.onSelect(deckItem.id)}>
-                            <span class={styles.blueprintName}>{deckItem.rName()}</span>
-                            <span class={styles.blueprintVersion}>v.{deckItem.rLastVersion().version}</span>
-                        </ListItem>
-                    );
+                    return <DeckListItem item={deckItem} onSelect={props.onSelect} />;
                 }}
             </For>
         </List>
@@ -115,7 +165,7 @@ export const DeckBrowser: Component = () => {
                 when={getSelectedId() === null}
                 fallback={<BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />}
             >
-                <DeckList items={deck.rBlueprints()} selected={getSelectedId()} onSelect={setSelectedId} />
+                <DeckList items={deck.rBlueprints()} onSelect={setSelectedId} />
             </Show>
         </>
     );

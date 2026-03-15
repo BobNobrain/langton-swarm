@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
-import { SwarmBotId, type NodeId, type SwarmId } from '@/game';
+import { SwarmUnitId, type NodeId, type SwarmId } from '@/game';
 import { useGame } from '@/gameContext';
 import { Symbols } from '@/lib/ascii';
 import { Breadcrumbs, type Breadcrumb } from '../Breadcrumbs/Breadcrumbs';
@@ -18,7 +18,7 @@ type BlueprintData = {
 };
 
 type BotListItem = {
-    id: SwarmBotId;
+    id: SwarmUnitId;
     state: string;
     position: NodeId;
     isSelected: boolean;
@@ -28,7 +28,7 @@ export const BotBrowser: Component = () => {
     const { swarms, deck } = useGame();
     const [getFilters, setFilters] = createSignal<{ blueprintId?: number; blueprintVersion?: number }>({});
     const listToShow = createMemo(() => (getFilters().blueprintVersion === undefined ? 'blueprints' : 'bots'));
-    const [selectedBotIds, setSelectedBotIds] = createSignal<SwarmBotId[]>([]);
+    const [selectedBotIds, setSelectedBotIds] = createSignal<SwarmUnitId[]>([]);
 
     const breadcrumbs = createMemo(() => {
         const { blueprintId, blueprintVersion } = getFilters();

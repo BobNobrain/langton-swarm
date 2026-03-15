@@ -2,7 +2,7 @@ import { type Component, createEffect, onCleanup, onMount } from 'solid-js';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { useSceneRenderer } from '../context';
 import { onBeforeRepaint } from '../hooks/handlers';
-import { KeyCodes } from '@/lib/input';
+import { KeyCode } from '@/lib/input';
 
 export type GameCameraProps = {
     ref?: (cam: PerspectiveCamera) => void;
@@ -98,29 +98,29 @@ function useKeyboardRotationControls(target: CameraOrbit): (t: number) => void {
 
     const onKeyDown = (ev: KeyboardEvent) => {
         switch (ev.code) {
-            case KeyCodes.ArrowDown:
-            case KeyCodes.KeyS:
+            case KeyCode.ArrowDown:
+            case KeyCode.KeyS:
                 if (presses.down === -1) {
                     presses.down = performance.now();
                 }
                 break;
 
-            case KeyCodes.ArrowUp:
-            case KeyCodes.KeyW:
+            case KeyCode.ArrowUp:
+            case KeyCode.KeyW:
                 if (presses.up === -1) {
                     presses.up = performance.now();
                 }
                 break;
 
-            case KeyCodes.ArrowRight:
-            case KeyCodes.KeyD:
+            case KeyCode.ArrowRight:
+            case KeyCode.KeyD:
                 if (presses.right === -1) {
                     presses.right = performance.now();
                 }
                 break;
 
-            case KeyCodes.ArrowLeft:
-            case KeyCodes.KeyA:
+            case KeyCode.ArrowLeft:
+            case KeyCode.KeyA:
                 if (presses.left === -1) {
                     presses.left = performance.now();
                 }
@@ -130,23 +130,23 @@ function useKeyboardRotationControls(target: CameraOrbit): (t: number) => void {
 
     const onKeyUp = (ev: KeyboardEvent) => {
         switch (ev.code) {
-            case KeyCodes.ArrowDown:
-            case KeyCodes.KeyS:
+            case KeyCode.ArrowDown:
+            case KeyCode.KeyS:
                 presses.down = -1;
                 break;
 
-            case KeyCodes.ArrowUp:
-            case KeyCodes.KeyW:
+            case KeyCode.ArrowUp:
+            case KeyCode.KeyW:
                 presses.up = -1;
                 break;
 
-            case KeyCodes.ArrowRight:
-            case KeyCodes.KeyD:
+            case KeyCode.ArrowRight:
+            case KeyCode.KeyD:
                 presses.right = -1;
                 break;
 
-            case KeyCodes.ArrowLeft:
-            case KeyCodes.KeyA:
+            case KeyCode.ArrowLeft:
+            case KeyCode.KeyA:
                 presses.left = -1;
                 break;
 

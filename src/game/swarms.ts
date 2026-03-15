@@ -263,5 +263,6 @@ function makeUnitId(swarmId: SwarmId, n: number): SwarmUnitId {
 function makeSwarmId(): SwarmId {
     return Math.floor(Math.random() * 16_777_216)
         .toString(16)
+        .padStart(6, '0')
         .toUpperCase();
 }

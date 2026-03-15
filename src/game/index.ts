@@ -39,12 +39,6 @@ export type { GameState };
 export type { Engine, Ticker };
 
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
-export type {
-    SwarmData,
-    SwarmId,
-    SwarmUnitData as SwarmBotData,
-    SwarmUnitId as SwarmBotId,
-    GameSwarms,
-} from './swarms';
+export type { SwarmData, SwarmId, SwarmUnitData, SwarmUnitId, GameSwarms } from './swarms';
 export type * from './types';
 export type { GameWorld } from './world';

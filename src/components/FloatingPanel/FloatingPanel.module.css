@@ -66,5 +66,6 @@
     &.sticky {
         position: sticky;
         top: calc(-1 * var(--container-padding-t, 0));
+        z-index: 1;
     }
 }

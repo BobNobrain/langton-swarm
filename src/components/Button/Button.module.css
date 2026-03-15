@@ -1,15 +1,45 @@
 .button {
+    --button-bg: var(--c-gray-d);
+    --button-text: var(--c-primary);
+
     border: none transparent;
-    background: none transparent;
+    background: var(--button-bg);
     border-radius: 0;
     outline: none;
     cursor: pointer;
+    position: relative;
 
     padding: 6px 12px;
 
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    & .label {
+        color: var(--button-text);
+
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    & .hotkey {
+        position: absolute;
+        top: -8px;
+        right: 2px;
+        font-size: 12px;
+        line-height: 16px;
+        padding: 0 2px;
+        border: 1px solid var(--button-text);
+        background-color: var(--button-bg);
+        color: var(--button-text);
+        min-width: 18px;
+        text-align: center;
+        opacity: 1;
+    }
+    &:hover .hotkey {
+        opacity: 0.2;
+    }
 
     &.disabled {
         cursor: not-allowed;
@@ -22,22 +52,22 @@
     }
 
     &.btnSecondary {
-        background-color: var(--c-gray-d);
-        color: var(--c-primary);
+        --button-bg: var(--c-gray-d);
+        --button-text: var(--c-primary);
 
         &:hover {
-            background-color: var(--c-white);
-            color: var(--c-primary);
+            --button-bg: var(--c-white);
+            --button-text: var(--c-primary);
         }
     }
 
     &.btnPrimary {
-        background-color: var(--c-primary);
-        color: var(--c-gray-d);
+        --button-bg: var(--c-primary);
+        --button-text: var(--c-gray-d);
 
         &:hover {
-            background-color: var(--c-white);
-            color: var(--c-primary);
+            --button-bg: var(--c-white);
+            --button-text: var(--c-primary);
         }
 
         &:focus {
@@ -46,10 +76,11 @@
     }
 
     &.btnText {
-        color: var(--c-primary);
+        --button-bg: transparent;
+        --button-text: var(--c-primary);
 
         &:hover {
-            color: var(--c-white);
+            --button-text: var(--c-white);
         }
     }
 }

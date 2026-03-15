@@ -6,6 +6,8 @@ export enum Symbols {
     LightShade = '░',
     MediumShade = '▒',
     DarkShade = '▓',
+    SquareOutlined = '▣',
+    SquareGrid = '▦',
     QuadrantBottomLeft = '▖',
     QuadrantTopLeft = '▘',
     QuadrantBottomRight = '▗',
@@ -18,4 +20,5 @@ export enum Symbols {
     QuadrantInverseTopRight = '▙',
     DiamondOutlined = '◈',
     DottedCircle = '◌',
+    Ellipsis = '…',
 }

@@ -4,11 +4,13 @@ import styles from './List.module.css';
 export const List: ParentComponent<{
     hasBorder?: boolean;
     insetH?: boolean;
+    class?: string;
 }> = (props) => {
     return (
         <ul
-            class={styles.list}
+            class={props.class}
             classList={{
+                [styles.list]: true,
                 [styles.hasBorder]: props.hasBorder,
                 [styles.insetH]: props.insetH,
             }}
@@ -22,11 +24,13 @@ export const ListItem: ParentComponent<{
     checked?: boolean;
     onCheck?: (newValue: boolean) => void;
     right?: JSX.Element;
+    class?: string;
     onClick?: () => void;
     onMainClick?: () => void;
 }> = (props) => {
     return (
         <li
+            class={props.class}
             classList={{
                 [styles.item]: true,
                 [styles.clickable]: Boolean(props.onClick || props.onMainClick),

@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, For, type Component } from 'solid-js';
-import type { SurfaceNode, NodeId, SwarmId, SwarmBotId } from '@/game';
+import type { SurfaceNode, NodeId, SwarmId, SwarmUnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { GridObjects } from '../GridObjects/GridObjects';
 import { botModel } from '../models/bot';

@@ -1,4 +1,5 @@
-import type { ParentComponent } from 'solid-js';
+import { Show, type ParentComponent } from 'solid-js';
+import { createHotkey, renderHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
 import styles from './Button.module.css';
 
 type ButtonStyle = 'primary' | 'secondary' | 'text';
@@ -12,8 +13,13 @@ const cls: Record<ButtonStyle, string> = {
 export const Button: ParentComponent<{
     style?: ButtonStyle;
     disabled?: boolean;
-    onClick?: (ev: MouseEvent) => void;
+    hotkey?: HotkeyDescriptor;
+    onClick?: (ev: MouseEvent | KeyboardEvent) => void;
 }> = (props) => {
+    if (props.hotkey) {
+        createHotkey(props.hotkey, (ev) => props.onClick?.(ev));
+    }
+
     return (
         <button
             type="button"
@@ -26,7 +32,10 @@ export const Button: ParentComponent<{
             disabled={props.disabled}
             onClick={props.onClick}
         >
-            {props.children}
+            <span class={styles.label}>{props.children}</span>
+            <Show when={props.hotkey}>
+                <span class={styles.hotkey}>{renderHotkey(props.hotkey!)}</span>
+            </Show>
         </button>
     );
 };

@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, type ParentComponent } from 'solid-js';
 import { createGame } from '@/game';
 import { GameProvider } from '@/gameContext';
-import { createGlobalListener, KeyCodes } from '@/lib/input';
+import { createGlobalListener, KeyCode } from '@/lib/input';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
 import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
 import { GameTopBar } from '../GameTopBar/GameTopBar';
@@ -33,7 +33,7 @@ export const GameUI: ParentComponent = (props) => {
     });
 
     createGlobalListener('keyup', (ev) => {
-        if (ev.code !== KeyCodes.Space) {
+        if (ev.code !== KeyCode.Space) {
             return;
         }
 

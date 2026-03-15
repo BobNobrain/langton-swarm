@@ -1,3 +1,83 @@
 .commandPanel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 34px;
+    grid-auto-flow: column;
+    gap: 2px;
+
+    margin-left: calc(-1 * var(--container-padding-l, 0));
+    margin-right: calc(-1 * var(--container-padding-r, 0));
+    margin-top: 8px;
+
+    min-height: 34px;
+}
+
+.noCommandsMessage {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    align-content: center;
+    text-align: center;
+    grid-column: 1 / 5;
+
+    color: var(--c-gray-l);
+}
+
+.command {
     display: flex;
+
+    & > * {
+        display: block;
+
+        &:first-child {
+            flex: 1 1 auto;
+        }
+    }
+}
+
+.unitsList {
+    min-height: 150px;
+}
+
+.unitActions {
+    display: flex;
+
+    & > * {
+        display: block;
+    }
+}
+
+.unitFilterLink {
+    color: var(--c-white);
+    cursor: pointer;
+
+    &:hover {
+        color: var(--c-primary);
+        text-decoration: underline;
+    }
+}
+.unitBlueprintName {
+    composes: unitFilterLink;
+    font-weight: 500;
+}
+.unitBlueprintVersion {
+    composes: unitFilterLink;
+    color: var(--c-gray-l);
+    font-weight: 300;
+    letter-spacing: 0.1em;
+}
+
+.actionsFooter {
+    position: sticky;
+    bottom: calc(-1 * var(--container-padding-b, 0));
+    margin-bottom: calc(-1 * var(--container-padding-b, 0));
+    margin-left: calc(-1 * var(--container-padding-l, 0));
+    margin-right: calc(-1 * var(--container-padding-r, 0));
+
+    background-color: var(--c-gray-d);
+
+    & > :not(:first-child) {
+        margin-left: 8px;
+    }
 }
