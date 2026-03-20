@@ -15,6 +15,8 @@ export const Button: ParentComponent<{
     disabled?: boolean;
     hotkey?: HotkeyDescriptor;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
+    onMouseEnter?: (ev: MouseEvent) => void;
+    onMouseLeave?: (ev: MouseEvent) => void;
 }> = (props) => {
     if (props.hotkey) {
         createHotkey(props.hotkey, (ev) => props.onClick?.(ev));
@@ -31,6 +33,8 @@ export const Button: ParentComponent<{
             }}
             disabled={props.disabled}
             onClick={props.onClick}
+            onMouseEnter={props.onMouseEnter}
+            onMouseLeave={props.onMouseLeave}
         >
             <span class={styles.label}>{props.children}</span>
             <Show when={props.hotkey}>

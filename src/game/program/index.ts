@@ -35,6 +35,10 @@ export function compileBotProgram(
         return { ok: false, message: 'The program is empty' };
     }
 
+    if (typeof program !== 'string') {
+        return { ok: true, result: program };
+    }
+
     const compiled = compile(program, parser.parse(program));
     if (compiled.errors.length) {
         return { ok: false, message: `found ${compiled.errors.length} errors` };

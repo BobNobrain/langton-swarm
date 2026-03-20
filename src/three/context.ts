@@ -20,7 +20,16 @@ export type SceneRendererContext = {
     readonly clickableObjects: SparseCollection<ClickableObject3D>;
 };
 
-export type Repainter = (t: number, dt: number) => void;
+export type RepaintContext = {
+    /** Monotonic clock read */
+    t: number;
+    /** Ms since last repaint */
+    dt: number;
+    /** Current cursor position (if inside the scene) */
+    cursor: Raycaster | null;
+};
+
+export type Repainter = (ctx: RepaintContext) => void;
 export type ClickHandler = (ev: MouseEvent, raycaster: Raycaster) => void;
 
 export type Object3DClickEvent = {
@@ -45,7 +54,7 @@ export type ClickableObject3D = {
     /** Which button(s) should this handler be invoked for (all of them by default) */
     button?: MouseButton | MouseButton[];
     /** The handler to be invoked when click happens */
-    handler: Object3DClickHandler;
+    onClick: Object3DClickHandler;
 };
 
 const outOfContext = new Proxy({} as SceneRendererContext, {

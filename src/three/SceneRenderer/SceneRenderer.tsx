@@ -18,8 +18,10 @@ import {
     type ClickableObject3D,
     type Object3DClickHandler,
     type Object3DClickEvent,
+    type RepaintContext,
 } from '../context';
 import styles from './SceneRenderer.module.css';
+import { createMouseTracker, handleSceneClick, setupRaycaster } from './mouse';
 
 type SceneRendererProps = {
     clearColor?: ColorRepresentation;
@@ -33,6 +35,7 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
     let renderer: WebGLRenderer | null = null;
     const raycaster = new Raycaster();
     const [getMainCamera, setMainCamera] = createSignal<Camera | null>(null);
+    const mouseTracker = createMouseTracker();
 
     const repaint = createEvent<Repainter>();
     const emptyClick = createEvent<ClickHandler>();
@@ -66,11 +69,23 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
                 return;
             }
 
-            const dt = lastTime === -1 ? 0 : time - lastTime;
-            lastTime = time;
-            repaint.trigger(time, dt);
-            renderer.render(scene, cam);
+            const mouse = mouseTracker.getMousePos();
+            if (mouse) {
+                setupRaycaster(raycaster, cam, mouse, canvas.getBoundingClientRect());
+            }
 
+            // prepare the scene
+            repaint.trigger({
+                t: time,
+                dt: lastTime === -1 ? 0 : time - lastTime,
+                cursor: mouse ? raycaster : null,
+            });
+
+            // render the scene
+            renderer.render(scene, cam);
+            lastTime = time;
+
+            // schedule next repaint
             requestAnimationFrame(animate);
         };
 
@@ -113,79 +128,28 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
         clickableObjects,
     };
 
-    const handleSceneClick = (ev: MouseEvent) => {
+    const handleCanvasClick = (ev: MouseEvent) => {
         const cam = getMainCamera();
         if (!cam) {
             return;
         }
 
-        const { width, height } = getBounds();
-        const pointer = new Vector2((ev.offsetX / width) * 2 - 1, 1 - (ev.offsetY / height) * 2);
-        raycaster.setFromCamera(pointer, cam);
-
-        const targetsByMesh = new Map<Object3D, ClickableObject3D>();
-
-        for (const target of clickableObjects.all()) {
-            if (target.button !== undefined) {
-                const matchesButton = Array.isArray(target.button)
-                    ? target.button.includes(ev.button)
-                    : target.button === ev.button;
-
-                if (!matchesButton) {
-                    continue;
-                }
-            }
-
-            if (target.skip && target.skip()) {
-                continue;
-            }
-
-            const mesh = target.object();
-            if (!mesh) {
-                continue;
-            }
-
-            if (Array.isArray(mesh)) {
-                for (const m of mesh) {
-                    targetsByMesh.set(m, target);
-                }
-            } else {
-                targetsByMesh.set(mesh, target);
-            }
-        }
-
-        const intersections = raycaster.intersectObjects(Array.from(targetsByMesh.keys()));
-        let shouldContinue = true;
-        const markNotHandled = () => {
-            shouldContinue = true;
-        };
-
-        for (const intersection of intersections) {
-            const target = targetsByMesh.get(intersection.object);
-            if (!target) {
-                continue;
-            }
-
-            shouldContinue = false;
-            target.handler({
-                source: ev,
-                intersection,
-                markNotHandled,
-            });
-
-            if (!shouldContinue) {
-                break;
-            }
-        }
-
-        if (shouldContinue) {
-            emptyClick.trigger(ev, raycaster);
-        }
+        handleSceneClick(
+            ev,
+            { camera: cam, raycaster, objects: clickableObjects, canvasBounds: getBounds() },
+            emptyClick,
+        );
     };
 
     return (
         <div ref={wrapperRef} class={styles.wrapper}>
-            <canvas class={styles.canvas} ref={canvas} onClick={handleSceneClick} />
+            <canvas
+                ref={canvas}
+                class={styles.canvas}
+                onClick={handleCanvasClick}
+                onMouseMove={mouseTracker.onMouseMove}
+                onMouseLeave={mouseTracker.onMouseLeave}
+            />
             <SceneRendererContext.Provider value={context}>{props.children}</SceneRendererContext.Provider>
         </div>
     );

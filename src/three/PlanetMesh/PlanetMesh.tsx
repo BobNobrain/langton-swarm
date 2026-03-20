@@ -7,6 +7,7 @@ import {
     LineBasicMaterial,
     LineSegments,
     Mesh,
+    MeshBasicMaterial,
     MeshStandardMaterial,
 } from 'three';
 import type { NodeId, SurfaceNode } from '@/game/types';
@@ -14,11 +15,12 @@ import { calcCenter, normz, scale } from '@/lib/3d';
 import { getInvertedMesh, MeshBuilder, type MaterialData, type RawFace } from '@/lib/MeshBuilder';
 import { MeshPainter } from '@/lib/MeshPainter';
 import { useInScene } from '../hooks/useInScene';
-import { useClickableMesh } from '../hooks/handlers';
+import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
 import { MouseButton } from '@/lib/input';
 
 const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.3, linewidth: 2, transparent: true });
 const selectionMat = new LineBasicMaterial({ color: 0x67b740, transparent: true, linewidth: 3 });
+const hoverMat = new MeshBasicMaterial({ color: 0x67b740, transparent: true, opacity: 0.4 });
 const SCALE_UP = 1.001;
 
 export const PlanetMesh: Component<{
@@ -110,7 +112,7 @@ export const PlanetMesh: Component<{
     useClickableMesh({
         object: planetMesh,
         button: MouseButton.Left,
-        handler: ({ intersection }) => {
+        onClick: ({ intersection }) => {
             const faceIndexMap = intersection.object.userData.faceIndexMap as Record<number, number> | undefined;
             if (!faceIndexMap) {
                 return;
@@ -168,7 +170,7 @@ export const PlanetMesh: Component<{
         const verticies = surface
             .face(index)
             .map((vi) => surface.coords(vi))
-            .map(scale(1.001));
+            .map(scale(SCALE_UP));
 
         verticies.push(verticies[0]);
 
@@ -182,9 +184,54 @@ export const PlanetMesh: Component<{
         return borderLine;
     });
 
+    const hoverGeometry = new BufferGeometry();
+    const hoverPoly = new Mesh(hoverGeometry, hoverMat);
+    hoverPoly.renderOrder = -1;
+    hoverPoly.name = 'hoveredTilePoly';
+    onBeforeRepaint(({ cursor }) => {
+        hoverPoly.visible = false;
+
+        if (!cursor) {
+            return;
+        }
+        const surface = invertedMesh();
+        const planet = planetMesh();
+        if (!surface || !planet) {
+            return;
+        }
+
+        const [closestIntersection] = cursor.intersectObject(planet);
+        if (!closestIntersection) {
+            return;
+        }
+
+        const faceIndexMap = closestIntersection.object.userData.faceIndexMap as Record<number, number> | undefined;
+        if (!faceIndexMap) {
+            return;
+        }
+
+        const originalFaceIndex = faceIndexMap[closestIntersection.faceIndex ?? -1] ?? -1;
+
+        const verticies = surface
+            .face(originalFaceIndex)
+            .map((vi) => surface.coords(vi))
+            .map(scale(SCALE_UP));
+
+        const builder = new MeshBuilder();
+        for (const v of verticies) {
+            builder.add(...v);
+        }
+        builder.assembleVerticies(verticies.map((_, i) => i));
+        builder.buildTriangulated(planetTriangulator, hoverGeometry);
+        hoverPoly.visible = true;
+
+        // hoverGeometry.setAttribute('position', new Float32BufferAttribute(verticies.flat(), 3));
+    });
+
     useInScene(planetMesh);
     useInScene(gridEdgesMesh);
     useInScene(activeTileMesh);
+    useInScene(() => hoverPoly);
 
     return null;
 };
@@ -194,7 +241,11 @@ function planetTriangulator(vs: number[], builder: MeshBuilder): RawFace[] {
     const middleCoords = normz(calcCenter(vs.map((vi) => builder.coords(vi))));
     const result: RawFace[] = [];
     const middle = builder.add(...middleCoords);
-    builder.paintVertex(middle, builder.getVertexMaterial(vs[0])!);
+
+    const material = builder.getVertexMaterial(vs[0]);
+    if (material) {
+        builder.paintVertex(middle, material);
+    }
 
     for (let i = 0; i < vs.length - 1; i++) {
         result.push([middle, vs[i], vs[i + 1]]);

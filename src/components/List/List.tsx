@@ -30,9 +30,9 @@ export const ListItem: ParentComponent<{
 }> = (props) => {
     return (
         <li
-            class={props.class}
+            class={styles.item}
             classList={{
-                [styles.item]: true,
+                [props.class ?? '']: Boolean(props.class),
                 [styles.clickable]: Boolean(props.onClick || props.onMainClick),
             }}
             onClick={props.onClick}

@@ -35,7 +35,7 @@ export const GameCamera: Component<GameCameraProps> = (props) => {
     };
     const syncToKeyboard = useKeyboardRotationControls(orbit);
 
-    onBeforeRepaint((t) => {
+    onBeforeRepaint(({ t }) => {
         syncToKeyboard(t);
 
         const { pitch, yaw, distance } = orbit;

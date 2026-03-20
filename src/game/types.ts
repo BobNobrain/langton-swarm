@@ -36,7 +36,7 @@ export type BehaviourTickContext = {
     env: Readonly<UnitEnvironment>;
 
     updateUnit: (patch: Partial<UnitState>) => void;
-    setState: (state: string, data: Record<string, BsmlValue>) => void;
+    setState: (newState: BehaviourState) => void;
     setData: (name: string, value: BsmlValue) => void;
     setInstructionPointer: (newValue: number) => void;
 };
@@ -57,11 +57,16 @@ export type UnitCommandArg = {
     type: BsmlValueType;
     defaultValue: BsmlValue | null;
 };
+export type UnitCommandCall = {
+    name: string;
+    args: BsmlValue[];
+};
 
 export type BehaviourState = {
     state: string;
     instructionPointer: number;
     data: Record<string, BsmlValue>;
+    prev: BehaviourState | null;
 };
 
 export type UnitState = {
@@ -69,7 +74,7 @@ export type UnitState = {
 };
 
 export type UnitConfiguration = {
-    program?: string;
+    program: string | UnitBehaviour;
     navigator?: boolean;
     receiver?: boolean;
     scanner?: boolean;

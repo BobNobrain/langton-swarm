@@ -3,7 +3,16 @@ import { getProcessorTickRate } from './config';
 import type { BlueprintDeck, BlueprintId } from './deck';
 import type { Engine } from './engine';
 import { compileBotProgram } from './program';
-import type { BehaviourState, UnitEnvironment, UnitState, NodeId, UnitConfiguration, UnitCommand } from './types';
+import type {
+    BehaviourState,
+    UnitEnvironment,
+    UnitState,
+    NodeId,
+    UnitConfiguration,
+    UnitCommand,
+    UnitCommandCall,
+    BehaviourTickContext,
+} from './types';
 import type { GameWorld } from './world';
 
 export type SwarmUnitData = {
@@ -25,6 +34,7 @@ export type SwarmData = {
     rUnitIds: () => SwarmUnitId[];
     findUnitsByLocation: (location: NodeId, into: Set<SwarmUnitId>) => void;
     getUnitCommands: (id: SwarmUnitId, env: UnitEnvironment) => UnitCommand[];
+    execUnitCommand: (id: SwarmUnitId, command: UnitCommandCall, env: UnitEnvironment) => void;
 };
 
 type SwarmController = SwarmData & {
@@ -45,6 +55,7 @@ export type GameSwarms = {
 
     findUnitsByLocation: (location: NodeId) => Set<SwarmUnitId>;
     getUnitCommands: (id: SwarmUnitId) => UnitCommand[];
+    execUnitCommand: (ids: SwarmUnitId[], command: UnitCommandCall) => void;
 };
 
 export function createGameSwarms(deck: BlueprintDeck, engine: Engine, world: GameWorld): GameSwarms {
@@ -155,6 +166,23 @@ export function createGameSwarms(deck: BlueprintDeck, engine: Engine, world: Gam
 
             return swarm.getUnitCommands(id, env);
         },
+
+        execUnitCommand(ids, command) {
+            const env = getEnv();
+            if (!env) {
+                return;
+            }
+
+            for (const id of ids) {
+                const swarmId = extractSwarmId(id);
+                const swarm = swarmsById[swarmId];
+                if (!swarm) {
+                    continue;
+                }
+
+                swarm.execUnitCommand(id, command, env);
+            }
+        },
     };
 }
 
@@ -175,6 +203,23 @@ function createSwarm(bpId: BlueprintId, bpVersion: number, config: UnitConfigura
     }
 
     const behaviour = compiled.result;
+    const makeContext = (data: SwarmUnitData, env: UnitEnvironment): BehaviourTickContext => ({
+        behaviourState: data.behaviour,
+        unitState: data.unit,
+        env,
+        setData(name, value) {
+            data.behaviour.data[name] = value;
+        },
+        setInstructionPointer(newValue) {
+            data.behaviour.instructionPointer = newValue;
+        },
+        setState(newState) {
+            data.behaviour = newState;
+        },
+        updateUnit(patch) {
+            Object.assign(data.unit, patch);
+        },
+    });
 
     return {
         id,
@@ -214,23 +259,7 @@ function createSwarm(bpId: BlueprintId, bpVersion: number, config: UnitConfigura
                 }
 
                 data.lastTickId = tick;
-                behaviour.tick({
-                    behaviourState: data.behaviour,
-                    unitState: data.unit,
-                    env,
-                    setData(name, value) {
-                        data.behaviour.data[name] = value;
-                    },
-                    setInstructionPointer(newValue) {
-                        data.behaviour.instructionPointer = newValue;
-                    },
-                    setState(state, stateData) {
-                        data.behaviour = { state, data: stateData, instructionPointer: 0 };
-                    },
-                    updateUnit(patch) {
-                        Object.assign(data.unit, patch);
-                    },
-                });
+                behaviour.tick(makeContext(data, env));
             }
         },
 
@@ -250,6 +279,10 @@ function createSwarm(bpId: BlueprintId, bpVersion: number, config: UnitConfigura
             }
 
             return behaviour.getCommands({ behaviourState: unit.behaviour, unitState: unit.unit, env });
+        },
+
+        execUnitCommand(id, command, env) {
+            behaviour.executeCommand(command.name, command.args, makeContext(unitData[id], env));
         },
     };
 }

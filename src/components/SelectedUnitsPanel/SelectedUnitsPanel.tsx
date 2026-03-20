@@ -1,4 +1,4 @@
-import { createMemo, For, Show, type Component } from 'solid-js';
+import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import type { BlueprintId, SwarmUnitId, UnitCommandArg } from '@/game';
 import { getUnitBlueprint, rGetUnitIdsByBlueprint } from '@/game/utils';
 import { useGame } from '@/gameContext';
@@ -9,6 +9,7 @@ import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPan
 import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import styles from './SelectedUnitsPanel.module.css';
+import type { BsmlValue } from '@/game/program/value';
 
 type UnitData = {
     id: SwarmUnitId;
@@ -94,6 +95,16 @@ export const SelectedUnitsPanel: Component = () => {
         });
     });
 
+    const executeCommand = (data: CommandData, args: BsmlValue[]) => {
+        const unitIds = ui.rSelectedUnits();
+        swarms.execUnitCommand(unitIds, {
+            name: data.name,
+            args,
+        });
+    };
+
+    const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<SwarmUnitId> | null>(null);
+
     return (
         <FloatingPanel pinBottom pinLeft withMargin>
             <FloatingPanelHeader sticky>
@@ -107,17 +118,23 @@ export const SelectedUnitsPanel: Component = () => {
                             let text = commandData.name;
 
                             if (commandData.isPartial) {
-                                text = `${text} (${commandData.appliesTo.size}/${ui.rSelectedUnits().length})`;
+                                text = `${text}*`;
                             }
 
-                            if (commandData.isPositional) {
-                                text = `${Symbols.SquareGrid} ${text}`;
-                            } else if (commandData.isConfigurable && !commandData.canImmediatelyRun) {
+                            if (commandData.isConfigurable && !commandData.canImmediatelyRun) {
                                 text = `${text}...`;
                             }
 
                             return (
-                                <div class={styles.command}>
+                                <div
+                                    class={styles.command}
+                                    onMouseEnter={
+                                        commandData.isPartial
+                                            ? () => setHoveredCommandTargets(commandData.appliesTo)
+                                            : undefined
+                                    }
+                                    onMouseLeave={() => setHoveredCommandTargets(null)}
+                                >
                                     <Button
                                         style={commandData.canImmediatelyRun ? 'primary' : 'secondary'}
                                         hotkey={
@@ -128,6 +145,14 @@ export const SelectedUnitsPanel: Component = () => {
                                                   }
                                                 : undefined
                                         }
+                                        onClick={() => {
+                                            if (!commandData.canImmediatelyRun) {
+                                                console.log('not implemented yet', commandData);
+                                                return;
+                                            }
+
+                                            executeCommand(commandData, []);
+                                        }}
                                     >
                                         {text}
                                     </Button>
@@ -145,6 +170,7 @@ export const SelectedUnitsPanel: Component = () => {
                     {(unitData) => {
                         return (
                             <ListItem
+                                class={(hoveredCommandTargets()?.has(unitData.id) ?? true) ? '' : styles.nonTargetUnit}
                                 right={
                                     <Show when={selectedUnits().length !== 1}>
                                         <div class={styles.unitActions}>

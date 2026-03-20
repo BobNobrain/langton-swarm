@@ -8,3 +8,8 @@
     grid-template-rows: 38px 150px 1fr;
     height: 100%;
 }
+
+.noProgramMessage {
+    text-align: center;
+    padding: 32px 16px;
+}

@@ -34,6 +34,16 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
 
         flattenInstructions(state.body, statesByName[state.name]);
     }
+    for (const cmd of program.commandDeclarations) {
+        const cmdStateName = getCommandStateName(cmd.name);
+        statesByName[cmdStateName] = {
+            argNames: cmd.args.map((arg) => arg.name),
+            argTypes: cmd.args.map((arg) => arg.type),
+            instructionsFlat: [],
+            jumpPoints: {},
+        };
+        flattenInstructions(cmd.body, statesByName[cmdStateName]);
+    }
 
     const stateNames = new Set(Object.keys(statesByName));
     const fns = new Set(Object.keys(FNS));
@@ -99,7 +109,7 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
 
     return {
         getCommands: () => programCommands,
-        setup: () => ({ state: defaultState, instructionPointer: 0, data: {} }),
+        setup: () => ({ state: defaultState, instructionPointer: 0, data: {}, prev: null }),
 
         tick: (ctx) => {
             const stateData = statesByName[ctx.behaviourState.state];
@@ -114,6 +124,14 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
 
             let ptr = ctx.behaviourState.instructionPointer;
             if (ptr >= stateData.instructionsFlat.length) {
+                // finished current instruction set
+                if (ctx.behaviourState.prev) {
+                    // we have a previous stack frame, so we need to restore it
+                    ctx.setState(ctx.behaviourState.prev);
+                    return;
+                }
+
+                // no previous stack frame => just loop current state
                 ptr = 0;
             }
 
@@ -141,7 +159,7 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
                         data[argNames[i]] = evaledArgs.argv[i];
                     }
 
-                    ctx.setState(state.value, data);
+                    ctx.setState({ state: state.value, data, instructionPointer: 0, prev: null });
                     // no need to set the instruction pointer when switching states
                     break;
                 }
@@ -201,8 +219,19 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
         },
 
         executeCommand(name, args, ctx) {
-            // TODO
-            console.log(name, args);
+            const cmdStateName = getCommandStateName(name);
+            if (!stateNames.has(cmdStateName)) {
+                return;
+            }
+
+            const argNames = statesByName[cmdStateName].argNames;
+            const cmdData: Record<string, BsmlValue> = {};
+
+            for (let i = 0; i < Math.min(args.length, argNames.length); i++) {
+                cmdData[argNames[i]] = args[i];
+            }
+
+            ctx.setState({ state: cmdStateName, data: cmdData, instructionPointer: 0, prev: ctx.behaviourState });
         },
     };
 }
@@ -226,5 +255,18 @@ function flattenInstructions(block: BsmlInstruction[], result: StateProgramData)
 }
 
 function reportError(ctx: BehaviourTickContext, msg: string) {
-    ctx.setState('error', { error: { type: 'string', value: msg } });
+    ctx.setState({
+        state: 'error',
+        data: {
+            error: { type: 'string', value: msg },
+            prev_state: { type: 'string', value: ctx.behaviourState.state },
+            prev_ptr: { type: 'number', value: ctx.behaviourState.instructionPointer },
+        },
+        instructionPointer: 0,
+        prev: null,
+    });
+}
+
+function getCommandStateName(commandName: string): string {
+    return `cmd:${commandName}`;
 }

@@ -1,5 +1,6 @@
 import { createSignal, onCleanup, onMount, type ParentComponent } from 'solid-js';
 import { createGame } from '@/game';
+import { createMotherConfig } from '@/game/mother';
 import { GameProvider } from '@/gameContext';
 import { createGlobalListener, KeyCode } from '@/lib/input';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
@@ -9,6 +10,7 @@ import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
 import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
 import { GameUIContextProvider } from './context';
 import styles from './GameUI.module.css';
+import { createDefaultUnitConfig } from '@/game/config';
 
 export const GameUI: ParentComponent = (props) => {
     const [isExpanded, setIsExpanded] = createSignal(false);
@@ -17,15 +19,14 @@ export const GameUI: ParentComponent = (props) => {
     onMount(() => {
         game.start();
 
-        const bp = game.deck.create('test');
+        const core = game.deck.create('core', createMotherConfig(game.swarms, game.deck));
+        game.swarms.spawn({
+            blueprint: core.id,
+            version: core.rLastVersion().version,
+            position: 15,
+        });
 
-        for (let i = 0; i < 100; i++) {
-            game.swarms.spawn({
-                blueprint: bp.id,
-                version: bp.rLastVersion().version,
-                position: Math.floor(Math.random() * (game.world.planet()?.nodes.length ?? 0)),
-            });
-        }
+        const testBp = game.deck.create('test', createDefaultUnitConfig());
 
         onCleanup(() => {
             game.stop();

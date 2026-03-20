@@ -91,12 +91,17 @@ export const BlueprintEditor: Component<{
                     // TODO
                 }}
             />
-            <ProgramEditor
-                program={selectedVersion()?.config.program ?? ''}
-                readonly={isReadonly()}
-                controllerRef={programEditor.ref}
-                onChanged={setProgramChanged}
-            />
+            <Show
+                when={typeof selectedVersion()?.config.program === 'string'}
+                fallback={<div class={styles.noProgramMessage}>This is a built-in blueprint. It has no program.</div>}
+            >
+                <ProgramEditor
+                    program={selectedVersion()?.config.program as string}
+                    readonly={isReadonly()}
+                    controllerRef={programEditor.ref}
+                    onChanged={setProgramChanged}
+                />
+            </Show>
         </div>
     );
 };

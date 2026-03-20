@@ -9,6 +9,7 @@ import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import styles from './DeckBrowser.module.css';
 import { rGetUnitIdsByBlueprint } from '@/game/utils';
+import { createDefaultUnitConfig } from '@/game/config';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -17,6 +18,7 @@ const DeckListItem: Component<{
     const { swarms, ui } = useGame();
 
     const unitCounts = createMemo(() => {
+        // TODO: this is not reactive; so when new swarm is created, this memo is no longer valid
         const swarmIds = swarms.findSwarms(props.item.id);
         let totalUnits = 0;
         let currentVersionUnits = 0;
@@ -69,9 +71,11 @@ const DeckList: Component<{
     items: BlueprintController[];
     onSelect: (id: BlueprintId) => void;
 }> = (props) => {
+    const itemsReversed = createMemo(() => props.items.toReversed());
+
     return (
         <List insetH>
-            <For each={props.items} fallback={<ListEmptyContent>You have no blueprints</ListEmptyContent>}>
+            <For each={itemsReversed()} fallback={<ListEmptyContent>You have no blueprints</ListEmptyContent>}>
                 {(deckItem) => {
                     return <DeckListItem item={deckItem} onSelect={props.onSelect} />;
                 }}
@@ -153,7 +157,7 @@ export const DeckBrowser: Component = () => {
                                     return;
                                 }
 
-                                deck.create(name);
+                                deck.create(name, createDefaultUnitConfig());
                             }}
                         >
                             Create

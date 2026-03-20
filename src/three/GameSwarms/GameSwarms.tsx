@@ -1,12 +1,12 @@
 import { createEffect, createMemo, createSignal, For, type Component } from 'solid-js';
-import type { SurfaceNode, NodeId, SwarmId, SwarmUnitId } from '@/game';
+import type { SurfaceNode, NodeId, SwarmId } from '@/game';
 import { useGame } from '@/gameContext';
 import { GridObjects } from '../GridObjects/GridObjects';
-import { botModel } from '../models/bot';
+import { getUnitModel } from '../models/bots';
 import { onBeforeRepaint } from '../hooks/handlers';
 
 const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => {
-    const { swarms } = useGame();
+    const { swarms, deck } = useGame();
     const [getPositions, setPositions] = createSignal<NodeId[]>([]);
     let lastTickUpdated = 0;
 
@@ -27,6 +27,12 @@ const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => 
         }
 
         setPositions(result);
+    });
+
+    const model = createMemo(() => {
+        const swarm = swarms.getSwarmData(props.swarmId);
+        const bp = swarm ? deck.getConfiguration(swarm.blueprintId, swarm.blueprintVersion) : null;
+        return getUnitModel(bp);
     });
 
     onBeforeRepaint(() => {
@@ -56,8 +62,8 @@ const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => 
 
     return (
         <GridObjects
-            geom={botModel.model}
-            material={botModel.mat}
+            geom={model().geom}
+            material={model().mat}
             allNodes={props.nodes}
             nodeIds={getPositions()}
             maxCount={200}

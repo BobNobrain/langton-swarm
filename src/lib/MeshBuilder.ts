@@ -201,7 +201,10 @@ export class MeshBuilder {
         return this.duplicatesToOriginals.get(dvi) ?? dvi;
     }
 
-    buildTriangulated(triangulator: (vs: number[], builder: MeshBuilder) => RawFace[] = triangulatePoly): {
+    buildTriangulated(
+        triangulator: (vs: number[], builder: MeshBuilder) => RawFace[] = triangulatePoly,
+        geometry = new T.BufferGeometry(),
+    ): {
         geometry: T.BufferGeometry;
         faceIndexMap: Record<number, number>;
     } {
@@ -222,7 +225,7 @@ export class MeshBuilder {
             }
         }
 
-        const geometry = new T.BufferGeometry();
+        // const geometry = new T.BufferGeometry();
         geometry.setAttribute('position', new T.BufferAttribute(new Float32Array(this.verticies.flat()), 3));
         geometry.setIndex(faces.flat());
         geometry.computeVertexNormals();

@@ -1,6 +1,5 @@
 import { createMemo, createSignal } from 'solid-js';
 import type { UnitConfiguration } from './types';
-import { createDefaultUnitConfig } from './config';
 
 export type BlueprintId = number;
 
@@ -28,10 +27,11 @@ type BlueprintControllerFull = BlueprintController & {
 export type BlueprintDeck = {
     rBlueprints: () => BlueprintController[];
 
-    create(name: string): BlueprintController;
+    create(name: string, config: UnitConfiguration): BlueprintController;
     getBlueprint(id: BlueprintId): BlueprintController | null;
     rename(id: BlueprintId, newName: string): void;
     getConfiguration(id: BlueprintId, version: number): UnitConfiguration | null;
+    findByName(name: string): BlueprintController | null;
 };
 
 export function createBlueprintDeck(): BlueprintDeck {
@@ -45,8 +45,8 @@ export function createBlueprintDeck(): BlueprintDeck {
             return rCards()[id];
         },
 
-        create(name) {
-            const blueprint = createBlueprintController(idSeq++, name);
+        create(name, config) {
+            const blueprint = createBlueprintController(idSeq++, name, config);
             rSetCards((old) => ({ ...old, [blueprint.id]: blueprint }));
             return blueprint;
         },
@@ -67,16 +67,20 @@ export function createBlueprintDeck(): BlueprintDeck {
             }
             return blueprint.getConfiguration(version);
         },
+
+        findByName(name) {
+            return Object.values(rCards()).find((card) => card.rName() === name) ?? null;
+        },
     };
 }
 
-function createBlueprintController(id: BlueprintId, name: string): BlueprintControllerFull {
+function createBlueprintController(id: BlueprintId, name: string, config: UnitConfiguration): BlueprintControllerFull {
     const [rName, rSetName] = createSignal(name);
     let lastVersion = 0;
 
     const firstVersion: BlueprintVersion = {
         version: lastVersion,
-        config: createDefaultUnitConfig(),
+        config,
         locked: false,
     };
 

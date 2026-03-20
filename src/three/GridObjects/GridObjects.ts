@@ -43,7 +43,7 @@ export const GridObjects: Component<{
         useClickableMesh({
             object: mesh,
             button: MouseButton.Left,
-            handler: ({ intersection }) => {
+            onClick: ({ intersection }) => {
                 const instanceIndex = intersection.instanceId;
                 if (instanceIndex === undefined) {
                     return;
@@ -91,7 +91,7 @@ export const GridObjects: Component<{
         }
     });
 
-    onBeforeRepaint((t) => {
+    onBeforeRepaint(({ t }) => {
         const instanced = mesh();
         const N = Math.min(states.length, props.maxCount ?? DEFAULT_MAX_COUNT);
         const dummy = new Object3D();
