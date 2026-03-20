@@ -1,6 +1,8 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
-import type { BlueprintController, BlueprintId, SwarmUnitId } from '@/game';
+import type { BlueprintController, BlueprintId } from '@/game';
+import { rGetUnitIdsByBlueprint } from '@/game/utils';
+import { createDefaultUnitConfig } from '@/game/config';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { Button } from '../Button/Button';
 import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
@@ -8,8 +10,6 @@ import { useExpandedPanel } from '../GameUI';
 import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import styles from './DeckBrowser.module.css';
-import { rGetUnitIdsByBlueprint } from '@/game/utils';
-import { createDefaultUnitConfig } from '@/game/config';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -18,8 +18,9 @@ const DeckListItem: Component<{
     const { swarms, ui } = useGame();
 
     const unitCounts = createMemo(() => {
-        // TODO: this is not reactive; so when new swarm is created, this memo is no longer valid
+        swarms.rSwarmIds(); // invalidate this memo each time a new swarm appears (or old one gets removed)
         const swarmIds = swarms.findSwarms(props.item.id);
+        console.log(props.item.id, swarmIds);
         let totalUnits = 0;
         let currentVersionUnits = 0;
 

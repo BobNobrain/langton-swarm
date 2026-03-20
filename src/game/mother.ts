@@ -5,7 +5,6 @@ import type { NodeId, UnitBehaviour, UnitConfiguration } from './types';
 export function createMotherConfig(swarms: GameSwarms, deck: BlueprintDeck): UnitConfiguration {
     const spawn = (bpname: string, at: NodeId) => {
         const bp = deck.findByName(bpname);
-        console.log(bpname, at, bp);
         if (!bp) {
             return;
         }

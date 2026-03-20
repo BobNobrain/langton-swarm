@@ -102,11 +102,11 @@ export function createGameSwarms(deck: BlueprintDeck, engine: Engine, world: Gam
 
         const newSwarm = createSwarm(blueprintId, blueprintVersion, config);
         swarmsById[newSwarm.id] = newSwarm;
-        rSetSwarmIds(Object.keys(swarmsById));
 
         idsByBlueprint[blueprintId] ??= new Map();
         idsByBlueprint[blueprintId].set(blueprintVersion, newSwarm.id);
 
+        rSetSwarmIds(Object.keys(swarmsById)); // reactive update must happen after all other data has been filled
         return newSwarm;
     };
 
