@@ -1,0 +1,35 @@
+.unitsList {
+    min-height: 150px;
+}
+
+.nonTargetUnit {
+    opacity: 0.3;
+}
+
+.unitActions {
+    display: flex;
+
+    & > * {
+        display: block;
+    }
+}
+
+.unitFilterLink {
+    color: var(--c-white);
+    cursor: pointer;
+
+    &:hover {
+        color: var(--c-primary);
+        text-decoration: underline;
+    }
+}
+.unitBlueprintName {
+    composes: unitFilterLink;
+    font-weight: 500;
+}
+.unitBlueprintVersion {
+    composes: unitFilterLink;
+    color: var(--c-gray-l);
+    font-weight: 300;
+    letter-spacing: 0.1em;
+}

@@ -1,0 +1,33 @@
+.header {
+    padding: 2px 8px;
+
+    background-color: var(--c-gray-d);
+    color: var(--c-primary);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 24px;
+}
+
+.actions {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 2px);
+
+    display: flex;
+    gap: 4px;
+    justify-content: flex-start;
+    flex-direction: row-reverse;
+
+    & > * {
+        display: block;
+    }
+}
+
+@keyframes activeField {
+    0% {
+        border-color: var(--c-white);
+    }
+    100% {
+        border-color: var(--c-primary);
+    }
+}

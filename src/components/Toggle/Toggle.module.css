@@ -1,16 +1,40 @@
 .toggle {
     cursor: pointer;
-}
-.toggle:hover {
-    outline: solid 1px var(--c-primary);
+    padding: 4px 8px;
+
+    &:hover .icon {
+        color: var(--c-primary);
+    }
+
+    &:focus-within {
+        outline: 3px double var(--c-white);
+
+        .icon {
+            animation: activeToggle infinite alternate ease-in-out 1s;
+        }
+    }
 }
 
 .input {
-    display: none;
+    opacity: 0;
+    position: absolute;
+    pointer-events: none;
 }
 
 .icon {
     font-weight: 600;
     color: var(--c-primary);
-    margin-right: 8px;
+}
+
+.label {
+    margin-left: 8px;
+}
+
+@keyframes activeToggle {
+    0% {
+        color: var(--c-gray-l);
+    }
+    100% {
+        color: var(--c-primary);
+    }
 }

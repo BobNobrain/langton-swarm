@@ -1,10 +1,23 @@
-import { createSignal } from 'solid-js';
-import type { NodeId } from './types';
+import { createMemo, createSignal } from 'solid-js';
 import type { GameSwarms, SwarmUnitId } from './swarms';
+import type { NodeId } from './types';
+
+export type HighlightedTile = {
+    tileId: NodeId;
+    color: 'primary' | 'white';
+};
 
 export type GameUIState = {
     rSelectedTile(): NodeId | null;
     selectTile(value: NodeId | null): void;
+    hijackTileSelection(listener: null | ((selected: NodeId | null) => boolean | void)): void;
+
+    rHoveredTile(): NodeId | null;
+    hoverTile(value: NodeId | null): void;
+
+    rHighlightedTiles(): HighlightedTile[];
+    addHighlightedTile(ht: HighlightedTile): void;
+    removeHighlightedTile(tid: NodeId): void;
 
     rSelectedUnits(): SwarmUnitId[];
     selectUnits(ids: SwarmUnitId[]): void;
@@ -13,19 +26,53 @@ export type GameUIState = {
 
 export function createGameUIState(swarms: GameSwarms): GameUIState {
     const [rSelectedTile, rSetSelectedTile] = createSignal<NodeId | null>(null);
+    const [rHoveredTile, rSetHoveredTile] = createSignal<NodeId | null>(null);
+    const [rHighlightedTiles, rSetHighlightedTiles] = createSignal<Record<NodeId, HighlightedTile>>({});
     const [rSelectedUnits, rSetSelectedUnits] = createSignal<SwarmUnitId[]>([]);
+
+    let tileSelectionHijacker: ((selected: NodeId | null) => boolean | void) | null = null;
 
     return {
         rSelectedTile,
         rSelectedUnits,
+        rHoveredTile,
+        rHighlightedTiles: createMemo(() => Object.values(rHighlightedTiles())),
 
         selectTile(value) {
+            if (tileSelectionHijacker) {
+                const shouldKeep = tileSelectionHijacker(value);
+                if (!shouldKeep) {
+                    tileSelectionHijacker = null;
+                }
+                return;
+            }
+
             rSetSelectedTile(value);
             if (value !== null) {
                 rSetSelectedUnits(Array.from(swarms.findUnitsByLocation(value)));
             } else {
                 rSetSelectedUnits([]);
             }
+        },
+        hoverTile: rSetHoveredTile,
+        hijackTileSelection(listener) {
+            // TODO: should these stack?
+            tileSelectionHijacker = listener;
+        },
+
+        addHighlightedTile(ht) {
+            rSetHighlightedTiles((old) => ({ ...old, [ht.tileId]: ht }));
+        },
+        removeHighlightedTile(tid) {
+            rSetHighlightedTiles((old) => {
+                if (!old[tid]) {
+                    return old;
+                }
+
+                const copy = { ...old };
+                delete copy[tid];
+                return copy;
+            });
         },
 
         selectUnits(ids) {

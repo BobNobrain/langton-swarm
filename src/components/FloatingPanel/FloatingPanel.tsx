@@ -41,3 +41,18 @@ export const FloatingPanelHeader: ParentComponent<{
         </header>
     );
 };
+
+export const FloatingPanelOverlay: ParentComponent<{
+    visible: boolean;
+}> = (props) => {
+    return (
+        <div
+            class={styles.overlay}
+            classList={{
+                [styles.overlayVisible]: props.visible,
+            }}
+        >
+            <div class={styles.overlayContent}>{props.children}</div>
+        </div>
+    );
+};

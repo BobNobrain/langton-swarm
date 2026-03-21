@@ -1,5 +1,5 @@
 import { onCleanup, onMount } from 'solid-js';
-import type { KeyCode } from './input';
+import { KeyCode } from './input';
 
 export type HotkeyDescriptor = {
     key: KeyCode;
@@ -18,10 +18,15 @@ class HotkeyManager {
 
     constructor() {
         document.addEventListener('keydown', (ev) => {
+            if (shouldSkipKeydown(ev)) {
+                return;
+            }
+
             const isRepeated = this.keysDown[ev.code] ?? false;
             this.keysDown[ev.code] = true;
 
             const hotkeys = this.hotkeysByCode[ev.code];
+            let handled = false;
 
             for (const hk of hotkeys ?? []) {
                 const { alt = false, shift = false, ctrl = false, isEnabled } = hk.descriptor;
@@ -38,6 +43,11 @@ class HotkeyManager {
                 }
 
                 hk.handler(ev, isRepeated);
+                handled = true;
+            }
+
+            if (handled) {
+                ev.preventDefault();
             }
         });
 
@@ -94,6 +104,16 @@ export function renderHotkey(hotkey: HotkeyDescriptor): string {
                 ArrowLeft: '⬅',
                 ArrowRight: '⮕',
             }[keyName] ?? keyName;
+    } else {
+        switch (keyName) {
+            case 'Escape':
+                keyName = 'Esc';
+                break;
+
+            case 'Enter':
+                keyName = '⏎';
+                break;
+        }
     }
 
     if (hotkey.alt) {
@@ -107,4 +127,17 @@ export function renderHotkey(hotkey: HotkeyDescriptor): string {
     }
 
     return keyName;
+}
+
+function shouldSkipKeydown(ev: KeyboardEvent): boolean {
+    switch ((ev.target as HTMLElement).tagName) {
+        case 'INPUT':
+            return ev.code !== KeyCode.Esc;
+
+        case 'BUTTON':
+            return ev.code === KeyCode.Space;
+
+        default:
+            return false;
+    }
 }

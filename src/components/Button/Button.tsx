@@ -1,6 +1,7 @@
 import { Show, type ParentComponent } from 'solid-js';
 import { createHotkey, renderHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
 import styles from './Button.module.css';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 
 type ButtonStyle = 'primary' | 'secondary' | 'text';
 
@@ -10,26 +11,52 @@ const cls: Record<ButtonStyle, string> = {
     text: styles.btnText,
 };
 
+export type ButtonController = {
+    focus(): void;
+};
+
 export const Button: ParentComponent<{
+    type?: 'button' | 'submit';
     style?: ButtonStyle;
     disabled?: boolean;
+    inline?: boolean;
     hotkey?: HotkeyDescriptor;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
     onMouseEnter?: (ev: MouseEvent) => void;
     onMouseLeave?: (ev: MouseEvent) => void;
+    controllerRef?: ControllerRef<ButtonController>;
 }> = (props) => {
     if (props.hotkey) {
-        createHotkey(props.hotkey, (ev) => props.onClick?.(ev));
+        createHotkey(
+            {
+                ...props.hotkey,
+                isEnabled: () => !props.disabled && (props.hotkey?.isEnabled?.() ?? true),
+            },
+            (ev) => props.onClick?.(ev),
+        );
     }
+
+    let button!: HTMLButtonElement;
+
+    provideController(
+        {
+            focus() {
+                button.focus();
+            },
+        },
+        () => props.controllerRef,
+    );
 
     return (
         <button
-            type="button"
+            ref={button}
+            type={props.type ?? 'button'}
             classList={{
                 [styles.button]: true,
                 [cls[props.style ?? 'secondary']]: true,
                 [styles.disabled]: props.disabled,
                 [styles.clickable]: Boolean(props.onClick),
+                [styles.inline]: props.inline,
             }}
             disabled={props.disabled}
             onClick={props.onClick}
@@ -43,3 +70,9 @@ export const Button: ParentComponent<{
         </button>
     );
 };
+
+export function createButtonController() {
+    return createControllerRef<ButtonController>({
+        focus() {},
+    });
+}

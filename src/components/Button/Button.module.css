@@ -3,13 +3,23 @@
     --button-text: var(--c-primary);
 
     border: none transparent;
-    background: var(--button-bg);
+    background-color: var(--button-bg);
     border-radius: 0;
     outline: none;
     cursor: pointer;
     position: relative;
 
+    font-family: inherit;
+    font-size: 0.95em;
+    line-height: 0.9em;
+
     padding: 6px 12px;
+
+    display: block;
+
+    &.inline {
+        display: inline-block;
+    }
 
     & .label {
         color: var(--button-text);
@@ -17,19 +27,25 @@
         font-weight: 600;
         letter-spacing: 0.05em;
         text-transform: uppercase;
-        font-size: 1em;
-        line-height: 0.72em;
 
-        display: inline-block;
+        display: block;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
+    &:hover {
+        background-color: var(--button-bg-hover, var(--button-bg));
+
+        .label {
+            color: var(--button-text-hover, var(--button-text));
+        }
+    }
+
     & .hotkey {
         position: absolute;
-        top: -8px;
+        top: -12px;
         right: 2px;
         font-size: 12px;
         line-height: 16px;
@@ -45,34 +61,34 @@
         opacity: 0.2;
     }
 
-    &.disabled {
-        cursor: not-allowed;
-    }
     &:active {
         transform: scale(0.95);
     }
     &:focus {
-        outline: 1px dashed var(--c-primary);
+        outline: 3px double var(--c-primary);
+        animation: focusedButton infinite alternate 1s ease-in-out;
+
+        .label {
+            animation: focusedButtonLabel infinite alternate 1s ease-in-out;
+        }
+
+        .hotkey {
+            opacity: 0;
+        }
     }
 
     &.btnSecondary {
         --button-bg: var(--c-gray-d);
         --button-text: var(--c-primary);
-
-        &:hover {
-            --button-bg: var(--c-white);
-            --button-text: var(--c-primary);
-        }
+        --button-bg-hover: var(--c-white);
+        --button-text-hover: var(--c-primary);
     }
 
     &.btnPrimary {
         --button-bg: var(--c-primary);
         --button-text: var(--c-gray-d);
-
-        &:hover {
-            --button-bg: var(--c-white);
-            --button-text: var(--c-primary);
-        }
+        --button-bg-hover: var(--c-white);
+        --button-text-hover: var(--c-primary);
 
         &:focus {
             outline-color: var(--c-white);
@@ -84,7 +100,37 @@
         --button-text: var(--c-primary);
 
         &:hover {
-            --button-text: var(--c-white);
+            --button-text-hover: var(--c-white);
         }
+    }
+
+    &.disabled {
+        --button-bg: var(--c-gray-d);
+        --button-text: var(--c-gray-l);
+        --button-bg-hover: var(--c-gray-d);
+        --button-text-hover: var(--c-red);
+        cursor: not-allowed;
+
+        &:active {
+            transform: scale(0.98);
+        }
+    }
+}
+
+@keyframes focusedButton {
+    0% {
+        background-color: var(--button-bg);
+    }
+    100% {
+        background-color: var(--button-bg-hover, var(--button-bg));
+    }
+}
+
+@keyframes focusedButtonLabel {
+    0% {
+        color: var(--button-text);
+    }
+    100% {
+        color: var(--button-text-hover, var(--button-text));
     }
 }

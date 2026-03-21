@@ -41,4 +41,7 @@ export type { Engine, Ticker };
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
 export type { SwarmData, SwarmId, SwarmUnitData, SwarmUnitId, GameSwarms } from './swarms';
 export type * from './types';
+export type { HighlightedTile } from './ui';
 export type { GameWorld } from './world';
+
+export type { BsmlValue, BsmlValueType } from './program/value';

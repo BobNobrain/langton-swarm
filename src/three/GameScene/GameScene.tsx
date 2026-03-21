@@ -24,9 +24,11 @@ export const GameScene: Component = () => {
             <PlanetMesh
                 planetNodes={game.world.planet()?.nodes ?? []}
                 selectedTileId={game.ui.rSelectedTile()}
+                hilightedTiles={game.ui.rHighlightedTiles()}
                 onTileClick={(tileId) => {
                     game.ui.selectTile(tileId);
                 }}
+                onTileHover={game.ui.hoverTile}
             />
             <PlanetResources />
             <GameSwarms />

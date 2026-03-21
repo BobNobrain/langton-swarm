@@ -1,7 +1,7 @@
 import type { BehaviourTickContext, UnitBehaviour, UnitCommand, UnitCommandArg } from '../types';
 import { FNS, typecheck } from './functions';
 import type { BsmlExpression, BsmlInstruction, BsmlProgram, BsmlStateDeclaration } from './program';
-import { evaluateExpression, isTruthy, renderValue, type EvalOptions } from './utils';
+import { evaluateExpression, isTruthy, namedArguments, renderValue, type EvalOptions } from './utils';
 import type { BsmlValue, BsmlValueType } from './value';
 
 type StateProgramData = {
@@ -154,12 +154,12 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
                         return;
                     }
 
-                    const data: Record<string, BsmlValue> = {};
-                    for (let i = 0; i < Math.min(evaledArgs.argv.length, argNames.length); i++) {
-                        data[argNames[i]] = evaledArgs.argv[i];
-                    }
-
-                    ctx.setState({ state: state.value, data, instructionPointer: 0, prev: null });
+                    ctx.setState({
+                        state: state.value,
+                        data: namedArguments(argNames, evaledArgs.argv),
+                        instructionPointer: 0,
+                        prev: null,
+                    });
                     // no need to set the instruction pointer when switching states
                     break;
                 }
@@ -224,14 +224,12 @@ export function createRunner(program: BsmlProgram): UnitBehaviour {
                 return;
             }
 
-            const argNames = statesByName[cmdStateName].argNames;
-            const cmdData: Record<string, BsmlValue> = {};
-
-            for (let i = 0; i < Math.min(args.length, argNames.length); i++) {
-                cmdData[argNames[i]] = args[i];
-            }
-
-            ctx.setState({ state: cmdStateName, data: cmdData, instructionPointer: 0, prev: ctx.behaviourState });
+            ctx.setState({
+                state: cmdStateName,
+                data: namedArguments(statesByName[cmdStateName].argNames, args),
+                instructionPointer: 0,
+                prev: ctx.behaviourState,
+            });
         },
     };
 }

@@ -143,5 +143,16 @@ export function renderValue(val: BsmlValue | null): string {
 
         case 'state':
             return `:${val.value}`;
+
+        case 'blueprint':
+            return `<blueprint:${val.value}>`;
     }
+}
+
+export function namedArguments(names: string[], values: BsmlValue[]): Record<string, BsmlValue> {
+    const result: Record<string, BsmlValue> = {};
+    for (let i = 0; i < Math.min(values.length, names.length); i++) {
+        result[names[i]] = values[i];
+    }
+    return result;
 }

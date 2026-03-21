@@ -1,5 +1,6 @@
 import type { BlueprintController, BlueprintDeck, BlueprintId } from './deck';
 import type { GameSwarms, SwarmUnitId } from './swarms';
+import type { NodeId } from './types';
 
 export function rGetUnitIdsByBlueprint({
     id: blueprintId,
@@ -45,4 +46,12 @@ export function getUnitBlueprint({
     }
 
     return { blueprint, version: swarm.blueprintVersion };
+}
+
+export function renderTileId(tid: NodeId | null | undefined) {
+    if (typeof tid !== 'number') {
+        return '--';
+    }
+
+    return '#' + tid.toString(16).padStart(3, '0');
 }

@@ -23,9 +23,10 @@ export const List: ParentComponent<{
 export const ListItem: ParentComponent<{
     checked?: boolean;
     onCheck?: (newValue: boolean) => void;
+    selected?: boolean;
     right?: JSX.Element;
     class?: string;
-    onClick?: () => void;
+    onClick?: (ev: MouseEvent) => void;
     onMainClick?: () => void;
 }> = (props) => {
     return (
@@ -34,6 +35,7 @@ export const ListItem: ParentComponent<{
             classList={{
                 [props.class ?? '']: Boolean(props.class),
                 [styles.clickable]: Boolean(props.onClick || props.onMainClick),
+                [styles.selected]: props.selected,
             }}
             onClick={props.onClick}
         >

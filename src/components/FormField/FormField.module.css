@@ -1,0 +1,56 @@
+.field {
+    display: flex;
+
+    background-color: var(--c-gray-l);
+    color: var(--c-black);
+    border: solid var(--c-gray-m) 0px;
+    border-left-width: 12px;
+
+    &.done {
+        border-color: var(--c-primary);
+    }
+    &.error {
+        border-color: var(--c-red);
+    }
+
+    &:focus-within {
+        background-color: var(--c-white);
+        animation: activeField infinite alternate 1s ease-in-out;
+
+        & .label {
+            color: var(--c-primary);
+            background-color: var(--c-gray-d);
+            font-weight: 600;
+        }
+    }
+}
+
+.label {
+    width: 40%;
+    max-width: 120px;
+    min-width: 50px;
+    flex: 0 0 auto;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    padding: 4px 8px;
+    padding-right: 0;
+
+    background-color: var(--c-gray-m);
+    color: var(--c-white);
+}
+
+.input {
+    flex: 1 1 auto;
+}
+
+@keyframes activeField {
+    0% {
+        border-color: var(--c-white);
+    }
+    100% {
+        border-color: var(--c-primary);
+    }
+}

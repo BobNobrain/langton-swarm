@@ -40,7 +40,12 @@
     }
 
     &:hover {
-        background-color: var(--c-gray-d);
+        background-color: var(--c-gray-m);
+    }
+
+    &.selected {
+        background-color: var(--c-gray-m);
+        color: var(--c-primary);
     }
 
     &.clickable {
@@ -61,7 +66,7 @@
     align-content: center;
 
     .item.clickable:hover & {
-        color: var(--c-primary);
+        color: var(--c-white);
     }
 }
 

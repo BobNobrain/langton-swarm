@@ -20,7 +20,6 @@ const DeckListItem: Component<{
     const unitCounts = createMemo(() => {
         swarms.rSwarmIds(); // invalidate this memo each time a new swarm appears (or old one gets removed)
         const swarmIds = swarms.findSwarms(props.item.id);
-        console.log(props.item.id, swarmIds);
         let totalUnits = 0;
         let currentVersionUnits = 0;
 

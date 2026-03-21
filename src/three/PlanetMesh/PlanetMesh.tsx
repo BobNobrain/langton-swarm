@@ -1,32 +1,40 @@
-import { createMemo, type Component } from 'solid-js';
+import { createMemo, For, type Component } from 'solid-js';
 import {
     BufferAttribute,
     BufferGeometry,
-    Float32BufferAttribute,
-    Line,
     LineBasicMaterial,
     LineSegments,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
+    type Material,
 } from 'three';
-import type { NodeId, SurfaceNode } from '@/game/types';
+import type { HighlightedTile, NodeId, SurfaceNode } from '@/game';
+import { renderTileId } from '@/game/utils';
 import { calcCenter, normz, scale } from '@/lib/3d';
+import { MouseButton } from '@/lib/input';
 import { getInvertedMesh, MeshBuilder, type MaterialData, type RawFace } from '@/lib/MeshBuilder';
 import { MeshPainter } from '@/lib/MeshPainter';
-import { useInScene } from '../hooks/useInScene';
 import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
-import { MouseButton } from '@/lib/input';
+import { useInScene, useAllInScene } from '../hooks/useInScene';
+import { createTileBorderGeometry, getTileVerticies, intersectionToTileId } from './utils';
 
 const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.3, linewidth: 2, transparent: true });
 const selectionMat = new LineBasicMaterial({ color: 0x67b740, transparent: true, linewidth: 3 });
 const hoverMat = new MeshBasicMaterial({ color: 0x67b740, transparent: true, opacity: 0.4 });
 const SCALE_UP = 1.001;
 
+const borderMatsByColor: Record<HighlightedTile['color'], Material> = {
+    primary: selectionMat,
+    white: new LineBasicMaterial({ color: 0xffffff, transparent: true, linewidth: 3 }),
+};
+
 export const PlanetMesh: Component<{
     planetNodes: SurfaceNode[];
     selectedTileId?: NodeId | null;
+    hilightedTiles?: HighlightedTile[];
     onTileClick: (tileId: NodeId) => void;
+    onTileHover: (tileId: NodeId | null) => void;
 }> = (props) => {
     const graphBuilder = createMemo(() => {
         const nodes = props.planetNodes;
@@ -167,21 +175,25 @@ export const PlanetMesh: Component<{
             return null;
         }
 
-        const verticies = surface
-            .face(index)
-            .map((vi) => surface.coords(vi))
-            .map(scale(SCALE_UP));
+        const verticies = getTileVerticies(surface, index).map(scale(SCALE_UP));
+        return createTileBorderGeometry({ verticies, mat: selectionMat, name: 'selectedTileBorder' });
+    });
 
-        verticies.push(verticies[0]);
+    const hilightedTileMeshes = createMemo(() => {
+        const surface = invertedMesh();
+        if (!surface) {
+            return [];
+        }
 
-        const polyGeometry = new BufferGeometry();
-        polyGeometry.setAttribute('position', new Float32BufferAttribute(verticies.flat(), 3));
-
-        const borderLine = new Line(polyGeometry, selectionMat);
-        borderLine.renderOrder = -1;
-        borderLine.name = 'activeTileBorder';
-
-        return borderLine;
+        const hts = props.hilightedTiles ?? [];
+        return hts.map((ht) => {
+            const verticies = getTileVerticies(surface, ht.tileId).map(scale(SCALE_UP));
+            return createTileBorderGeometry({
+                verticies,
+                mat: borderMatsByColor[ht.color],
+                name: 'hilightedTile_' + renderTileId(ht.tileId),
+            });
+        });
     });
 
     const hoverGeometry = new BufferGeometry();
@@ -190,6 +202,7 @@ export const PlanetMesh: Component<{
     hoverPoly.name = 'hoveredTilePoly';
     onBeforeRepaint(({ cursor }) => {
         hoverPoly.visible = false;
+        props.onTileHover(null);
 
         if (!cursor) {
             return;
@@ -201,21 +214,14 @@ export const PlanetMesh: Component<{
         }
 
         const [closestIntersection] = cursor.intersectObject(planet);
-        if (!closestIntersection) {
+        const originalFaceIndex = intersectionToTileId(closestIntersection);
+        if (originalFaceIndex === -1) {
             return;
         }
 
-        const faceIndexMap = closestIntersection.object.userData.faceIndexMap as Record<number, number> | undefined;
-        if (!faceIndexMap) {
-            return;
-        }
+        props.onTileHover(originalFaceIndex);
 
-        const originalFaceIndex = faceIndexMap[closestIntersection.faceIndex ?? -1] ?? -1;
-
-        const verticies = surface
-            .face(originalFaceIndex)
-            .map((vi) => surface.coords(vi))
-            .map(scale(SCALE_UP));
+        const verticies = getTileVerticies(surface, originalFaceIndex).map(scale(SCALE_UP));
 
         const builder = new MeshBuilder();
         for (const v of verticies) {
@@ -224,14 +230,13 @@ export const PlanetMesh: Component<{
         builder.assembleVerticies(verticies.map((_, i) => i));
         builder.buildTriangulated(planetTriangulator, hoverGeometry);
         hoverPoly.visible = true;
-
-        // hoverGeometry.setAttribute('position', new Float32BufferAttribute(verticies.flat(), 3));
     });
 
     useInScene(planetMesh);
     useInScene(gridEdgesMesh);
     useInScene(activeTileMesh);
     useInScene(() => hoverPoly);
+    useAllInScene(hilightedTileMeshes);
 
     return null;
 };

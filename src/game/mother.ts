@@ -26,7 +26,13 @@ export function createMotherConfig(swarms: GameSwarms, deck: BlueprintDeck): Uni
             return [
                 {
                     name: 'spawn',
-                    args: [],
+                    args: [
+                        {
+                            name: 'blueprint',
+                            type: 'blueprint',
+                            defaultValue: null,
+                        },
+                    ],
                 },
             ];
         },
