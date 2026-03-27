@@ -8,12 +8,13 @@ import { useExpandedPanel } from '../GameUI';
 import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import styles from './DeckBrowser.module.css';
+import { Select, type SelectOption } from '../Select/Select';
 
 const DeckListItem: Component<{
     item: BlueprintController;
     onSelect: (id: BlueprintId) => void;
 }> = (props) => {
-    const { ui, deck, units } = useGame();
+    const { ui } = useGame();
 
     const unitCounts = createMemo(() => {
         const ids = props.item.rUnitIds();
@@ -76,13 +77,12 @@ const DeckList: Component<{
 };
 
 export const DeckBrowser: Component = () => {
-    const { deck } = useGame();
+    const { deck, ui } = useGame();
 
-    const [getSelectedId, setSelectedId] = createSignal<BlueprintId | null>(null);
-    useExpandedPanel(() => getSelectedId() !== null);
+    useExpandedPanel(() => ui.rDeckSelectedBlueprint() !== null);
 
     const selectedBlueprint = createMemo(() => {
-        const bpId = getSelectedId();
+        const bpId = ui.rDeckSelectedBlueprint();
         if (bpId === null) {
             return null;
         }
@@ -92,29 +92,58 @@ export const DeckBrowser: Component = () => {
 
     const editor = useBlueprintEditorController();
 
+    const versionOptions = createMemo((): SelectOption<number>[] => {
+        const bp = selectedBlueprint();
+        if (!bp) {
+            return [];
+        }
+
+        return Object.values(bp.rVersions())
+            .map(
+                (version): SelectOption<number> => ({
+                    text: 'v' + version.version.toFixed(0),
+                    value: version.version,
+                }),
+            )
+            .sort((a, b) => b.value - a.value);
+    });
+    const selectedVersionOption = createMemo((): SelectOption<number> | null => {
+        const selected = ui.rDeckSelectedVersion() ?? selectedBlueprint()?.rLastVersion().version;
+        return versionOptions().find((option) => option.value === selected) ?? null;
+    });
+
     return (
         <>
             <FloatingPanelHeader>
                 <Header size="md" withMargin>
-                    <Show when={getSelectedId() !== null} fallback="Blueprints">
+                    <Show when={ui.rDeckSelectedBlueprint() !== null} fallback="Blueprints">
                         {selectedBlueprint()?.rName()} v.{selectedBlueprint()?.rLastVersion().version ?? '?'}
                     </Show>
                 </Header>
                 <div class={styles.toolbar}>
                     <Show
-                        when={getSelectedId() === null}
+                        when={ui.rDeckSelectedBlueprint() === null}
                         fallback={
                             <>
+                                <Select
+                                    value={selectedVersionOption()}
+                                    options={versionOptions()}
+                                    onUpdate={(option) => {
+                                        ui.deckSelectVersion(option.value);
+                                    }}
+                                    dark
+                                    popupOpening="manual"
+                                />
                                 <Button>Reset</Button>
                                 <Show
                                     when={editor.rGet().rHasChanges()}
-                                    fallback={<Button onClick={() => setSelectedId(null)}>Close</Button>}
+                                    fallback={<Button onClick={ui.deckUnselectBlueprint}>Close</Button>}
                                 >
                                     <Button
                                         style="primary"
                                         disabled={!editor.rGet().rCanSave()}
                                         onClick={() => {
-                                            const id = getSelectedId();
+                                            const id = ui.rDeckSelectedBlueprint();
                                             if (id === null) {
                                                 return;
                                             }
@@ -157,10 +186,10 @@ export const DeckBrowser: Component = () => {
                 </div>
             </FloatingPanelHeader>
             <Show
-                when={getSelectedId() === null}
+                when={ui.rDeckSelectedBlueprint() === null}
                 fallback={<BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />}
             >
-                <DeckList items={deck.rBlueprints()} onSelect={setSelectedId} />
+                <DeckList items={deck.rBlueprints()} onSelect={(id) => ui.deckSelectBlueprint(id)} />
             </Show>
         </>
     );

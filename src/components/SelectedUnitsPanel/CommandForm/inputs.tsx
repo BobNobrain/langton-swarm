@@ -37,7 +37,7 @@ const StringInput: Component<ArgInputProps> = (props) => {
 
     return (
         <TextInput
-            value={(props.value?.value ?? '') as string}
+            value={props.value?.type === 'string' ? props.value.value : ''}
             onUpdate={(value) => props.onUpdate({ type: 'string', value })}
             onKeyDown={(ev) => {
                 if (ev.code === KeyCode.Enter) {
@@ -94,7 +94,7 @@ const NumberArgInput: Component<ArgInputProps> = (props) => {
 
     return (
         <NumberInput
-            value={props.value?.value as number | undefined}
+            value={props.value?.type === 'number' ? props.value.value : undefined}
             onUpdate={(value) => props.onUpdate({ type: 'number', value })}
             onKeyDown={(ev) => {
                 if (ev.code === KeyCode.Enter) {
@@ -224,8 +224,11 @@ export const inputsByType: Record<BsmlValueType, Component<ArgInputProps>> = {
     flag: FlagInput,
     number: NumberArgInput,
     position: PositionInput,
-    state: UnknownTypeInput,
     string: StringInput,
+
+    // these cannot be set
+    state: UnknownTypeInput,
+    magic: UnknownTypeInput,
 };
 
 export type FieldController = {

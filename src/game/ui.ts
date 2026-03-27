@@ -1,4 +1,5 @@
 import { createMemo, createSignal } from 'solid-js';
+import type { BlueprintId } from './deck';
 import type { NodeId, UnitId } from './types';
 import type { GameUnitSystems } from './systems';
 
@@ -22,6 +23,12 @@ export type GameUIState = {
     rSelectedUnits(): UnitId[];
     selectUnits(ids: UnitId[]): void;
     removeSelectedUnit(id: UnitId): void;
+
+    rDeckSelectedBlueprint: () => BlueprintId | null;
+    rDeckSelectedVersion: () => number | null;
+    deckSelectBlueprint(id: BlueprintId, version?: number): void;
+    deckSelectVersion(version: number | null): void;
+    deckUnselectBlueprint(): void;
 };
 
 export function createGameUIState(units: GameUnitSystems): GameUIState {
@@ -31,6 +38,9 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
     const [rSelectedUnits, rSetSelectedUnits] = createSignal<UnitId[]>([]);
 
     let tileSelectionHijacker: ((selected: NodeId | null) => boolean | void) | null = null;
+
+    const [rDeckSelectedBlueprint, rSetDeckSelectedBlueprint] = createSignal<BlueprintId | null>(null);
+    const [rDeckSelectedVersion, rSetDeckSelectedVersion] = createSignal<number | null>(null);
 
     return {
         rSelectedTile,
@@ -89,6 +99,20 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
                 copy.splice(idx, 1);
                 return copy;
             });
+        },
+
+        rDeckSelectedBlueprint,
+        rDeckSelectedVersion,
+        deckSelectBlueprint(id, version) {
+            rSetDeckSelectedBlueprint(id);
+            rSetDeckSelectedVersion(version ?? null);
+        },
+        deckSelectVersion(version) {
+            rSetDeckSelectedVersion(version);
+        },
+        deckUnselectBlueprint() {
+            rSetDeckSelectedBlueprint(null);
+            rSetDeckSelectedVersion(null);
         },
     };
 }

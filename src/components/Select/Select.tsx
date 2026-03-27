@@ -13,8 +13,9 @@ export type SelectOption<T> = {
 type SelectProps<T> = {
     value: SelectOption<T> | null;
     options: SelectOption<T>[];
-    label?: string;
     direction?: 'up' | 'down';
+    popupOpening?: 'auto' | 'manual';
+    dark?: boolean;
     onUpdate?: (value: SelectOption<T>) => void;
     controllerRef?: ControllerRef<SelectController>;
 };
@@ -88,6 +89,17 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
         return props.value?.text ?? '--';
     });
 
+    const selectOption = (value: SelectOption<T>) => {
+        if (!props.onUpdate) {
+            return;
+        }
+
+        props.onUpdate(value);
+        if (props.popupOpening === 'manual') {
+            setOptionsVisible(false);
+        }
+    };
+
     return (
         <div class={styles.select}>
             <TextInput
@@ -95,14 +107,16 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                 onUpdate={(val) => {
                     setSearch(val);
                 }}
+                readonly={!optionsVisible()}
                 placeholder="Search options..."
                 onFocus={() => {
-                    console.log('Select > TextInput.onFocus', performance.now());
-                    setOptionsVisible(true);
+                    if (props.popupOpening !== 'manual') {
+                        setOptionsVisible(true);
+                    }
+
                     setSearch('');
                 }}
                 onBlur={() => {
-                    console.log('Select > TextInput.onBlur', performance.now());
                     if (isBlurBecauseOptionsClick) {
                         isBlurBecauseOptionsClick = false;
                         return;
@@ -116,8 +130,8 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                             ev.preventDefault();
 
                             const selected = selectedOption();
-                            if (selected && props.onUpdate) {
-                                props.onUpdate(selected);
+                            if (selected) {
+                                selectOption(selected);
                             }
                             break;
                         }
@@ -133,7 +147,13 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                             break;
                     }
                 }}
+                onClick={() => {
+                    if (props.popupOpening === 'manual') {
+                        setOptionsVisible(true);
+                    }
+                }}
                 controllerRef={searchInput.ref}
+                dark={props.dark}
             />
             <div
                 class={styles.optionsWrapper}
@@ -142,7 +162,6 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                     [styles.directionUp]: props.direction === 'up',
                 }}
                 onMouseDown={() => {
-                    console.log('Select > optionsWrapper.onMouseDown', performance.now());
                     isBlurBecauseOptionsClick = true;
                 }}
             >
@@ -156,10 +175,9 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                                 <ListItem
                                     selected={index() === selectedIndex()}
                                     onClick={(ev) => {
-                                        console.log('Select > ListItem.onClick', performance.now());
                                         ev.preventDefault();
                                         searchInput.rGet().input?.focus();
-                                        props.onUpdate?.(option);
+                                        selectOption(option);
                                     }}
                                 >
                                     {option.text}

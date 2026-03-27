@@ -100,8 +100,6 @@ const bsmlCompletion = bsmlLanguage.data.of({
             node = node.parent;
         }
 
-        console.log(path.join('<'), rules);
-
         const list: Array<string | Completion> = [];
         if (rules.suggestDeclarations) {
             list.push(

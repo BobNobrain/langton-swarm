@@ -1,7 +1,8 @@
 import { createMemo, createSignal } from 'solid-js';
+import { sequentialId, type ID } from '@/lib/ids';
 import type { UnitConfiguration, UnitId } from './types';
 
-export type BlueprintId = number;
+export type BlueprintId = ID<number, 'BlueprintId'>;
 
 export type BlueprintVersion = {
     version: number;
@@ -41,7 +42,7 @@ export type BlueprintDeck = {
 
 export function createBlueprintDeck(): BlueprintDeck {
     const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>({});
-    let idSeq = 1;
+    const blueprintId = sequentialId<BlueprintId>();
 
     return {
         rBlueprints: createMemo(() => Object.values(rCards())),
@@ -51,7 +52,7 @@ export function createBlueprintDeck(): BlueprintDeck {
         },
 
         create(name, config) {
-            const blueprint = createBlueprintController(idSeq++, name, config);
+            const blueprint = createBlueprintController(blueprintId.aquire(), name, config);
             rSetCards((old) => ({ ...old, [blueprint.id]: blueprint }));
             return blueprint;
         },

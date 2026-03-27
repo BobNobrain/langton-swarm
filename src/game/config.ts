@@ -13,5 +13,5 @@ export function createDefaultUnitConfig(): UnitConfiguration {
 }
 
 export function getProcessorTickRate(config: UnitConfiguration): number {
-    return 10; // every 10 ticks, so 2 times per second
+    return 4; // every 4 ticks, so 5 times per second
 }

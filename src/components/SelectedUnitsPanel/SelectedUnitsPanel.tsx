@@ -96,7 +96,6 @@ export const SelectedUnitsPanel: Component = () => {
                     command={activeCommand()?.cmd ?? null}
                     onSubmit={(argValues) => {
                         const active = activeCommand();
-                        console.log(active, argValues);
                         if (!active) {
                             return;
                         }

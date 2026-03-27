@@ -19,8 +19,11 @@ export type TextInputProps = {
     onBlur?: (ev: FocusEvent) => void;
     onKeyDown?: (ev: KeyboardEvent) => void;
     onKeyUp?: (ev: KeyboardEvent) => void;
+    onClick?: (ev: MouseEvent) => void;
 
     controllerRef?: ControllerRef<TextInputController>;
+
+    dark?: boolean;
 };
 
 export const TextInput: Component<TextInputProps> = (props) => {
@@ -39,6 +42,7 @@ export const TextInput: Component<TextInputProps> = (props) => {
             ref={input}
             type="text"
             class={styles.input}
+            classList={{ [styles.dark]: props.dark }}
             value={props.value}
             onInput={(el) => props.onUpdate?.(el.target.value)}
             readonly={props.readonly}
@@ -49,6 +53,7 @@ export const TextInput: Component<TextInputProps> = (props) => {
             onBlur={props.onBlur}
             onKeyDown={props.onKeyDown}
             onKeyUp={props.onKeyUp}
+            onClick={props.onClick}
         />
     );
 };

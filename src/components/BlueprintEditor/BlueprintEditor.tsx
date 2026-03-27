@@ -4,6 +4,7 @@ import { createControllerRef, provideController, type ControllerRef } from '@/li
 import { Configurator } from '../Configurator/Configurator';
 import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
 import styles from './BlueprintEditor.module.css';
+import { useGame } from '@/gameContext';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
@@ -16,16 +17,23 @@ export const BlueprintEditor: Component<{
     blueprint: BlueprintController | null;
     controllerRef?: ControllerRef<BlueprintEditorController>;
 }> = (props) => {
+    const { ui } = useGame();
+
     const [rProgramChanged, setProgramChanged] = createSignal(false);
     const [rConfigChanged, setConfigChanged] = createSignal(false);
 
-    const [selectedVersionNumber, setSelectedVersionNumber] = createSignal(
-        props.blueprint?.rLastVersion().version ?? -1,
-    );
+    const selectedVersionNumber = createMemo((): number => {
+        const raw = ui.rDeckSelectedVersion();
+        if (raw === null) {
+            return props.blueprint?.rLastVersion().version ?? -1;
+        }
+
+        return raw;
+    });
+
     createEffect(() => {
         const newLastVersion = props.blueprint?.rLastVersion().version;
         if (newLastVersion !== undefined) {
-            setSelectedVersionNumber(newLastVersion);
             setProgramChanged(false);
             setConfigChanged(false);
         }
@@ -37,13 +45,14 @@ export const BlueprintEditor: Component<{
             return null;
         }
 
-        const version = blueprint.rVersions()[selectedVersionNumber()];
-        if (!version) {
-            return null;
+        const v = ui.rDeckSelectedVersion();
+        if (v === null) {
+            return props.blueprint?.rLastVersion() ?? null;
         }
 
-        return version;
+        return blueprint.rVersions()[v] ?? null;
     });
+
     const isReadonly = createMemo(() => {
         if (!props.blueprint) {
             return true;

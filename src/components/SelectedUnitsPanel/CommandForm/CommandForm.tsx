@@ -69,10 +69,8 @@ export const CommandForm: Component<{
             return;
         }
 
-        console.log('CommandForm > onFinish(' + name + ')', performance.now());
         const currentIndex = props.command.args.findIndex((cmd) => cmd.name === name);
         if (currentIndex === props.command.args.length - 1) {
-            console.log('CommandForm > onFinish > submitButton.focus()', performance.now());
             submitButton.rGet().focus();
             return;
         }
@@ -124,7 +122,6 @@ export const CommandForm: Component<{
                                 type={arg.type}
                                 value={values()[arg.name] ?? null}
                                 onUpdate={(newValue) => {
-                                    console.log('CommandForm > input.onUpdate', performance.now());
                                     setValues((old) => ({ ...old, [arg.name]: newValue }));
                                 }}
                                 onFinish={onFinish}
