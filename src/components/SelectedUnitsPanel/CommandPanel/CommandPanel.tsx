@@ -1,6 +1,6 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
 import { Button } from '@/components/Button/Button';
-import type { SwarmUnitId, UnitCommandArg, UnitCommand } from '@/game';
+import type { UnitId, UnitCommandArg, UnitCommand } from '@/game';
 import { useGame } from '@/gameContext';
 import { Symbols } from '@/lib/ascii';
 import { DIGIT_KEY_CODES, type KeyCode } from '@/lib/input';
@@ -10,7 +10,7 @@ type CommandData = {
     name: string;
     args: UnitCommandArg[];
     hotkey: KeyCode | null;
-    appliesTo: Set<SwarmUnitId>;
+    appliesTo: Set<UnitId>;
     canImmediatelyRun: boolean;
     isConfigurable: boolean;
     isPositional: boolean;
@@ -18,23 +18,24 @@ type CommandData = {
 };
 
 export const CommandPanel: Component<{
-    onExecute: (cmd: UnitCommand) => void;
-    setHoveredCommandTargets: (value: Set<SwarmUnitId> | null) => void;
+    onExecute: (cmd: UnitCommand, targets: Set<UnitId>) => void;
+    setHoveredCommandTargets: (value: Set<UnitId> | null) => void;
 }> = (props) => {
-    const { ui, swarms } = useGame();
+    const { ui, units, deck } = useGame();
 
     const availableCommands = createMemo(() => {
         const selectedUnitIds = ui.rSelectedUnits();
         const allCommands: Record<string, CommandData> = {};
 
         for (const unitId of selectedUnitIds) {
-            const swarm = swarms.getSwarmDataByUnitId(unitId);
-            if (!swarm) {
+            const found = deck.findByUnitId(unitId);
+            if (!found) {
                 continue;
             }
 
-            const bpId = `${swarm.blueprintId}v${swarm.blueprintVersion}`;
-            const unitCommands = swarms.getUnitCommands(unitId);
+            const bpId = `${found.bp.id}v${found.v}`;
+            const unitCommands = units.queryCommands(unitId);
+
             for (const cmd of unitCommands) {
                 const cmdId = `${cmd.name}:${bpId}`;
 
@@ -103,7 +104,12 @@ export const CommandPanel: Component<{
                                           }
                                         : undefined
                                 }
-                                onClick={() => props.onExecute({ name: commandData.name, args: commandData.args })}
+                                onClick={() =>
+                                    props.onExecute(
+                                        { name: commandData.name, args: commandData.args },
+                                        commandData.appliesTo,
+                                    )
+                                }
                             >
                                 {text}
                             </Button>

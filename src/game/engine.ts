@@ -6,6 +6,7 @@ export type Engine = {
     start: () => void;
     stop: () => void;
     clear: () => void;
+    getCurrentTick: () => number;
 
     readonly tickDurationMs: number;
 };
@@ -42,6 +43,8 @@ export function createEngine(tickTime: number): Engine {
         stop: () => {
             clearInterval(intervalId);
         },
+
+        getCurrentTick: () => tick,
 
         tickDurationMs: tickTime,
     };

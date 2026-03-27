@@ -8,10 +8,10 @@ import {
     type BufferGeometry,
     type Material,
 } from 'three';
-import type { SurfaceNode } from '@/game/types';
-import { useInScene } from '../hooks/useInScene';
-import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
+import type { SurfaceNode } from '@/game';
 import { MouseButton } from '@/lib/input';
+import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
+import { useInScene } from '../hooks/useInScene';
 
 type GridObjectState = {
     nodeId: number;

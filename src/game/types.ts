@@ -1,7 +1,10 @@
 import type { Vector3 } from 'three';
+import type { ID } from '@/lib/ids';
+import type { NavMesh } from '@/lib/NavMesh';
 import type { BsmlValue, BsmlValueType } from './program/value';
 
-export type NodeId = number;
+export type NodeId = ID<number, 'NodeId'>;
+export type UnitId = ID<number, 'UnitId'>;
 
 export type SurfaceNode = {
     index: NodeId;
@@ -11,6 +14,7 @@ export type SurfaceNode = {
 
 export type Planet = {
     nodes: SurfaceNode[];
+    nav: NavMesh;
     resources: Map<NodeId, ResourceDeposit>;
 };
 
@@ -19,33 +23,10 @@ export type ResourceDeposit = {
     amount: number;
 };
 
-export type UnitData = {
-    behaviourState: BehaviourState;
-    botState: UnitState;
-    config: UnitConfiguration;
-};
-
 export type UnitEnvironment = {
     world: Planet;
+    currentTick: number;
     // TBD: other bots locations?
-};
-
-export type BehaviourTickContext = {
-    behaviourState: Readonly<BehaviourState>;
-    unitState: Readonly<UnitState>;
-    env: Readonly<UnitEnvironment>;
-
-    updateUnit: (patch: Partial<UnitState>) => void;
-    setState: (newState: BehaviourState) => void;
-    setData: (name: string, value: BsmlValue) => void;
-    setInstructionPointer: (newValue: number) => void;
-};
-
-export type UnitBehaviour = {
-    setup: () => BehaviourState;
-    tick: (ctx: BehaviourTickContext) => void;
-    getCommands: (ctx: Pick<BehaviourTickContext, 'behaviourState' | 'unitState' | 'env'>) => UnitCommand[];
-    executeCommand: (name: string, args: BsmlValue[], ctx: BehaviourTickContext) => void;
 };
 
 export type UnitCommand = {
@@ -62,25 +43,26 @@ export type UnitCommandCall = {
     args: BsmlValue[];
 };
 
-export type BehaviourState = {
-    state: string;
-    instructionPointer: number;
-    data: Record<string, BsmlValue>;
-    prev: BehaviourState | null;
-};
-
 export type UnitState = {
     location: NodeId;
 };
 
 export type UnitConfiguration = {
-    program: string | UnitBehaviour;
+    /** BSML program for unit's CPU */
+    cpu?: string;
+    /** set to true for if the unit is mother */
+    mother?: boolean;
+    /** If unit has navigation & movement capabilities */
     navigator?: boolean;
+    /** If unit has a receiver to receive commands */
     receiver?: boolean;
+    /** If unit has a scanner to scan for ores */
     scanner?: boolean;
+    /** Unit storage characteristics */
     storage?: {
         readonly size: number;
     };
+    /** Unit battery characteristics */
     battery: {
         readonly capacity: number;
     };

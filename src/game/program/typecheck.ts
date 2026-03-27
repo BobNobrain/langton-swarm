@@ -1,4 +1,5 @@
-import { FNS } from './functions';
+import type { UnitConfiguration } from '../types';
+import { getFunctions } from './functions';
 import type { BsmlExpression, BsmlFunctionCall, BsmlInstruction, BsmlProgram, CodePosition } from './program';
 import type { BsmlValueType } from './value';
 
@@ -10,6 +11,7 @@ type TypecheckMessage = {
 type TypecheckState = {
     result: TypecheckMessage[];
     stateArgTypes: Record<string, BsmlValueType[]>;
+    fns: ReturnType<typeof getFunctions>;
 };
 type LocalState = {
     variables: Record<string, BsmlValueType | null>;
@@ -17,11 +19,12 @@ type LocalState = {
 
 const MAGIC_IDENTIFIERS = ['random', 'zero'];
 
-export function typecheck(program: BsmlProgram): TypecheckMessage[] {
+export function typecheck(program: BsmlProgram, config: UnitConfiguration | null): TypecheckMessage[] {
     const result: TypecheckMessage[] = [];
     const state: TypecheckState = {
         result,
         stateArgTypes: { idle: [], error: [] },
+        fns: getFunctions(config),
     };
 
     for (const stateDecl of program.stateDeclarations) {
@@ -111,7 +114,7 @@ function typecheckFunctionCall(
     state: TypecheckState,
     localState: LocalState,
 ): BsmlValueType | null {
-    const fn = FNS[call.name];
+    const fn = state.fns[call.name];
     if (!fn) {
         state.result.push({ pos: call.pos, message: `Unknown function ${call.name}` });
         return null;

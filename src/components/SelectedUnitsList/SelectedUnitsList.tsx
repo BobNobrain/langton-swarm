@@ -1,39 +1,38 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
-import styles from './SelectedUnitsList.module.css';
+import type { BlueprintId, UnitId } from '@/game';
 import { useGame } from '@/gameContext';
-import { getUnitBlueprint, rGetUnitIdsByBlueprint } from '@/game/utils';
-import type { BlueprintId, SwarmUnitId } from '@/game';
-import { List, ListEmptyContent, ListItem } from '../List/List';
-import { Button } from '../Button/Button';
 import { Symbols } from '@/lib/ascii';
+import { Button } from '../Button/Button';
+import { List, ListEmptyContent, ListItem } from '../List/List';
+import styles from './SelectedUnitsList.module.css';
 
 type UnitData = {
-    id: SwarmUnitId;
+    id: UnitId;
     blueprintId: BlueprintId;
     blueprintName: () => string;
     blueprintVersion: number;
 };
 
 export const SelectedUnitsList: Component<{
-    hoveredCommandTargets: Set<SwarmUnitId> | null;
+    hoveredCommandTargets: Set<UnitId> | null;
 }> = (props) => {
-    const { ui, swarms, deck } = useGame();
+    const { ui, deck } = useGame();
 
     const selectedUnits = createMemo(() => {
         const ids = ui.rSelectedUnits();
         const result: UnitData[] = [];
 
         for (const unitId of ids) {
-            const unitBlueprint = getUnitBlueprint({ unitId, swarms, deck });
-            if (!unitBlueprint) {
+            const found = deck.findByUnitId(unitId);
+            if (!found) {
                 continue;
             }
 
             result.push({
                 id: unitId,
-                blueprintId: unitBlueprint.blueprint.id,
-                blueprintName: unitBlueprint.blueprint.rName,
-                blueprintVersion: unitBlueprint.version,
+                blueprintId: found.bp.id,
+                blueprintName: found.bp.rName,
+                blueprintVersion: found.v,
             });
         }
         return result;
@@ -64,7 +63,7 @@ export const SelectedUnitsList: Component<{
                                 class={styles.unitBlueprintName}
                                 role="button"
                                 onClick={() => {
-                                    ui.selectUnits(rGetUnitIdsByBlueprint({ id: unitData.blueprintId, swarms }));
+                                    ui.selectUnits(deck.getBlueprint(unitData.blueprintId)!.rUnitIdsFlat());
                                 }}
                             >
                                 {unitData.blueprintName()}
@@ -74,11 +73,9 @@ export const SelectedUnitsList: Component<{
                                 role="button"
                                 onClick={() => {
                                     ui.selectUnits(
-                                        rGetUnitIdsByBlueprint({
-                                            id: unitData.blueprintId,
-                                            version: unitData.blueprintVersion,
-                                            swarms,
-                                        }),
+                                        deck.getBlueprint(unitData.blueprintId)!.rUnitIds()[
+                                            unitData.blueprintVersion
+                                        ] ?? [],
                                     );
                                 }}
                             >

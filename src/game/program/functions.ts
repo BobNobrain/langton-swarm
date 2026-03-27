@@ -1,46 +1,33 @@
-import type { BehaviourTickContext } from '../types';
+import { CPU_FNS } from '../systems/cpu';
+import { NAVIGATOR_FNS } from '../systems/navigator';
+import type { UnitConfiguration } from '../types';
 import type { BsmlValue, BsmlValueType } from './value';
 
 type BuiltinFn = {
     argTypes: BsmlValueType[];
     returnType: BsmlValueType | null;
-    call: (values: BsmlValue[], ctx: BehaviourTickContext) => BsmlValue | null;
 };
 
-export const FNS: Record<string, BuiltinFn> = {
-    'navigator.move': {
-        argTypes: ['position'],
-        returnType: null,
-        call: ([position], ctx) => {
-            const pos = position.value as number; // we expect position
-            const node = ctx.env.world.nodes[ctx.unitState.location];
+export function getFunctions(config: UnitConfiguration | null) {
+    const result: Record<string, BuiltinFn> = {};
+    const add = (namespace: string, name: string, args: BsmlValueType[], ret: BsmlValueType | null) => {
+        result[[namespace, name].filter(Boolean).join('.')] = { argTypes: args, returnType: ret };
+    };
 
-            if (!node.connections.has(pos)) {
-                // TODO: report error somehow?
-                return null;
-            }
+    for (const [name, fn] of Object.entries(CPU_FNS)) {
+        add('', name, fn.argTypes, fn.returnType);
+    }
 
-            ctx.updateUnit({ location: pos });
-            return null;
-        },
-    },
-    'navigator.navigate': {
-        argTypes: ['position'],
-        returnType: null,
-        call: () => {
-            return null;
-        },
-    },
-    'drill.mine': {
-        argTypes: [],
-        returnType: null,
-        call: () => {
-            return null;
-        },
-    },
-};
+    if (config?.navigator ?? true) {
+        for (const [name, fn] of Object.entries(NAVIGATOR_FNS)) {
+            add('navigator', name, fn.argTypes, fn.returnType);
+        }
+    }
 
-export function typecheck(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTypes'>): string | null {
+    return result;
+}
+
+export function typecheckValues(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTypes'>): string | null {
     if (values.length !== fn.argTypes.length) {
         return `wrong number of arguments: expected ${fn.argTypes.length}, found ${values.length}`;
     }
@@ -52,7 +39,7 @@ export function typecheck(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTypes'>):
         }
 
         const actual = values[i].type;
-        if (expected !== actual) {
+        if (expected !== actual && actual !== 'magic') {
             return `mismatching types: expected ${expected}, got ${actual}`;
         }
     }

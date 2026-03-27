@@ -1,5 +1,5 @@
 import { createMemo, createSignal } from 'solid-js';
-import type { UnitConfiguration } from './types';
+import type { UnitConfiguration, UnitId } from './types';
 
 export type BlueprintId = number;
 
@@ -14,9 +14,13 @@ export type BlueprintController = {
     rName: () => string;
     rVersions: () => Record<number, BlueprintVersion>;
     rLastVersion: () => BlueprintVersion;
+    rUnitIds: () => Record<number, UnitId[]>;
+    rUnitIdsFlat: () => UnitId[];
 
     lockVersion(v: number): void;
     updateConfiguration(patch: UnitConfiguration): void;
+    registerUnit(unitId: UnitId, v: number): void;
+    findUnitIdVersion(unitId: UnitId): number | null;
 };
 
 type BlueprintControllerFull = BlueprintController & {
@@ -32,6 +36,7 @@ export type BlueprintDeck = {
     rename(id: BlueprintId, newName: string): void;
     getConfiguration(id: BlueprintId, version: number): UnitConfiguration | null;
     findByName(name: string): BlueprintController | null;
+    findByUnitId(unitId: UnitId): { bp: BlueprintController; v: number } | null;
 };
 
 export function createBlueprintDeck(): BlueprintDeck {
@@ -71,11 +76,22 @@ export function createBlueprintDeck(): BlueprintDeck {
         findByName(name) {
             return Object.values(rCards()).find((card) => card.rName() === name) ?? null;
         },
+
+        findByUnitId(unitId) {
+            for (const card of Object.values(rCards())) {
+                const v = card.findUnitIdVersion(unitId);
+                if (v !== null) {
+                    return { bp: card, v };
+                }
+            }
+            return null;
+        },
     };
 }
 
 function createBlueprintController(id: BlueprintId, name: string, config: UnitConfiguration): BlueprintControllerFull {
     const [rName, rSetName] = createSignal(name);
+    const [rUnitIds, rSetUnitIds] = createSignal<Record<number, UnitId[]>>({});
     let lastVersion = 0;
 
     const firstVersion: BlueprintVersion = {
@@ -92,12 +108,16 @@ function createBlueprintController(id: BlueprintId, name: string, config: UnitCo
         return rVersions()[lastVersion];
     });
 
+    const versionNumbersByUnitId: Record<UnitId, number> = {};
+
     return {
         id,
         rName,
         rSetName,
         rVersions,
         rLastVersion,
+        rUnitIds,
+        rUnitIdsFlat: createMemo(() => Object.values(rUnitIds()).flat()),
 
         updateConfiguration(patch) {
             setRVersions((all) => {
@@ -135,6 +155,15 @@ function createBlueprintController(id: BlueprintId, name: string, config: UnitCo
 
         getConfiguration(v) {
             return rVersions()[v]?.config ?? null;
+        },
+
+        registerUnit(unitId, v) {
+            versionNumbersByUnitId[unitId] = v;
+            rSetUnitIds((old) => ({ ...old, [v]: (old[v] ?? []).concat([unitId]) }));
+        },
+
+        findUnitIdVersion(unitId) {
+            return versionNumbersByUnitId[unitId] ?? null;
         },
     };
 }

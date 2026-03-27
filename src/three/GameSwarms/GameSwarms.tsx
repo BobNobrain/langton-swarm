@@ -1,58 +1,46 @@
 import { createEffect, createMemo, createSignal, For, type Component } from 'solid-js';
-import type { SurfaceNode, NodeId, SwarmId } from '@/game';
+import { SurfaceNode, NodeId, UnitModelType } from '@/game';
 import { useGame } from '@/gameContext';
 import { GridObjects } from '../GridObjects/GridObjects';
-import { getUnitModel } from '../models/bots';
 import { onBeforeRepaint } from '../hooks/handlers';
+import { getUnitModel } from '../models/units';
 
-const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => {
-    const { swarms, deck } = useGame();
+const Swarm: Component<{ modelType: UnitModelType; nodes: SurfaceNode[] }> = (props) => {
+    const { deck, units } = useGame();
     const [getPositions, setPositions] = createSignal<NodeId[]>([]);
     let lastTickUpdated = 0;
 
     createEffect(() => {
-        const swarm = swarms.getSwarmData(props.swarmId);
-        if (!swarm) {
-            return [];
-        }
+        const rIds = units.signals.getUnitIdsSignal(props.modelType);
 
         const result: NodeId[] = [];
-        for (const botId of swarm.rUnitIds()) {
-            const state = swarm.botStates[botId];
+        for (const unitId of rIds()) {
+            const state = units.unitStates[unitId];
             if (!state) {
                 continue;
             }
 
-            result.push(state.unit.location);
+            result.push(state.location);
         }
 
         setPositions(result);
     });
 
-    const model = createMemo(() => {
-        const swarm = swarms.getSwarmData(props.swarmId);
-        const bp = swarm ? deck.getConfiguration(swarm.blueprintId, swarm.blueprintVersion) : null;
-        return getUnitModel(bp);
-    });
+    const model = createMemo(() => getUnitModel(props.modelType));
 
     onBeforeRepaint(() => {
-        const swarm = swarms.getSwarmData(props.swarmId);
-        if (!swarm) {
-            return;
-        }
-
         const currentPositions: NodeId[] = [];
         const signalUpdatedTo = lastTickUpdated;
 
-        // TODO: rBotIds() does not care about bot ordering
-        for (const botId of swarm.rUnitIds()) {
-            const state = swarm.botStates[botId];
+        // TODO: this signal does not care about unit ordering
+        for (const unitId of units.signals.getUnitIdsSignal(props.modelType)()) {
+            const state = units.unitStates[unitId];
             if (!state) {
                 continue;
             }
 
-            currentPositions.push(state.unit.location);
-            lastTickUpdated = Math.max(lastTickUpdated, state.lastTickId);
+            currentPositions.push(state.location);
+            lastTickUpdated = Math.max(lastTickUpdated, units.getLastUpdatedTime(unitId));
         }
 
         if (signalUpdatedTo !== lastTickUpdated) {
@@ -71,14 +59,16 @@ const Swarm: Component<{ swarmId: SwarmId; nodes: SurfaceNode[] }> = (props) => 
     );
 };
 
+const ALL_MODELS = [UnitModelType.Mother, UnitModelType.Rover];
+
 export const GameSwarms: Component = () => {
     const game = useGame();
     const nodes = createMemo(() => game.world.planet()?.nodes ?? []);
 
     return (
-        <For each={game.swarms.rSwarmIds()}>
-            {(swarmId) => {
-                return <Swarm nodes={nodes()} swarmId={swarmId} />;
+        <For each={ALL_MODELS}>
+            {(modelType) => {
+                return <Swarm nodes={nodes()} modelType={modelType} />;
             }}
         </For>
     );

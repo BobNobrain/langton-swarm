@@ -1,5 +1,12 @@
 export type RawVertex = Readonly<[x: number, y: number, z: number]>;
 
+export function distSquared(v1: RawVertex, v2: RawVertex): number {
+    const dx = v1[0] - v2[0];
+    const dy = v1[1] - v2[1];
+    const dz = v1[2] - v2[2];
+    return dx * dx + dy * dy + dz * dz;
+}
+
 export function calcCenter(vs: RawVertex[]): RawVertex {
     let x = 0;
     let y = 0;

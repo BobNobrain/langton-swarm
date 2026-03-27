@@ -1,5 +1,5 @@
 import { BoxGeometry, MeshStandardMaterial, type BufferGeometry, type Material } from 'three';
-import type { UnitConfiguration } from '@/game';
+import { UnitModelType } from '@/game';
 
 type UnitModel = {
     geom: BufferGeometry;
@@ -39,14 +39,15 @@ const unknown: UnitModel = {
     }),
 };
 
-export function getUnitModel(config: UnitConfiguration | null): UnitModel {
-    if (!config) {
-        return unknown;
-    }
+export function getUnitModel(type: UnitModelType): UnitModel {
+    switch (type) {
+        case UnitModelType.Mother:
+            return mother;
 
-    if (config.navigator) {
-        return rover;
-    }
+        case UnitModelType.Rover:
+            return rover;
 
-    return mother;
+        default:
+            return unknown;
+    }
 }

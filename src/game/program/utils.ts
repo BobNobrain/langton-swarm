@@ -1,6 +1,6 @@
 import { randomElement } from '@/lib/random';
-import type { UnitEnvironment, UnitState } from '../types';
-import type { BsmlExpression } from './program';
+import type { UnitCommand, UnitEnvironment, UnitState } from '../types';
+import type { BsmlExpression, BsmlProgram } from './program';
 import type { BsmlValue, BsmlValueType } from './value';
 
 export type EvalOptions = {
@@ -123,7 +123,7 @@ export function isTruthy(val: BsmlValue): boolean {
     }
 }
 
-export function renderValue(val: BsmlValue | null): string {
+export function renderValue(val: BsmlValue | null | undefined): string {
     if (!val) {
         return '<null>';
     }
@@ -146,6 +146,9 @@ export function renderValue(val: BsmlValue | null): string {
 
         case 'blueprint':
             return `<blueprint:${val.value}>`;
+
+        case 'magic':
+            return `<${val.name}>`;
     }
 }
 
@@ -155,4 +158,45 @@ export function namedArguments(names: string[], values: BsmlValue[]): Record<str
         result[names[i]] = values[i];
     }
     return result;
+}
+
+export function extractTyped<T extends BsmlValueType>(
+    data: Record<string, BsmlValue>,
+    name: string,
+    type: T,
+    magic: Record<string, Extract<BsmlValue, { type: T }>> = {},
+): Extract<BsmlValue, { type: T }> | null {
+    const val = data[name];
+
+    if (val.type === 'magic') {
+        const magicValue = magic[val.name];
+        if (!magicValue) {
+            console.error('[WARN] extract typed: could not resolve magic value ' + val.name);
+            return null;
+        }
+
+        return magicValue;
+    }
+
+    if (!val || val.type !== type) {
+        return null;
+    }
+
+    return val as never;
+}
+
+export function getCommandStateName(commandName: string): string {
+    return `cmd:${commandName}`;
+}
+export function isCommandStateName(stateName: string): boolean {
+    return stateName.startsWith('cmd:');
+}
+
+export function extractCommands(program: BsmlProgram): UnitCommand[] {
+    return program.commandDeclarations.map(
+        (decl): UnitCommand => ({
+            name: decl.name,
+            args: decl.args.map((arg) => ({ name: arg.name, type: arg.type as BsmlValueType, defaultValue: null })),
+        }),
+    );
 }

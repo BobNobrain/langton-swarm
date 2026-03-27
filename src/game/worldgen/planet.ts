@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { diff, mul, normz, size, sizeSquared, sum, ZERO, type RawVertex } from '@/lib/3d';
 import { icosahedron } from '@/lib/icosa';
 import type { MeshBuilder } from '@/lib/MeshBuilder';
+import { NavMesh } from '@/lib/NavMesh';
 import { drawInteger, RandomNumberGenerator, type RandomSequence } from '@/lib/random';
 import { SurfaceNode, type Planet } from '../types';
 import { generateResourceDeposits } from './resources';
@@ -20,8 +21,10 @@ export function generatePlanet(seed: string): Planet {
 
     const planet: Planet = {
         nodes,
+        nav: new NavMesh(mb.getAllCoords().slice(), connections),
         resources: new Map(),
     };
+    console.log('[INFO] Graph size', planet.nodes.length);
 
     generateResourceDeposits(seed, planet);
 

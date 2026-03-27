@@ -1,18 +1,23 @@
 import { createEffect, createSignal, Show, type Component } from 'solid-js';
-import type { SwarmUnitId, UnitCommand, UnitCommandArg } from '@/game';
+import type { UnitCommand, UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
 import { Header } from '../Header/Header';
 import { SelectedUnitsList } from '../SelectedUnitsList/SelectedUnitsList';
+import { CommandForm } from './CommandForm/CommandForm';
 import { CommandPanel } from './CommandPanel/CommandPanel';
 import styles from './SelectedUnitsPanel.module.css';
-import { CommandForm } from './CommandForm/CommandForm';
+
+type ActiveCommand = {
+    cmd: UnitCommand;
+    targets: Set<UnitId>;
+};
 
 export const SelectedUnitsPanel: Component = () => {
-    const { ui, swarms } = useGame();
-    const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<SwarmUnitId> | null>(null);
-    const [activeCommand, setActiveCommand] = createSignal<UnitCommand | null>(null);
+    const { ui, units } = useGame();
+    const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<UnitId> | null>(null);
+    const [activeCommand, setActiveCommand] = createSignal<ActiveCommand | null>(null);
 
     createEffect(() => {
         ui.rSelectedUnits();
@@ -25,16 +30,16 @@ export const SelectedUnitsPanel: Component = () => {
                 <Header size="sm">Units ({ui.rSelectedUnits().length})</Header>
                 <CommandPanel
                     setHoveredCommandTargets={setHoveredCommandTargets}
-                    onExecute={(cmd) => {
+                    onExecute={(cmd, targets) => {
                         if (cmd.args.length === 0) {
-                            swarms.execUnitCommand(ui.rSelectedUnits(), {
+                            units.executeCommandMany(ui.rSelectedUnits(), {
                                 name: cmd.name,
                                 args: [],
                             });
                             return;
                         }
 
-                        setActiveCommand(cmd);
+                        setActiveCommand({ cmd, targets });
                     }}
                 />
             </FloatingPanelHeader>
@@ -62,16 +67,16 @@ export const SelectedUnitsPanel: Component = () => {
             </footer>
             <FloatingPanelOverlay visible={activeCommand() !== null}>
                 <CommandForm
-                    command={activeCommand()}
+                    command={activeCommand()?.cmd ?? null}
                     onSubmit={(argValues) => {
-                        const cmd = activeCommand();
-                        console.log(cmd, argValues);
-                        if (!cmd) {
+                        const active = activeCommand();
+                        console.log(active, argValues);
+                        if (!active) {
                             return;
                         }
 
-                        swarms.execUnitCommand(ui.rSelectedUnits(), {
-                            name: cmd.name,
+                        units.executeCommandMany(Array.from(active.targets.values()), {
+                            name: active.cmd.name,
                             args: argValues,
                         });
 

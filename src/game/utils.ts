@@ -1,52 +1,6 @@
-import type { BlueprintController, BlueprintDeck, BlueprintId } from './deck';
-import type { GameSwarms, SwarmUnitId } from './swarms';
+import type { BlueprintDeck, BlueprintId } from './deck';
+import type { createGameSystems } from './systems';
 import type { NodeId } from './types';
-
-export function rGetUnitIdsByBlueprint({
-    id: blueprintId,
-    version,
-    swarms,
-}: {
-    id: BlueprintId;
-    version?: number;
-    swarms: GameSwarms;
-}): SwarmUnitId[] {
-    const swarmIds = swarms.findSwarms(blueprintId, version);
-    const unitIds: SwarmUnitId[] = [];
-
-    for (const swarmId of swarmIds) {
-        const swarm = swarms.getSwarmData(swarmId);
-        if (!swarm) {
-            continue;
-        }
-
-        unitIds.push(...swarm.rUnitIds());
-    }
-
-    return unitIds;
-}
-
-export function getUnitBlueprint({
-    unitId,
-    deck,
-    swarms,
-}: {
-    unitId: SwarmUnitId;
-    deck: BlueprintDeck;
-    swarms: GameSwarms;
-}): { blueprint: BlueprintController; version: number } | null {
-    const swarm = swarms.getSwarmDataByUnitId(unitId);
-    if (!swarm) {
-        return null;
-    }
-
-    const blueprint = deck.getBlueprint(swarm.blueprintId);
-    if (!blueprint) {
-        return null;
-    }
-
-    return { blueprint, version: swarm.blueprintVersion };
-}
 
 export function renderTileId(tid: NodeId | null | undefined) {
     if (typeof tid !== 'number') {
@@ -54,4 +8,34 @@ export function renderTileId(tid: NodeId | null | undefined) {
     }
 
     return '#' + tid.toString(16).padStart(3, '0');
+}
+
+export function spawnFromDeck(
+    deck: BlueprintDeck,
+    systems: Pick<ReturnType<typeof createGameSystems>, 'spawn'>,
+    at: NodeId,
+    bpId: BlueprintId,
+    bpVersionNumber?: number,
+) {
+    const bp = deck.getBlueprint(bpId);
+    if (!bp) {
+        console.error('[WARN] spawnFromDeck: blueprint not found', bpId);
+        return;
+    }
+
+    const version =
+        bpVersionNumber === undefined || bpVersionNumber < 0 ? bp.rLastVersion() : bp.rVersions()[bpVersionNumber];
+
+    if (!version) {
+        console.error('[WARN] spawnFromDeck: blueprint version not found', {
+            bpId,
+            bpVersion: bpVersionNumber,
+            vs: bp.rVersions(),
+        });
+        return;
+    }
+
+    bp.lockVersion(version.version);
+    const unitId = systems.spawn({ at, config: version.config });
+    bp.registerUnit(unitId, version.version);
 }

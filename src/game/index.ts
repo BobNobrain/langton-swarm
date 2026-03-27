@@ -20,12 +20,15 @@ export function createGame({ tickTime = DEFAULT_TICK_TIME, worldSeed = DEFAULT_S
     const engine = createEngine(tickTime);
     const state = createGameState(engine);
 
-    return {
+    const game: Game = {
         ...state,
         engine,
 
         start: () => {
             state.world.init(worldSeed);
+
+            state.units.providePlanet(state.world.planet()!);
+
             engine.start();
         },
         stop: () => {
@@ -33,13 +36,19 @@ export function createGame({ tickTime = DEFAULT_TICK_TIME, worldSeed = DEFAULT_S
             engine.clear();
         },
     };
+
+    // @ts-expect-error For debug
+    window.game = game;
+    return game;
 }
 
 export type { GameState };
 export type { Engine, Ticker };
 
+export { createDefaultUnitConfig, getProcessorTickRate } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
-export type { SwarmData, SwarmId, SwarmUnitData, SwarmUnitId, GameSwarms } from './swarms';
+export { createMotherConfig } from './mother';
+export { type GameUnitSystems, UnitModelType } from './systems';
 export type * from './types';
 export type { HighlightedTile } from './ui';
 export type { GameWorld } from './world';

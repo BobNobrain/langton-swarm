@@ -1,4 +1,5 @@
 import { type Diagnostic } from '@codemirror/lint';
+import type { UnitConfiguration } from '../types';
 import type { BsmlProgram } from './program';
 import { typecheck } from './typecheck';
 
@@ -6,11 +7,11 @@ type LintState = {
     result: Diagnostic[];
 };
 
-export function lintProgram(p: BsmlProgram): Diagnostic[] {
+export function lintProgram(p: BsmlProgram, config: UnitConfiguration | null): Diagnostic[] {
     const state: LintState = { result: [] };
     // TODO: typecheck, etc.
 
-    const typeErrors = typecheck(p);
+    const typeErrors = typecheck(p, config);
     for (const err of typeErrors) {
         state.result.push({
             from: err.pos.from,

@@ -22,17 +22,18 @@ import {
     lineNumbers,
     highlightActiveLineGutter,
 } from '@codemirror/view';
+import type { UnitConfiguration } from '@/game';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { bsml, bsmlHighlight } from './language';
 import { bsmlLinter } from './linter';
 import styles from './ProgramEditor.module.css';
-import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 
 export type ProgramEditorController = {
     getProgramText: () => string;
 };
 
 export const ProgramEditor: Component<{
-    program: string;
+    config: UnitConfiguration | null;
     readonly: boolean;
     controllerRef: ControllerRef<ProgramEditorController>;
     onChanged: (hasChanges: boolean) => void;
@@ -40,10 +41,11 @@ export const ProgramEditor: Component<{
     let editorWrapper!: HTMLDivElement;
     let view: EditorView | null = null;
     const readonlyCompartment = new Compartment();
+    const linterCompartment = new Compartment();
 
     onMount(() => {
         view = new EditorView({
-            doc: props.program,
+            doc: props.config?.cpu ?? '',
             parent: editorWrapper,
             extensions: [
                 lineNumbers(),
@@ -87,7 +89,7 @@ export const ProgramEditor: Component<{
                 }),
 
                 bsml(),
-                bsmlLinter,
+                linterCompartment.of(bsmlLinter(props.config)),
             ],
         });
 
@@ -98,7 +100,7 @@ export const ProgramEditor: Component<{
     });
 
     createEffect(() => {
-        const program = props.program ?? '';
+        const program = props.config?.cpu ?? '';
         if (!view || !program) {
             return;
         }
@@ -114,6 +116,10 @@ export const ProgramEditor: Component<{
                 ],
             });
         }
+
+        view.dispatch({
+            effects: linterCompartment.reconfigure(bsmlLinter(props.config)),
+        });
 
         props.onChanged(false);
     });

@@ -3,7 +3,7 @@ import type { UnitConfiguration } from './types';
 
 export function createDefaultUnitConfig(): UnitConfiguration {
     return {
-        program: createDefaultProgramText(),
+        cpu: createDefaultProgramText(),
         battery: { capacity: 100 },
         navigator: true,
         receiver: true,

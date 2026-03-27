@@ -1,8 +1,6 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
-import type { BlueprintController, BlueprintId } from '@/game';
-import { rGetUnitIdsByBlueprint } from '@/game/utils';
-import { createDefaultUnitConfig } from '@/game/config';
+import { type BlueprintController, type BlueprintId, createDefaultUnitConfig } from '@/game';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { Button } from '../Button/Button';
 import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
@@ -15,23 +13,21 @@ const DeckListItem: Component<{
     item: BlueprintController;
     onSelect: (id: BlueprintId) => void;
 }> = (props) => {
-    const { swarms, ui } = useGame();
+    const { ui, deck, units } = useGame();
 
     const unitCounts = createMemo(() => {
-        swarms.rSwarmIds(); // invalidate this memo each time a new swarm appears (or old one gets removed)
-        const swarmIds = swarms.findSwarms(props.item.id);
+        const ids = props.item.rUnitIds();
+        const versions = props.item.rVersions();
+        const lastVersion = props.item.rLastVersion();
+
         let totalUnits = 0;
         let currentVersionUnits = 0;
 
-        for (const swarmId of swarmIds) {
-            const swarm = swarms.getSwarmData(swarmId);
-            if (!swarm) {
-                continue;
-            }
-
-            const nUnits = swarm.rUnitIds().length;
+        for (const version of Object.keys(versions)) {
+            const v = Number(version);
+            const nUnits = (ids[v] ?? []).length;
             totalUnits += nUnits;
-            if (swarm.blueprintVersion === props.item.rLastVersion().version) {
+            if (v === lastVersion.version) {
                 currentVersionUnits += nUnits;
             }
         }
@@ -48,12 +44,7 @@ const DeckListItem: Component<{
             right={
                 <Button
                     onClick={() => {
-                        ui.selectUnits(
-                            rGetUnitIdsByBlueprint({
-                                id: props.item.id,
-                                swarms,
-                            }),
-                        );
+                        ui.selectUnits(Object.values(props.item.rUnitIds()).flat());
                     }}
                 >
                     Select {unitCounts()}

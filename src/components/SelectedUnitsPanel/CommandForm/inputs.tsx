@@ -1,15 +1,14 @@
 import { createMemo, createSignal, onCleanup, onMount, type Component } from 'solid-js';
 import type { BlueprintId, BsmlValue, BsmlValueType, NodeId } from '@/game';
+import { renderTileId } from '@/game/utils';
 import { useGame } from '@/gameContext';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { KeyCode } from '@/lib/input';
-import { FormField } from '../../FormField/FormField';
 import { createSelectController, Select, type SelectOption } from '../../Select/Select';
 import { TextInput, createTextInputController } from '../../TextInput/TextInput';
 import { createToggleController, Toggle } from '../../Toggle/Toggle';
-import styles from './CommandForm.module.css';
 import { NumberInput } from '../../NumberInput/NumberInput';
-import { renderTileId } from '@/game/utils';
+// import styles from './CommandForm.module.css';
 
 export type ArgInputProps = {
     name: string;

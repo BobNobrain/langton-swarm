@@ -16,16 +16,16 @@ type SyntaxError = {
     message: string;
 };
 
-type CompilationResult = {
+type ParsingResult = {
     program: BsmlProgram;
     errors: SyntaxError[];
 };
 
-type MatcherState = CompilationResult & {
+type MatcherState = ParsingResult & {
     src: (pos: CodePosition) => string;
 };
 
-export function compile(source: string, tree: Tree): CompilationResult {
+export function parseProgram(source: string, tree: Tree): ParsingResult {
     const state: MatcherState = {
         program: {
             stateDeclarations: [],

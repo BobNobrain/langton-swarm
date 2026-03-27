@@ -1,6 +1,6 @@
 import { createMemo, createSignal } from 'solid-js';
-import type { GameSwarms, SwarmUnitId } from './swarms';
-import type { NodeId } from './types';
+import type { NodeId, UnitId } from './types';
+import type { GameUnitSystems } from './systems';
 
 export type HighlightedTile = {
     tileId: NodeId;
@@ -19,16 +19,16 @@ export type GameUIState = {
     addHighlightedTile(ht: HighlightedTile): void;
     removeHighlightedTile(tid: NodeId): void;
 
-    rSelectedUnits(): SwarmUnitId[];
-    selectUnits(ids: SwarmUnitId[]): void;
-    removeSelectedUnit(id: SwarmUnitId): void;
+    rSelectedUnits(): UnitId[];
+    selectUnits(ids: UnitId[]): void;
+    removeSelectedUnit(id: UnitId): void;
 };
 
-export function createGameUIState(swarms: GameSwarms): GameUIState {
+export function createGameUIState(units: GameUnitSystems): GameUIState {
     const [rSelectedTile, rSetSelectedTile] = createSignal<NodeId | null>(null);
     const [rHoveredTile, rSetHoveredTile] = createSignal<NodeId | null>(null);
     const [rHighlightedTiles, rSetHighlightedTiles] = createSignal<Record<NodeId, HighlightedTile>>({});
-    const [rSelectedUnits, rSetSelectedUnits] = createSignal<SwarmUnitId[]>([]);
+    const [rSelectedUnits, rSetSelectedUnits] = createSignal<UnitId[]>([]);
 
     let tileSelectionHijacker: ((selected: NodeId | null) => boolean | void) | null = null;
 
@@ -49,7 +49,7 @@ export function createGameUIState(swarms: GameSwarms): GameUIState {
 
             rSetSelectedTile(value);
             if (value !== null) {
-                rSetSelectedUnits(Array.from(swarms.findUnitsByLocation(value)));
+                rSetSelectedUnits(units.findByLocation(value));
             } else {
                 rSetSelectedUnits([]);
             }

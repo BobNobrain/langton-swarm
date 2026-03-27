@@ -1,11 +1,9 @@
 import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
 import type { UnitConfiguration, BlueprintController } from '@/game';
-import { Button } from '../Button/Button';
-import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
-import { Toggle } from '../Toggle/Toggle';
-import styles from './BlueprintEditor.module.css';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { Configurator } from '../Configurator/Configurator';
+import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
+import styles from './BlueprintEditor.module.css';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
@@ -68,7 +66,7 @@ export const BlueprintEditor: Component<{
                 }
 
                 const program = programEditor.rGet().getProgramText();
-                const newConfig: UnitConfiguration = { ...selected.config, program };
+                const newConfig: UnitConfiguration = { ...selected.config, cpu: program };
                 return newConfig;
             },
             rCanSave: createMemo(() => {
@@ -92,11 +90,11 @@ export const BlueprintEditor: Component<{
                 }}
             />
             <Show
-                when={typeof selectedVersion()?.config.program === 'string'}
-                fallback={<div class={styles.noProgramMessage}>This is a built-in blueprint. It has no program.</div>}
+                when={typeof selectedVersion()?.config.cpu === 'string'}
+                fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
             >
                 <ProgramEditor
-                    program={selectedVersion()?.config.program as string}
+                    config={selectedVersion()?.config ?? null}
                     readonly={isReadonly()}
                     controllerRef={programEditor.ref}
                     onChanged={setProgramChanged}
