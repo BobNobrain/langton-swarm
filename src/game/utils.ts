@@ -10,6 +10,42 @@ export function renderTileId(tid: NodeId | null | undefined) {
     return '#' + tid.toString(16).padStart(3, '0');
 }
 
+export function renderHealth(h: number | null | undefined): string {
+    if (typeof h !== 'number') {
+        return 'H--%';
+    }
+
+    if (h <= 0) {
+        return 'DEAD';
+    }
+
+    const percents = Math.round(Math.min(h * 100, 100));
+
+    if (percents === 100) {
+        return 'H100';
+    }
+
+    return `H${percents}%`;
+}
+
+export function renderEnergy(e: number | null | undefined): string {
+    if (typeof e !== 'number') {
+        return 'E--%';
+    }
+
+    if (e <= 0) {
+        return 'E00!';
+    }
+
+    const percents = Math.round(Math.min(e * 100, 100));
+
+    if (percents === 100) {
+        return 'EFUL';
+    }
+
+    return `E${percents}%`;
+}
+
 export function spawnFromDeck(
     deck: BlueprintDeck,
     systems: Pick<ReturnType<typeof createGameSystems>, 'spawn'>,

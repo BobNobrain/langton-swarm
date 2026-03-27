@@ -1,12 +1,15 @@
 import { createEffect, createSignal, Show, type Component } from 'solid-js';
 import type { UnitCommand, UnitId } from '@/game';
+import { renderEnergy, renderHealth, renderTileId } from '@/game/utils';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
 import { Header } from '../Header/Header';
+import { Inventory } from '../Inventory/Inventory';
 import { SelectedUnitsList } from '../SelectedUnitsList/SelectedUnitsList';
 import { CommandForm } from './CommandForm/CommandForm';
 import { CommandPanel } from './CommandPanel/CommandPanel';
+import { createUnitTracker } from './createUnitTracker';
 import styles from './SelectedUnitsPanel.module.css';
 
 type ActiveCommand = {
@@ -22,6 +25,15 @@ export const SelectedUnitsPanel: Component = () => {
     createEffect(() => {
         ui.rSelectedUnits();
         setActiveCommand(null);
+    });
+
+    const selectedUnitTracker = createUnitTracker(() => {
+        const selectedIds = ui.rSelectedUnits();
+        if (selectedIds.length !== 1) {
+            return null;
+        }
+
+        return selectedIds[0];
     });
 
     return (
@@ -43,7 +55,12 @@ export const SelectedUnitsPanel: Component = () => {
                     }}
                 />
             </FloatingPanelHeader>
-            <SelectedUnitsList hoveredCommandTargets={hoveredCommandTargets()} />
+            <section class={styles.content}>
+                <SelectedUnitsList hoveredCommandTargets={hoveredCommandTargets()} />
+                <Show when={ui.rSelectedUnits().length === 1}>
+                    <Inventory contents={[]} />
+                </Show>
+            </section>
             <footer class={styles.actionsFooter}>
                 <Show when={ui.rSelectedUnits().length === 0}>
                     <Button inline style="secondary">
@@ -54,9 +71,18 @@ export const SelectedUnitsPanel: Component = () => {
                     <Button inline style="secondary">
                         Debug
                     </Button>
-                    <span>:roaming</span>
-                    <span>H25%</span>
-                    <span>E25%</span>
+                    <span class={styles.footerLabel} title="Health">
+                        {renderHealth(selectedUnitTracker.rHealth())}
+                    </span>
+                    <span class={styles.footerLabel} title="Energy">
+                        {renderEnergy(selectedUnitTracker.rEnergy())}
+                    </span>
+                    <span class={styles.footerLabel} title="Location">
+                        {renderTileId(selectedUnitTracker.rLocation())}
+                    </span>
+                    <span class={styles.footerLabel} title="CPU state">
+                        {selectedUnitTracker.rStateName()}
+                    </span>
                 </Show>
                 <Show when={ui.rSelectedUnits().length > 1}>
                     <Button style="secondary" onClick={() => ui.selectUnits([])}>

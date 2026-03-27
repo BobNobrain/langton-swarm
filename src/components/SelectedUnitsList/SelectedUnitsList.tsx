@@ -39,7 +39,7 @@ export const SelectedUnitsList: Component<{
     });
 
     return (
-        <List insetH class={styles.unitsList}>
+        <List insetH>
             <For each={selectedUnits()} fallback={<ListEmptyContent>Nothing is selected</ListEmptyContent>}>
                 {(unitData) => {
                     return (

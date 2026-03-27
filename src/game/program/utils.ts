@@ -191,6 +191,17 @@ export function getCommandStateName(commandName: string): string {
 export function isCommandStateName(stateName: string): boolean {
     return stateName.startsWith('cmd:');
 }
+export function renderStateName(stateName: string | null | undefined): string {
+    if (!stateName) {
+        return '--';
+    }
+
+    if (stateName.includes(':')) {
+        return stateName;
+    }
+
+    return ':' + stateName;
+}
 
 export function extractCommands(program: BsmlProgram): UnitCommand[] {
     return program.commandDeclarations.map(

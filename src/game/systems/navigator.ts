@@ -1,14 +1,8 @@
 import { pick } from '@/lib/random';
 import { extractTyped } from '../program/utils';
 import type { NodeId } from '../types';
-import {
-    callableUnitSystemHandlers,
-    createUnitSystem,
-    type CallableUnitSystemFunctions,
-    type CallableUnitSystemMessages,
-    type CreateUnitSystemCommonOptions,
-} from './systems';
-import { returnToCpu } from './utils';
+import { createUnitSystem, type CallableUnitSystemMessages, type CreateUnitSystemCommonOptions } from './systems';
+import { callableUnitSystemHandlers, returnToCpu, type CallableUnitSystemFunctions } from './utils';
 
 type NavigatorData = {
     currentRoute: NodeId[];

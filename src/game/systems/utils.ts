@@ -1,6 +1,14 @@
+import { typecheckValues } from '../program/functions';
+import { namedArguments } from '../program/utils';
 import type { BsmlValue } from '../program/value';
-import type { NodeId, UnitConfiguration, UnitId } from '../types';
-import type { CreateUnitSystemCommonOptions, UnitSystemFunctionCallPayload, UnitSystemTickContext } from './systems';
+import type { NodeId, UnitConfiguration, UnitEnvironment } from '../types';
+import type {
+    CallableUnitSystemMessages,
+    MessageHandlers,
+    UnitSystemFunction,
+    UnitSystemFunctionCallPayload,
+    UnitSystemTickContext,
+} from './systems';
 
 export type SpawnOptions = {
     config: UnitConfiguration;
@@ -30,4 +38,34 @@ export function fcall(
         unitId: ctx.unitId,
         payload: call,
     });
+}
+
+export type CallableUnitSystemFunctions<Data> = Record<
+    string,
+    UnitSystemFunction & {
+        init: (args: Record<string, BsmlValue>, ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
+    }
+>;
+
+export function callableUnitSystemHandlers<Data>(
+    fns: CallableUnitSystemFunctions<Data>,
+): MessageHandlers<Data, CallableUnitSystemMessages> {
+    return {
+        fcall: {
+            handler(payload, ctx, env) {
+                const fn = fns[payload.fname];
+                if (!fn) {
+                    console.error('[WARN] fcall: unknown function', payload);
+                    return false;
+                }
+
+                const typeError = typecheckValues(payload.argv, fn);
+                if (typeError) {
+                    console.error('[WARN] fcall: typecheck failed, ' + typeError, payload);
+                }
+
+                return fn.init(namedArguments(fn.argNames, payload.argv), ctx, env);
+            },
+        },
+    };
 }

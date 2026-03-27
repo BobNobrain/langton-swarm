@@ -1,9 +1,7 @@
-import { typecheckValues } from '../program/functions';
-import { namedArguments } from '../program/utils';
 import type { BsmlValue, BsmlValueType } from '../program/value';
 import type { UnitCommand, UnitCommandCall, UnitConfiguration, UnitEnvironment, UnitId, UnitState } from '../types';
 
-type UnitSystemFunction = {
+export type UnitSystemFunction = {
     argNames: string[];
     argTypes: BsmlValueType[];
     returnType: BsmlValueType | null;
@@ -23,7 +21,7 @@ export type CallableUnitSystemMessages = {
     fcall: UnitSystemFunctionCallPayload;
 };
 
-export type UnitSystem = {
+export type UnitSystem<Data> = {
     readonly name: string;
     readonly fns: Record<string, UnitSystemFunction>;
 
@@ -31,7 +29,9 @@ export type UnitSystem = {
     create(unitId: UnitId, config: UnitConfiguration, state: UnitState): void;
     activate(unitId: UnitId): void;
     remove(unitId: UnitId): void;
+
     has(unitId: UnitId): boolean;
+    getData(unitId: UnitId): Data | null;
 
     handleMessage(msg: UnitSystemMessage): void;
 
@@ -55,7 +55,7 @@ type UnitEntry<Data> = {
     sleepUntil: number;
 };
 
-type MessageHandlers<Data, MessagePayloads extends Record<string, unknown>> = {
+export type MessageHandlers<Data, MessagePayloads extends Record<string, unknown>> = {
     [key in keyof MessagePayloads]: {
         handler: (payload: MessagePayloads[key], ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
     };
@@ -94,7 +94,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
         queryCommands,
         hasCommand,
     }: CreateOptions<Data, MessagePayloads>,
-): UnitSystem {
+): UnitSystem<Data> {
     const data: Record<UnitId, UnitEntry<Data>> = {};
     const inactiveData: Record<UnitId, UnitEntry<Data>> = {};
 
@@ -107,7 +107,6 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 delete data[entry.unitId];
                 inactiveData[entry.unitId] = entry;
                 entry.sleepUntil = 0;
-                console.log('[DEBUG] unit deactivated: ' + name, entry.unitId);
                 return;
             }
 
@@ -173,6 +172,10 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
             return Boolean(data[unitId] || inactiveData[unitId]);
         },
 
+        getData(unitId) {
+            return (data[unitId] ?? inactiveData[unitId])?.systemData ?? null;
+        },
+
         handleMessage(msg) {
             const handler = messages[msg.event];
             if (!handler) {
@@ -233,36 +236,6 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
             }
 
             return false;
-        },
-    };
-}
-
-export type CallableUnitSystemFunctions<Data> = Record<
-    string,
-    UnitSystemFunction & {
-        init: (args: Record<string, BsmlValue>, ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
-    }
->;
-
-export function callableUnitSystemHandlers<Data>(
-    fns: CallableUnitSystemFunctions<Data>,
-): MessageHandlers<Data, CallableUnitSystemMessages> {
-    return {
-        fcall: {
-            handler(payload, ctx, env) {
-                const fn = fns[payload.fname];
-                if (!fn) {
-                    console.error('[WARN] fcall: unknown function', payload);
-                    return false;
-                }
-
-                const typeError = typecheckValues(payload.argv, fn);
-                if (typeError) {
-                    console.error('[WARN] fcall: typecheck failed, ' + typeError, payload);
-                }
-
-                return fn.init(namedArguments(fn.argNames, payload.argv), ctx, env);
-            },
         },
     };
 }

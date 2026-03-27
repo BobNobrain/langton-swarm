@@ -16,6 +16,7 @@ const parserWithMetadata = parser.configure({
         styleTags({
             Identifier: tags.variableName,
             Declkw: tags.definitionKeyword,
+            Defaultkw: tags.definitionKeyword,
             Boolkw: tags.bool,
             IntegerLiteral: tags.number,
             StringLiteral: tags.string,

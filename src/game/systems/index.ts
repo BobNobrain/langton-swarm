@@ -12,6 +12,7 @@ import type { SpawnOptions } from './utils';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
+    readonly cpu: Pick<ReturnType<typeof createCPUSystem>, 'getData'>;
     readonly unitStates: Readonly<Record<string, UnitState>>;
 
     providePlanet(planet: Planet): void;
@@ -24,7 +25,7 @@ export type GameUnitSystems = {
 };
 
 export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine: Engine): GameUnitSystems {
-    const systems: Record<string, UnitSystem> = {};
+    const systems: Record<string, UnitSystem<unknown>> = {};
     const messageQueue: { to: string; message: UnitSystemMessage }[] = [];
 
     const unitId = sequentialId<UnitId>();
@@ -33,7 +34,6 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine:
     // const unitConfigs: Record<UnitId, UnitConfiguration> = {};
 
     const sendMessage: CreateUnitSystemCommonOptions['sendMessage'] = (to, message) => {
-        console.log('[DEBUG] sendMessage:', to, message);
         messageQueue.push({ to, message });
     };
 
@@ -102,7 +102,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine:
     });
 
     return {
-        signals: signals,
+        signals,
+        cpu,
         unitStates,
 
         providePlanet(planet) {

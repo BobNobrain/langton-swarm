@@ -3,13 +3,7 @@ import { getProcessorTickRate } from '../config';
 import { parser } from '../program/bsml';
 import { compile, type CompiledProgram } from '../program/compile';
 import { parseProgram } from '../program/parser';
-import {
-    extractCommands,
-    getCommandStateName,
-    isCommandStateName,
-    namedArguments,
-    renderValue,
-} from '../program/utils';
+import { extractCommands, getCommandStateName, namedArguments, renderValue } from '../program/utils';
 import type { BsmlValue, BsmlValueType } from '../program/value';
 import type { UnitCommand } from '../types';
 import { createUnitSystem, type CreateUnitSystemCommonOptions } from './systems';
@@ -140,7 +134,6 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                     break;
 
                 case 'pop':
-                    console.log('[DEBUG] pop: ', cpu.stack);
                     cpu.stack.pop();
                     break;
 
