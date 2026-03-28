@@ -1,0 +1,57 @@
+.valueLabel {
+    font-weight: 500;
+}
+
+.string {
+    composes: valueLabel;
+    color: #ab40b7;
+}
+
+.number {
+    composes: valueLabel;
+    color: #449edd;
+}
+
+.blueprint {
+    composes: valueLabel;
+    color: #44a9c2;
+}
+
+.flag {
+    composes: valueLabel;
+
+    &.yes {
+        color: #67b740;
+    }
+    &.no {
+        color: #fd9d92;
+    }
+}
+
+.position {
+    composes: valueLabel;
+    color: #e2c43d;
+}
+
+.state {
+    composes: valueLabel;
+    color: #f7d3d3;
+}
+
+.magic {
+    composes: valueLabel;
+    color: #f7d3d3;
+    font-style: italic;
+}
+
+
+/*
+Default = '#f7f7f7',
+    Pink = '#f7d3d3',
+    Dim = '#b7b7b7',
+    Green = '#67b740',
+    Yellow = '#e2c43d',
+    Blue = '#449edd',
+    Purple = '#ab40b7',
+    Cyan = '#44a9c2',
+*/

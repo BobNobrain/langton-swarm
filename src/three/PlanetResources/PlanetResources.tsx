@@ -1,7 +1,7 @@
 import type { NodeId } from '@/game';
 import { useGame } from '@/gameContext';
 import { createMemo, For, type Component } from 'solid-js';
-import { GridObjects } from '../GridObjects/GridObjects';
+import { GridObjects, GridObjectData } from '../GridObjects/GridObjects';
 import { depositModel, materialsByResource, defaultMat } from '../models/deposit';
 
 export const PlanetResources: Component = () => {
@@ -13,27 +13,31 @@ export const PlanetResources: Component = () => {
             return [];
         }
 
-        // TODO: reactivity and data updates
-        const byResource: Record<string, NodeId[]> = {};
+        // TODO: data updates
+        const byResource: Record<string, Record<string, GridObjectData>> = {};
 
         for (const [nodeId, deposit] of planet.resources.entries()) {
-            byResource[deposit.resource] ??= [];
-            byResource[deposit.resource].push(nodeId);
+            byResource[deposit.resource] ??= {};
+            byResource[deposit.resource][nodeId] = { location: nodeId };
         }
 
-        return Object.entries(byResource).map(([resource, nodes]) => ({ resource, nodes }));
+        return Object.entries(byResource).map(([resource, objects]) => ({
+            resource,
+            objects,
+        }));
     });
 
     return (
         <For each={resourceDeposits()}>
-            {({ resource, nodes }) => {
+            {({ resource, objects }) => {
                 return (
                     <GridObjects
                         geom={depositModel}
                         material={materialsByResource[resource] ?? defaultMat}
-                        allNodes={world.planet()?.nodes ?? []}
-                        nodeIds={nodes}
-                        maxCount={nodes.length}
+                        grid={world.planet()?.nodes ?? []}
+                        objects={objects}
+                        isStatic // to be removed when resources will be mineable
+                        maxCount={Object.keys(objects).length}
                     />
                 );
             }}

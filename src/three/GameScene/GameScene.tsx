@@ -55,7 +55,7 @@ export const GameScene: Component = () => {
             <PlanetResources />
             <GameSwarms />
             <GameGlobalLight />
-            <GameCamera fov={75} far={10} near={0.1} />
+            <GameCamera fov={75} far={10} near={0.01} />
             {/* <PathTrace nodes={game.world.planet()?.nodes ?? []} path={testPath()} /> */}
         </>
     );

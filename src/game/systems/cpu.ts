@@ -18,6 +18,8 @@ type CPUData = {
     variables: Record<string, BsmlValue>;
     isWaitingForReturn: boolean;
     tickRate: number;
+
+    lastUpdated: number;
 };
 
 export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
@@ -39,6 +41,8 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                     if (payload.value) {
                         ctx.systemData.stack.push(payload.value);
                     }
+
+                    ctx.systemData.isWaitingForReturn = false;
 
                     return true;
                 },
@@ -68,6 +72,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                 variables: {},
                 isWaitingForReturn: false,
                 tickRate: getProcessorTickRate(config),
+                lastUpdated: 0,
             };
         },
 
@@ -92,6 +97,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
 
             const instruction = instructions[cpu.ptr];
             ++cpu.ptr;
+            cpu.lastUpdated = env.currentTick;
 
             switch (instruction.type) {
                 case 'assign': {

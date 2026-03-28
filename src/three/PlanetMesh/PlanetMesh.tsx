@@ -19,7 +19,7 @@ import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
 import { useInScene, useAllInScene } from '../hooks/useInScene';
 import { createTileBorderGeometry, getTileVerticies, intersectionToTileId } from './utils';
 
-const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.3, linewidth: 2, transparent: true });
+const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.15, linewidth: 2, transparent: true });
 const selectionMat = new LineBasicMaterial({ color: 0x67b740, transparent: true, linewidth: 3 });
 const hoverMat = new MeshBasicMaterial({ color: 0x67b740, transparent: true, opacity: 0.4 });
 const SCALE_UP = 1.001;
@@ -121,7 +121,7 @@ export const PlanetMesh: Component<{
         object: planetMesh,
         button: MouseButton.Left,
         onClick: ({ intersection }) => {
-            const faceIndexMap = intersection.object.userData.faceIndexMap as Record<number, number> | undefined;
+            const faceIndexMap = intersection.object.userData.faceIndexMap as Record<number, NodeId> | undefined;
             if (!faceIndexMap) {
                 return;
             }

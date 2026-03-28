@@ -1,14 +1,14 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
-import { type BlueprintController, type BlueprintId, createDefaultUnitConfig } from '@/game';
+import { type BlueprintController, type BlueprintId, createDefaultUnitConfig, type UnitId } from '@/game';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { Button } from '../Button/Button';
-import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
-import { useExpandedPanel } from '../GameUI';
+import { Debugger } from '../Debugger/Debugger';
+import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
 import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
-import styles from './DeckBrowser.module.css';
 import { Select, type SelectOption } from '../Select/Select';
+import styles from './DeckBrowser.module.css';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -79,8 +79,6 @@ const DeckList: Component<{
 export const DeckBrowser: Component = () => {
     const { deck, ui } = useGame();
 
-    useExpandedPanel(() => ui.rDeckSelectedBlueprint() !== null);
-
     const selectedBlueprint = createMemo(() => {
         const bpId = ui.rDeckSelectedBlueprint();
         if (bpId === null) {
@@ -112,8 +110,35 @@ export const DeckBrowser: Component = () => {
         return versionOptions().find((option) => option.value === selected) ?? null;
     });
 
+    const debuggingUnitId = createMemo((): UnitId | null => {
+        const openBlueprint = ui.rDeckSelectedBlueprint();
+        if (openBlueprint === null) {
+            return null;
+        }
+
+        const selectedIds = ui.rSelectedUnits();
+        if (selectedIds.length !== 1) {
+            return null;
+        }
+
+        const found = deck.findByUnitId(selectedIds[0]);
+        if (!found) {
+            return null;
+        }
+
+        if (found.bp.id !== openBlueprint || found.v !== ui.rDeckSelectedVersion()) {
+            return null;
+        }
+
+        if (!found.bp.rVersions()[found.v]?.config.cpu) {
+            return null;
+        }
+
+        return selectedIds[0];
+    });
+
     return (
-        <>
+        <FloatingPanel pinRight pinBottom pinTop expandedWidth={ui.rDeckSelectedBlueprint() !== null}>
             <FloatingPanelHeader>
                 <Header size="md" withMargin>
                     <Show when={ui.rDeckSelectedBlueprint() !== null} fallback="Blueprints">
@@ -187,10 +212,22 @@ export const DeckBrowser: Component = () => {
             </FloatingPanelHeader>
             <Show
                 when={ui.rDeckSelectedBlueprint() === null}
-                fallback={<BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />}
+                fallback={
+                    <div
+                        class={styles.editorDebugger}
+                        classList={{
+                            [styles.hasDebugger]: debuggingUnitId() !== null,
+                        }}
+                    >
+                        <BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />
+                        <Show when={debuggingUnitId() !== null}>
+                            <Debugger unitId={debuggingUnitId()} />
+                        </Show>
+                    </div>
+                }
             >
                 <DeckList items={deck.rBlueprints()} onSelect={(id) => ui.deckSelectBlueprint(id)} />
             </Show>
-        </>
+        </FloatingPanel>
     );
 };

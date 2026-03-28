@@ -4,16 +4,12 @@ import { spawnFromDeck } from '@/game/utils';
 import { GameProvider } from '@/gameContext';
 import { createGlobalListener, KeyCode } from '@/lib/input';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
-import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
 import { GameTopBar } from '../GameTopBar/GameTopBar';
 import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
 import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
-import { GameUIContextProvider } from './context';
 import styles from './GameUI.module.css';
 
 export const GameUI: ParentComponent = (props) => {
-    const [isExpanded, setIsExpanded] = createSignal(false);
-
     const game = createGame({});
     onMount(() => {
         game.start();
@@ -38,17 +34,13 @@ export const GameUI: ParentComponent = (props) => {
 
     return (
         <GameProvider value={game}>
-            <GameUIContextProvider value={{ setIsExpanded }}>
-                <main class={styles.wrapper}>
-                    <section class={styles.scene}>{props.children}</section>
-                    <GameTopBar />
-                    <SelectedTilePanel />
-                    <SelectedUnitsPanel />
-                    <FloatingPanel pinRight pinBottom pinTop expandedWidth={isExpanded()}>
-                        <DeckBrowser />
-                    </FloatingPanel>
-                </main>
-            </GameUIContextProvider>
+            <main class={styles.wrapper}>
+                <section class={styles.scene}>{props.children}</section>
+                <GameTopBar />
+                <SelectedTilePanel />
+                <SelectedUnitsPanel />
+                <DeckBrowser />
+            </main>
         </GameProvider>
     );
 };

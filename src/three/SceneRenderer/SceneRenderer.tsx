@@ -1,25 +1,8 @@
 import { onMount, onCleanup, createEffect, createSignal, type ParentComponent, untrack } from 'solid-js';
-import {
-    Raycaster,
-    Scene,
-    Vector2,
-    WebGLRenderer,
-    type Camera,
-    type ColorRepresentation,
-    type Intersection,
-    type Object3D,
-} from 'three';
+import { Raycaster, Scene, WebGLRenderer, type Camera, type ColorRepresentation } from 'three';
 import { createBoundsTracker } from '@/lib/BoundsTracker';
 import { createEvent, createSparseCollection } from '@/lib/sparse';
-import {
-    type ClickHandler,
-    SceneRendererContext,
-    type Repainter,
-    type ClickableObject3D,
-    type Object3DClickHandler,
-    type Object3DClickEvent,
-    type RepaintContext,
-} from '../context';
+import { type ClickHandler, SceneRendererContext, type Repainter, type ClickableObject3D } from '../context';
 import styles from './SceneRenderer.module.css';
 import { createMouseTracker, handleSceneClick, setupRaycaster } from './mouse';
 

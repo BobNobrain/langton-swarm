@@ -42,7 +42,7 @@ export const PathTrace: Component<{ path: number[]; nodes: SurfaceNode[] }> = (p
 
     return (
         <GridObjects
-            allNodes={props.nodes}
+            grid={props.nodes}
             geom={pathTraceModel}
             material={pathStepMaterial}
             nodeIds={stepIds()}

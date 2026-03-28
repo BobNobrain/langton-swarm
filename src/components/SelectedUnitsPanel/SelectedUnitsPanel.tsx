@@ -18,7 +18,7 @@ type ActiveCommand = {
 };
 
 export const SelectedUnitsPanel: Component = () => {
-    const { ui, units } = useGame();
+    const { ui, units, deck } = useGame();
     const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<UnitId> | null>(null);
     const [activeCommand, setActiveCommand] = createSignal<ActiveCommand | null>(null);
 
@@ -68,7 +68,20 @@ export const SelectedUnitsPanel: Component = () => {
                     </Button>
                 </Show>
                 <Show when={ui.rSelectedUnits().length === 1}>
-                    <Button inline style="secondary">
+                    <Button
+                        inline
+                        style="secondary"
+                        onClick={() => {
+                            const unitId = ui.rSelectedUnits()[0];
+                            const found = deck.findByUnitId(unitId);
+
+                            if (!found) {
+                                return;
+                            }
+
+                            ui.deckSelectBlueprint(found.bp.id, found.v);
+                        }}
+                    >
                         Debug
                     </Button>
                     <span class={styles.footerLabel} title="Health">

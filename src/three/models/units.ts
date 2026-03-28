@@ -1,7 +1,14 @@
-import { BoxGeometry, MeshStandardMaterial, type BufferGeometry, type Material } from 'three';
+import {
+    BoxGeometry,
+    CylinderGeometry,
+    DoubleSide,
+    MeshStandardMaterial,
+    type BufferGeometry,
+    type Material,
+} from 'three';
 import { UnitModelType } from '@/game';
 
-type UnitModel = {
+export type UnitModel = {
     geom: BufferGeometry;
     mat: Material;
 };
@@ -51,3 +58,15 @@ export function getUnitModel(type: UnitModelType): UnitModel {
             return unknown;
     }
 }
+
+export const selection: UnitModel = {
+    geom: new CylinderGeometry(0.04, 0.04, 0.05, 16, 1, true),
+    mat: new MeshStandardMaterial({
+        color: '#ffffff',
+        emissive: '#ffffff',
+        emissiveIntensity: 1,
+        opacity: 0.2,
+        transparent: true,
+        side: DoubleSide,
+    }),
+};

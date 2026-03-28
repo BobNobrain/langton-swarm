@@ -1,0 +1,34 @@
+.debugPanel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    column-gap: 8px;
+}
+
+.debuggerHeader {
+    grid-column: 1 / 3;
+    padding-bottom: 8px;
+}
+
+.instruction > *:not(:last-child) {
+    padding-right: 8px;
+}
+
+.instructionName {
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.varName {
+    color: var(--c-white);
+}
+
+.funcName {
+    color: var(--c-white);
+}
+
+.nargs {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--c-white);
+}

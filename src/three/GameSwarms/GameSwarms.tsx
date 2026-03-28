@@ -1,59 +1,42 @@
-import { createEffect, createMemo, createSignal, For, type Component } from 'solid-js';
-import { SurfaceNode, NodeId, UnitModelType } from '@/game';
+import { createMemo, For, type Component } from 'solid-js';
+import { SurfaceNode, UnitModelType, type UnitId } from '@/game';
 import { useGame } from '@/gameContext';
-import { GridObjects } from '../GridObjects/GridObjects';
+import { GridObjects, type GridObjectData } from '../GridObjects/GridObjects';
 import { onBeforeRepaint } from '../hooks/handlers';
-import { getUnitModel } from '../models/units';
+import { getUnitModel, selection, UnitModel } from '../models/units';
 
-const Swarm: Component<{ modelType: UnitModelType; nodes: SurfaceNode[] }> = (props) => {
-    const { deck, units } = useGame();
-    const [getPositions, setPositions] = createSignal<NodeId[]>([]);
-    let lastTickUpdated = 0;
-
-    createEffect(() => {
-        const rIds = units.signals.getUnitIdsSignal(props.modelType);
-
-        const result: NodeId[] = [];
-        for (const unitId of rIds()) {
-            const state = units.unitStates[unitId];
-            if (!state) {
-                continue;
-            }
-
-            result.push(state.location);
-        }
-
-        setPositions(result);
-    });
-
-    const model = createMemo(() => getUnitModel(props.modelType));
+const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitModel }> = (props) => {
+    const { units } = useGame();
+    const objects: Record<string, GridObjectData> = {};
 
     onBeforeRepaint(() => {
-        const currentPositions: NodeId[] = [];
-        const signalUpdatedTo = lastTickUpdated;
+        const idsToDelete = new Set(Object.keys(objects));
 
-        // TODO: this signal does not care about unit ordering
-        for (const unitId of units.signals.getUnitIdsSignal(props.modelType)()) {
+        for (const unitId of props.unitIds) {
             const state = units.unitStates[unitId];
             if (!state) {
                 continue;
             }
 
-            currentPositions.push(state.location);
-            lastTickUpdated = Math.max(lastTickUpdated, units.getLastUpdatedTime(unitId));
+            idsToDelete.delete(unitId.toString());
+            if (!objects[unitId]) {
+                objects[unitId] = { location: state.location };
+            } else {
+                objects[unitId].location = state.location;
+            }
         }
 
-        if (signalUpdatedTo !== lastTickUpdated) {
-            setPositions(currentPositions);
+        for (const id of idsToDelete) {
+            delete objects[id];
         }
     });
 
     return (
         <GridObjects
-            geom={model().geom}
-            material={model().mat}
-            allNodes={props.nodes}
-            nodeIds={getPositions()}
+            geom={props.model.geom}
+            material={props.model.mat}
+            grid={props.grid}
+            objects={objects}
             maxCount={200}
         />
     );
@@ -62,14 +45,23 @@ const Swarm: Component<{ modelType: UnitModelType; nodes: SurfaceNode[] }> = (pr
 const ALL_MODELS = [UnitModelType.Mother, UnitModelType.Rover];
 
 export const GameSwarms: Component = () => {
-    const game = useGame();
-    const nodes = createMemo(() => game.world.planet()?.nodes ?? []);
+    const { world, units, ui } = useGame();
+    const grid = createMemo(() => world.planet()?.nodes ?? []);
 
     return (
-        <For each={ALL_MODELS}>
-            {(modelType) => {
-                return <Swarm nodes={nodes()} modelType={modelType} />;
-            }}
-        </For>
+        <>
+            <For each={ALL_MODELS}>
+                {(modelType) => {
+                    return (
+                        <Swarm
+                            grid={grid()}
+                            model={getUnitModel(modelType)}
+                            unitIds={units.signals.getUnitIdsSignal(modelType)()}
+                        />
+                    );
+                }}
+            </For>
+            <Swarm grid={grid()} model={selection} unitIds={ui.rSelectedUnits()} />
+        </>
     );
 };
