@@ -22,3 +22,7 @@ export function createTimeout(defaultTimeout = 0): TimeoutSetter {
         },
     };
 }
+
+export function sleep(nMs = 0): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, nMs));
+}

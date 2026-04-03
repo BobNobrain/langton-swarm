@@ -14,7 +14,8 @@ export const SelectedTilePanel: Component = () => {
             return null;
         }
 
-        const deposit = world.planet()!.resources.get(selectedTile);
+        // TODO: this is not reactive
+        const deposit = world.resources.get(selectedTile);
 
         return {
             id: selectedTile.toString(16).padStart(3, '0'),

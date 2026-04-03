@@ -24,6 +24,10 @@
 
     background-color: rgba(from var(--c-white) r g b / 15%);
     font-weight: 400;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .ddValue {
     flex: 1 1 auto;

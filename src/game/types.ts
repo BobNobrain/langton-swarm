@@ -23,10 +23,9 @@ export type ResourceDeposit = {
     amount: number;
 };
 
+// TODO: maybe just move it to tick context?
 export type UnitEnvironment = {
-    world: Planet;
     currentTick: number;
-    // TBD: other bots locations?
 };
 
 export type UnitCommand = {
@@ -50,20 +49,37 @@ export type UnitState = {
 export type UnitConfiguration = {
     /** BSML program for unit's CPU */
     cpu?: string;
-    /** set to true for if the unit is mother */
+    /** Set to true for if the unit is mother */
     mother?: boolean;
+    /** Unit's movement characteristics */
+    engine?: {
+        power: 1 | 2 | 3;
+    };
     /** If unit has navigation & movement capabilities */
     navigator?: boolean;
-    /** If unit has a receiver to receive commands */
-    receiver?: boolean;
     /** If unit has a scanner to scan for ores */
+    drill?: boolean;
+    /** If unit has a mineral scanner */
     scanner?: boolean;
     /** Unit storage characteristics */
     storage?: {
         readonly size: number;
     };
     /** Unit battery characteristics */
-    battery: {
+    battery?: {
         readonly capacity: number;
     };
+    /** Construction target (for stationaries) */
+    construction?: UnitConfiguration;
 };
+
+export type CreateGameProgress = {
+    progress: number;
+    stage: string;
+};
+export type CreateGameProgressListener = (p: CreateGameProgress) => void;
+
+export type WorldgenOptions = {
+    seed: string;
+};
+export type WorldgenOptionsInput = Partial<WorldgenOptions>;

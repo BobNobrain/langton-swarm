@@ -1,32 +1,35 @@
 import { typecheckValues } from '../program/functions';
 import { namedArguments } from '../program/utils';
 import type { BsmlValue } from '../program/value';
-import type { NodeId, UnitConfiguration, UnitEnvironment } from '../types';
-import type {
-    CallableUnitSystemMessages,
-    MessageHandlers,
-    UnitSystemFunction,
-    UnitSystemFunctionCallPayload,
-    UnitSystemTickContext,
-} from './systems';
-
-export type SpawnOptions = {
-    config: UnitConfiguration;
-    at: NodeId;
-};
+import type { UnitEnvironment } from '../types';
+import type { MessageHandlers } from './systems';
+import type { UnitSystemFunction, UnitSystemTickContext } from './types';
 
 export function returnToCpu(
     ctx: Pick<UnitSystemTickContext<unknown>, 'sendMessage' | 'unitId'>,
     value: BsmlValue | null,
+    delayTicks?: number,
 ) {
-    ctx.sendMessage('cpu', {
-        event: 'return',
-        unitId: ctx.unitId,
-        payload: {
-            value,
+    ctx.sendMessage(
+        'cpu',
+        {
+            event: 'return',
+            unitId: ctx.unitId,
+            payload: {
+                value,
+            },
         },
-    });
+        delayTicks,
+    );
 }
+
+export type UnitSystemFunctionCallPayload = {
+    fname: string;
+    argv: BsmlValue[];
+};
+export type CallableUnitSystemMessages = {
+    fcall: UnitSystemFunctionCallPayload;
+};
 
 export function fcall(
     ctx: Pick<UnitSystemTickContext<unknown>, 'sendMessage' | 'unitId'>,
@@ -40,15 +43,21 @@ export function fcall(
     });
 }
 
-export type CallableUnitSystemFunctions<Data> = Record<
+export type CallableUnitSystemFunctions<Data, Deps> = Record<
     string,
     UnitSystemFunction & {
-        init: (args: Record<string, BsmlValue>, ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
+        init: (
+            args: Record<string, BsmlValue>,
+            ctx: UnitSystemTickContext<Data>,
+            env: UnitEnvironment,
+            deps: Deps,
+        ) => boolean;
     }
 >;
 
-export function callableUnitSystemHandlers<Data>(
-    fns: CallableUnitSystemFunctions<Data>,
+export function callableUnitSystemHandlers<Data, Deps>(
+    deps: Deps,
+    fns: CallableUnitSystemFunctions<Data, Deps>,
 ): MessageHandlers<Data, CallableUnitSystemMessages> {
     return {
         fcall: {
@@ -64,7 +73,43 @@ export function callableUnitSystemHandlers<Data>(
                     console.error('[WARN] fcall: typecheck failed, ' + typeError, payload);
                 }
 
-                return fn.init(namedArguments(fn.argNames, payload.argv), ctx, env);
+                return fn.init(namedArguments(fn.argNames, payload.argv), ctx, env, deps);
+            },
+        },
+    };
+}
+
+export type UnitSystemSchedulePayload<Data> = (
+    ctx: UnitSystemTickContext<Data>,
+    env: UnitEnvironment,
+) => boolean | void;
+export type UnitSystemScheduleMessages<Data> = {
+    schedule: UnitSystemSchedulePayload<Data>;
+};
+
+export function createScheduler<Data>(system: string) {
+    return (
+        ctx: Pick<UnitSystemTickContext<unknown>, 'sendMessage' | 'unitId'>,
+        task: UnitSystemSchedulePayload<Data>,
+        delayTicks: number,
+    ) => {
+        ctx.sendMessage(
+            system,
+            {
+                event: 'schedule',
+                unitId: ctx.unitId,
+                payload: task,
+            },
+            delayTicks,
+        );
+    };
+}
+
+export function schedulerMessageHandlers<Data>(): MessageHandlers<Data, UnitSystemScheduleMessages<Data>> {
+    return {
+        schedule: {
+            handler(payload, ctx, env) {
+                return payload(ctx, env) ?? false;
             },
         },
     };

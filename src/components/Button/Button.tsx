@@ -20,6 +20,7 @@ export const Button: ParentComponent<{
     style?: ButtonStyle;
     disabled?: boolean;
     inline?: boolean;
+    vibrantFocus?: boolean;
     hotkey?: HotkeyDescriptor;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
     onMouseEnter?: (ev: MouseEvent) => void;
@@ -57,6 +58,7 @@ export const Button: ParentComponent<{
                 [styles.disabled]: props.disabled,
                 [styles.clickable]: Boolean(props.onClick),
                 [styles.inline]: props.inline,
+                [styles.vibrantFocus]: props.vibrantFocus,
             }}
             disabled={props.disabled}
             onClick={props.onClick}

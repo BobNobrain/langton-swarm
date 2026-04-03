@@ -1,12 +1,3 @@
-.blueprintName {
-    font-weight: 400;
-}
-.blueprintVersion {
-    font-weight: 300;
-    color: var(--c-gray-l);
-    margin-left: 8px;
-}
-
 .toolbar {
     display: grid;
     grid-template-rows: 1fr;
@@ -27,4 +18,11 @@
     &.hasDebugger {
         grid-template-rows: 1fr 1fr;
     }
+}
+
+.deckItemProperties {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-top: 4px;
 }

@@ -138,10 +138,11 @@ export const CommandForm: Component<{
                     hotkey={{ key: KeyCode.Enter, ctrl: true }}
                     controllerRef={submitButton.ref}
                     type="submit"
+                    vibrantFocus
                 >
                     Execute
                 </Button>
-                <Button hotkey={{ key: KeyCode.Esc }} onClick={() => props.onCancel()}>
+                <Button hotkey={{ key: KeyCode.Esc }} vibrantFocus onClick={() => props.onCancel()}>
                     Cancel
                 </Button>
             </footer>

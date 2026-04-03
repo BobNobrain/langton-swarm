@@ -1,4 +1,4 @@
-import { createMemo, For, type Component } from 'solid-js';
+import { For, type Component } from 'solid-js';
 import { SurfaceNode, UnitModelType, type UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { GridObjects, type GridObjectData } from '../GridObjects/GridObjects';
@@ -42,11 +42,10 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
     );
 };
 
-const ALL_MODELS = [UnitModelType.Mother, UnitModelType.Rover];
+const ALL_MODELS = [UnitModelType.Mother, UnitModelType.Rover, UnitModelType.Pile, UnitModelType.Unknown];
 
 export const GameSwarms: Component = () => {
     const { world, units, ui } = useGame();
-    const grid = createMemo(() => world.planet()?.nodes ?? []);
 
     return (
         <>
@@ -54,14 +53,14 @@ export const GameSwarms: Component = () => {
                 {(modelType) => {
                     return (
                         <Swarm
-                            grid={grid()}
+                            grid={world.surface}
                             model={getUnitModel(modelType)}
                             unitIds={units.signals.getUnitIdsSignal(modelType)()}
                         />
                     );
                 }}
             </For>
-            <Swarm grid={grid()} model={selection} unitIds={ui.rSelectedUnits()} />
+            <Swarm grid={world.surface} model={selection} unitIds={ui.rSelectedUnits()} />
         </>
     );
 };

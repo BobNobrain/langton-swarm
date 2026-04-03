@@ -44,6 +44,11 @@
     font-style: italic;
 }
 
+.null {
+    composes: valueLabel;
+    color: #fd9d92;
+    text-decoration: line-through;
+}
 
 /*
 Default = '#f7f7f7',

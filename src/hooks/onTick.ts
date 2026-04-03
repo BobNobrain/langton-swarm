@@ -3,16 +3,16 @@ import { useGame } from '@/gameContext';
 import { createEffect, onCleanup, onMount } from 'solid-js';
 
 export function onTick(handler: Ticker) {
-    const { engine } = useGame();
+    const { gameTick: engine } = useGame();
 
     onMount(() => {
-        const id = engine.on(handler);
-        onCleanup(() => engine.off(id));
+        const id = engine.addUITask(handler);
+        onCleanup(() => engine.removeUITask(id));
     });
 }
 
 export function onTickConditional<T>(condition: () => T | null, handlerFactory: (t: T) => Ticker) {
-    const { engine } = useGame();
+    const { gameTick: engine } = useGame();
 
     createEffect(() => {
         const data = condition();
@@ -20,7 +20,9 @@ export function onTickConditional<T>(condition: () => T | null, handlerFactory: 
             return;
         }
 
-        const id = engine.on(handlerFactory(data));
-        onCleanup(() => engine.off(id));
+        const ticker = handlerFactory(data);
+        ticker(engine.getCurrentTick());
+        const id = engine.addUITask(ticker);
+        onCleanup(() => engine.removeUITask(id));
     });
 }

@@ -3,13 +3,14 @@ import { getProcessorTickRate } from '../config';
 import { parser } from '../program/bsml';
 import { compile, type CompiledProgram } from '../program/compile';
 import { parseProgram } from '../program/parser';
-import { extractCommands, getCommandStateName, namedArguments, renderValue } from '../program/utils';
+import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderValue } from '../program/utils';
 import type { BsmlValue, BsmlValueType } from '../program/value';
 import type { UnitCommand } from '../types';
-import { createUnitSystem, type CreateUnitSystemCommonOptions } from './systems';
+import { createUnitSystem } from './systems';
+import type { CreateUnitSystemCommonOptions } from './types';
 import { fcall } from './utils';
 
-type CPUData = {
+export type CPUData = {
     program: CompiledProgram;
     commands: UnitCommand[];
     state: string;
@@ -131,9 +132,13 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                     break;
                 }
 
-                case 'jumpz':
-                    cpu.ptr = instruction.position;
+                case 'jumpz': {
+                    const [condition] = popStack(cpu, 1);
+                    if (!isTruthy(condition)) {
+                        cpu.ptr = instruction.position;
+                    }
                     break;
+                }
 
                 case 'push':
                     cpu.stack.push(instruction.value);
@@ -199,7 +204,7 @@ export const CPU_FNS: Record<
     string,
     {
         argTypes: BsmlValueType[];
-        returnType: BsmlValueType | null;
+        returnType: BsmlValueType;
         call: (...args: BsmlValue[]) => BsmlValue;
     }
 > = {};

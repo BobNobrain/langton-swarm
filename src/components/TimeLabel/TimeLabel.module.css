@@ -1,0 +1,7 @@
+.label {
+    border: 1px solid var(--c-gray-l);
+    border-radius: 2px;
+    padding: 2px 4px;
+    font-size: 0.9em;
+    line-height: 1em;
+}

@@ -1,73 +1,81 @@
 import { pick } from '@/lib/random';
 import { extractTyped } from '../program/utils';
 import type { NodeId } from '../types';
-import { createUnitSystem, type CallableUnitSystemMessages, type CreateUnitSystemCommonOptions } from './systems';
-import { callableUnitSystemHandlers, returnToCpu, type CallableUnitSystemFunctions } from './utils';
+import type { GameWorld } from '../world';
+import { createUnitSystem } from './systems';
+import type { CreateUnitSystemCommonOptions } from './types';
+import {
+    callableUnitSystemHandlers,
+    returnToCpu,
+    type CallableUnitSystemFunctions,
+    type CallableUnitSystemMessages,
+} from './utils';
 
-type NavigatorData = {
+export type NavigatorSystemData = {
+    home: NodeId;
     currentRoute: NodeId[];
-    currentRouteIndex: number;
-    ticksPerMove: number;
 };
 
-export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorData> = {
-    navigate: {
-        argNames: ['to'],
-        argTypes: ['position'],
-        returnType: 'flag',
-        init(args, ctx, env) {
-            const currentPosition = ctx.state.location;
-            const to = extractTyped(args, 'to', 'position', {
-                zero: { type: 'position', value: currentPosition },
-                random: {
-                    type: 'position',
-                    // TODO: make random mean any tile, not just neighbour?
-                    value: pick(Math.random, Array.from(env.world.nodes[currentPosition].connections.values())),
-                },
-            })!;
+type NavigatorDeps = Pick<GameWorld, 'surface' | 'nav'>;
 
-            const path = env.world.nav.findPath(ctx.state.location, to.value) as NodeId[];
-            ctx.systemData.currentRoute = path;
-            ctx.systemData.currentRouteIndex = 0;
-            return true;
+export const NAVIGATOR_SYSTEM_NAME = 'navigator';
+
+export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, NavigatorDeps> = {
+    home: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'position',
+        init(_, ctx) {
+            returnToCpu(ctx, { type: 'position', value: ctx.systemData.home });
+            return false;
         },
     },
-    move: {
+    find_route: {
         argNames: ['to'],
         argTypes: ['position'],
         returnType: 'flag',
-        init(args, ctx, env) {
-            const currentPosition = ctx.state.location;
-            const to = extractTyped(args, 'to', 'position', {
-                zero: { type: 'position', value: currentPosition },
-                random: {
-                    type: 'position',
-                    value: pick(Math.random, Array.from(env.world.nodes[currentPosition].connections.values())),
-                },
-            })!;
+        init(args, ctx, _, { nav }) {
+            const to = extractTyped(args, 'to', 'position')!.value;
+            const route = nav.findPath(ctx.state.location, to) as NodeId[];
 
-            const isNbor = env.world.nodes[ctx.state.location].connections.has(to.value);
-            const nav = ctx.systemData;
-
-            if (!isNbor) {
-                nav.currentRoute.length = 0;
-                nav.currentRouteIndex = 0;
-                returnToCpu(ctx, { type: 'flag', value: false });
+            returnToCpu(ctx, { type: 'flag', value: route.length > 0 });
+            if (!route.length) {
                 return false;
             }
 
-            ctx.systemData.currentRoute = [ctx.state.location, to.value];
-            ctx.systemData.currentRouteIndex = 0;
-            return true;
+            const map = ctx.systemData;
+            map.currentRoute = route;
+
+            return false;
+        },
+    },
+    next_step: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'position',
+        init(_, ctx) {
+            const map = ctx.systemData;
+            returnToCpu(ctx, { type: 'position', value: map.currentRoute[0] });
+            map.currentRoute.shift();
+            return false;
+        },
+    },
+    has_next: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'flag',
+        init(_, ctx) {
+            returnToCpu(ctx, { type: 'flag', value: ctx.systemData.currentRoute.length > 0 });
+            return false;
         },
     },
 };
 
-export function createNavigatorSystem(options: CreateUnitSystemCommonOptions) {
-    const system = createUnitSystem<NavigatorData, CallableUnitSystemMessages>(options, {
-        name: 'navigator',
+export function createNavigatorSystem(options: CreateUnitSystemCommonOptions, deps: NavigatorDeps) {
+    return createUnitSystem<NavigatorSystemData, CallableUnitSystemMessages>(options, {
+        name: NAVIGATOR_SYSTEM_NAME,
         messages: {
-            ...callableUnitSystemHandlers(NAVIGATOR_FNS),
+            ...callableUnitSystemHandlers(deps, NAVIGATOR_FNS),
         },
 
         initialData: (config, state) => {
@@ -76,31 +84,9 @@ export function createNavigatorSystem(options: CreateUnitSystemCommonOptions) {
             }
 
             return {
+                home: state.location,
                 currentRoute: [],
-                currentRouteIndex: -1,
-                ticksPerMove: 2, // TODO: use config to determine unit speed
             };
         },
-
-        tick(ctx, env) {
-            const nav = ctx.systemData;
-            const nextTile = nav.currentRoute[nav.currentRouteIndex];
-
-            if (nextTile === undefined) {
-                const success = ctx.state.location === nav.currentRoute[nav.currentRoute.length - 1];
-                nav.currentRoute = [];
-                nav.currentRouteIndex = -1;
-                ctx.sleep();
-
-                returnToCpu(ctx, { type: 'flag', value: success });
-                return;
-            }
-
-            nav.currentRouteIndex += 1;
-            ctx.update({ location: nextTile });
-            ctx.sleep(nav.ticksPerMove);
-        },
     });
-
-    return system;
 }

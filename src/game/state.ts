@@ -1,7 +1,8 @@
 import { createBlueprintDeck, type BlueprintDeck } from './deck';
-import type { Engine } from './engine';
+import type { GameLoop } from './loop';
 import { createGameSystems, GameUnitSystems } from './systems';
 import { createGameTime, type GameTimeState } from './time';
+import type { CreateGameProgressListener, WorldgenOptions } from './types';
 import { createGameUIState, type GameUIState } from './ui';
 import { createGameWorld, type GameWorld } from './world';
 
@@ -13,11 +14,17 @@ export type GameState = {
     readonly units: GameUnitSystems;
 };
 
-export const createGameState = (engine: Engine): GameState => {
-    const time = createGameTime(engine);
-    const world = createGameWorld();
+type Options = {
+    worldgen: WorldgenOptions;
+    gameTick: GameLoop;
+    onProgress: CreateGameProgressListener | undefined;
+};
+
+export async function createGameState({ gameTick, onProgress, worldgen }: Options): Promise<GameState> {
+    const time = createGameTime(gameTick);
+    const world = await createGameWorld(worldgen, onProgress);
     const deck = createBlueprintDeck();
-    const units = createGameSystems(world, deck, engine);
+    const units = createGameSystems(world, deck, gameTick);
     const ui = createGameUIState(units);
 
     const state: GameState = {
@@ -29,4 +36,4 @@ export const createGameState = (engine: Engine): GameState => {
     };
 
     return state;
-};
+}

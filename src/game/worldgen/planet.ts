@@ -4,18 +4,33 @@ import { icosahedron } from '@/lib/icosa';
 import type { MeshBuilder } from '@/lib/MeshBuilder';
 import { NavMesh } from '@/lib/NavMesh';
 import { drawInteger, RandomNumberGenerator, type RandomSequence } from '@/lib/random';
-import { SurfaceNode, type Planet } from '../types';
+import {
+    SurfaceNode,
+    type CreateGameProgressListener,
+    type NodeId,
+    type Planet,
+    type ResourceDeposit,
+    type WorldgenOptions,
+} from '../types';
 import { generateResourceDeposits } from './resources';
+import { sleep } from '@/lib/timeouts';
 
-export function generatePlanet(seed: string): Planet {
-    const mb = createPlanetGeometry(seed);
+export async function generatePlanet(
+    opts: WorldgenOptions,
+    onProgress: CreateGameProgressListener | undefined,
+): Promise<Planet> {
+    const mb = await createPlanetGeometry(opts, onProgress);
+
+    onProgress?.({ progress: 0.9, stage: 'Assembling the planet' });
+    await sleep(0);
+
     const nodes = new Array<SurfaceNode>(mb.size().verticies);
     const connections = mb.calculateConnectionMap();
-    for (let v = 0; v < nodes.length; v++) {
+    for (let v = 0 as NodeId; v < nodes.length; v++) {
         nodes[v] = {
             index: v,
             position: new Vector3(...mb.coords(v)),
-            connections: connections[v],
+            connections: connections[v] as Set<NodeId>,
         };
     }
 
@@ -26,20 +41,33 @@ export function generatePlanet(seed: string): Planet {
     };
     console.log('[INFO] Graph size', planet.nodes.length);
 
-    generateResourceDeposits(seed, planet);
+    onProgress?.({ progress: 0.95, stage: 'Generating resources' });
+    await sleep(0);
+
+    generateResourceDeposits(opts.seed, planet);
 
     return planet;
 }
 
-function createPlanetGeometry(seed: string): MeshBuilder {
+async function createPlanetGeometry(
+    opts: WorldgenOptions,
+    onProgress: CreateGameProgressListener | undefined,
+): Promise<MeshBuilder> {
+    onProgress?.({ progress: 0, stage: 'Building planet graph' });
+    await sleep(0);
+
     const SIZE = 1;
     const planet = icosahedron({
         size: SIZE,
         subdivisions: 4,
     });
 
-    const rng = new RandomNumberGenerator(seed);
+    const rng = new RandomNumberGenerator(opts.seed);
     const seq = rng.detached();
+
+    onProgress?.({ progress: 0.1, stage: 'Randomizing planet graph' });
+    await sleep(0);
+
     rotateRandomEdges({
         builder: planet,
         seq,
@@ -49,6 +77,9 @@ function createPlanetGeometry(seed: string): MeshBuilder {
 
     const idealFaceArea = (4 * Math.PI * SIZE * SIZE) / planet.size().faces;
     const idealEdgeLength = Math.sqrt((idealFaceArea * 4) / Math.sqrt(3));
+
+    onProgress?.({ progress: 0.5, stage: 'Relaxing planet graph' });
+    await sleep(0);
 
     relaxMesh(planet, {
         targetEdgeLength: idealEdgeLength,

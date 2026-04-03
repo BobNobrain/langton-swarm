@@ -1,11 +1,15 @@
 import { createSignal, type Signal } from 'solid-js';
 import type { BlueprintId } from '../deck';
 import type { UnitConfiguration, UnitId } from '../types';
-import { createUnitSystem, type CreateUnitSystemCommonOptions } from './systems';
+import { createUnitSystem } from './systems';
+import type { CreateUnitSystemCommonOptions } from './types';
+import { isPile } from '../config';
 
 export enum UnitModelType {
+    Unknown = 'unknown',
     Rover = 'rover',
     Mother = 'mother',
+    Pile = 'pile',
 }
 
 type SignalsSystemData = {
@@ -20,8 +24,10 @@ export type GameSignals = {
 export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
     // TODO: somehow export these signals
     const idsByModelType: Record<UnitModelType, Signal<UnitId[]>> = {
+        [UnitModelType.Unknown]: createSignal<UnitId[]>([]),
         [UnitModelType.Rover]: createSignal<UnitId[]>([]),
         [UnitModelType.Mother]: createSignal<UnitId[]>([]),
+        [UnitModelType.Pile]: createSignal<UnitId[]>([]),
     };
     const idsByBlueprint: Record<BlueprintId, Signal<UnitId[]>[]> = {};
 
@@ -35,9 +41,6 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
             rSet((old) => [...old, unitId]);
 
             return { modelType };
-        },
-        tick(ctx, env) {
-            ctx.sleep();
         },
 
         finalize(ctx, env) {
@@ -55,9 +58,17 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
 }
 
 function getUnitModel(config: UnitConfiguration): UnitModelType {
-    if (config.navigator) {
+    if (config.mother) {
+        return UnitModelType.Mother;
+    }
+
+    if (config.engine) {
         return UnitModelType.Rover;
     }
 
-    return UnitModelType.Mother;
+    if (isPile(config)) {
+        return UnitModelType.Pile;
+    }
+
+    return UnitModelType.Unknown;
 }

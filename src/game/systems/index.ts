@@ -1,60 +1,97 @@
 import { sequentialId } from '@/lib/ids';
 import type { BlueprintDeck } from '../deck';
-import type { Engine } from '../engine';
-import type { NodeId, Planet, UnitCommand, UnitCommandCall, UnitEnvironment, UnitId, UnitState } from '../types';
+import type { GameLoop } from '../loop';
+import type {
+    NodeId,
+    UnitCommand,
+    UnitCommandCall,
+    UnitConfiguration,
+    UnitEnvironment,
+    UnitId,
+    UnitState,
+} from '../types';
 import type { GameWorld } from '../world';
-import { createCPUSystem } from './cpu';
-import { createMotherSystem } from './mother';
-import { createNavigatorSystem } from './navigator';
+import { createCPUSystem, type CPUData } from './cpu';
+import { createDrillSystem } from './drill';
+import { createEngineSystem } from './engine';
+import { createInventorySystem, type InventoryController } from './inventory';
+import { createMotherSystem, type MotherData } from './mother';
+import { createNavigatorSystem, type NavigatorSystemData } from './navigator';
+import { createScannerSystem, type ScannerData } from './scanner';
 import { createSignalsSystem } from './signals';
-import type { CreateUnitSystemCommonOptions, UnitSystem, UnitSystemMessage } from './systems';
-import type { SpawnOptions } from './utils';
+import { createStationariesSystem } from './stationaries';
+import type { UnitSystem, UnitSystemPublic } from './systems';
+import type { CreateUnitSystemCommonOptions, DespawnFn, SendMessage, SpawnFn, UnitSystemMessage } from './types';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
-    readonly cpu: Pick<ReturnType<typeof createCPUSystem>, 'getData'>;
     readonly unitStates: Readonly<Record<string, UnitState>>;
 
-    providePlanet(planet: Planet): void;
-    spawn(options: SpawnOptions): UnitId;
+    readonly inventory: InventoryController;
+    readonly mother: UnitSystemPublic<MotherData>;
+    readonly cpu: UnitSystemPublic<CPUData>;
+    readonly navigator: UnitSystemPublic<NavigatorSystemData>;
+    readonly scanner: UnitSystemPublic<ScannerData>;
+
+    readonly debug: unknown;
+
+    spawn: SpawnFn;
+    despawn: DespawnFn;
+
     queryCommands(unitId: UnitId): UnitCommand[];
     executeCommand(unitId: UnitId, call: UnitCommandCall): void;
     executeCommandMany(unitIds: UnitId[], call: UnitCommandCall): void;
     findByLocation(location: NodeId | Set<NodeId>): UnitId[];
     getLastUpdatedTime(id: UnitId): number;
+    getConfig(id: UnitId): UnitConfiguration | null;
 };
 
-export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine: Engine): GameUnitSystems {
+export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTick: GameLoop): GameUnitSystems {
     const systems: Record<string, UnitSystem<unknown>> = {};
-    const messageQueue: { to: string; message: UnitSystemMessage }[] = [];
+    const messageQueue: { to: string; message: UnitSystemMessage; notUntil?: number }[] = [];
 
     const unitId = sequentialId<UnitId>();
     const unitStates: Record<UnitId, UnitState> = {};
     const unitUpdateTimes: Record<UnitId, number> = {};
-    // const unitConfigs: Record<UnitId, UnitConfiguration> = {};
-
-    const sendMessage: CreateUnitSystemCommonOptions['sendMessage'] = (to, message) => {
-        messageQueue.push({ to, message });
-    };
+    const unitConfigs: Record<UnitId, UnitConfiguration> = {};
 
     const env: UnitEnvironment = {
-        world: world.planet()!,
         currentTick: -1,
     };
 
-    const spawn = ({ at, config }: SpawnOptions): UnitId => {
+    const sendMessage: SendMessage = (to, message, delay) => {
+        messageQueue.push({ to, message, notUntil: delay ? env.currentTick + delay : undefined });
+    };
+
+    const spawn: SpawnFn = ({ at, config }) => {
+        console.log('[DEBUG] spawn:', at.toString(16), config);
         const id = unitId.aquire();
         const state: UnitState = { location: at };
 
         unitStates[id] = state;
         unitUpdateTimes[id] = -1;
-        // unitConfigs[id] = config;
+        unitConfigs[id] = config;
 
         for (const system of Object.values(systems)) {
             system.create(id, config, state);
         }
 
         return id;
+    };
+    const despawn: DespawnFn = (unitId) => {
+        console.log('[DEBUG] despawn:', unitId);
+        const state = unitStates[unitId];
+        if (!state) {
+            return;
+        }
+
+        for (const system of Object.values(systems)) {
+            system.remove(unitId);
+        }
+
+        delete unitStates[unitId];
+        delete unitUpdateTimes[unitId];
+        delete unitConfigs[unitId];
     };
 
     const updateUnitState = (id: UnitId, patch: Partial<UnitState>) => {
@@ -64,53 +101,66 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine:
 
     const opts: CreateUnitSystemCommonOptions = { env, states: unitStates, sendMessage, updateUnitState };
 
-    const navigator = createNavigatorSystem(opts);
     const cpu = createCPUSystem(opts);
-    const mother = createMotherSystem(opts, { deck, spawn });
+    const engine = createEngineSystem(opts, world);
+    const [stationariesSystem, stationaries] = createStationariesSystem(opts, { despawn });
+    const [inventorySystem, inventoryController] = createInventorySystem(opts, stationaries, spawn, despawn);
+    const mother = createMotherSystem(opts, { deck, spawn, inventory: inventoryController });
     const signals = createSignalsSystem(opts);
+    const drill = createDrillSystem(opts, world, inventoryController);
+    const scanner = createScannerSystem(opts, world, inventoryController);
+    const navigator = createNavigatorSystem(opts, world);
 
-    systems['navigator'] = navigator;
-    systems['cpu'] = cpu;
-    systems['mother'] = mother;
-    systems['signals'] = signals;
+    systems[cpu.name] = cpu;
+    systems[engine.name] = engine;
+    systems[mother.name] = mother;
+    systems[signals.name] = signals;
+    systems[stationariesSystem.name] = stationariesSystem;
+    systems[inventorySystem.name] = inventorySystem;
+    systems[drill.name] = drill;
+    systems[scanner.name] = scanner;
+    systems[navigator.name] = navigator;
 
-    engine.on((tick) => {
-        if (!env.world) {
-            return;
-        }
-
+    logicTick.addGameTask((tick) => {
         // main unit update loop
         // update the env object
         env.currentTick = tick;
 
         // tick all the components, in order
-        mother.tick();
         cpu.tick();
-        navigator.tick();
+        mother.tick();
+        inventorySystem.tick();
+        stationariesSystem.tick();
 
         // process all the messages to activate the components
-        for (const { to, message } of messageQueue) {
-            const system = systems[to];
-            if (!system) {
-                console.error(`[WARN] sendMessage: system "${to}" not found`, message);
+        const pending: typeof messageQueue = [];
+        for (const msg of messageQueue) {
+            if (tick < (msg.notUntil ?? 0)) {
+                pending.push(msg);
                 continue;
             }
 
-            system.handleMessage(message);
+            const system = systems[msg.to];
+            system.handleMessage(msg.message);
         }
+
         messageQueue.length = 0;
+        messageQueue.push(...pending);
     });
 
     return {
         signals,
-        cpu,
         unitStates,
-
-        providePlanet(planet) {
-            env.world = planet;
-        },
+        debug: { systems, messageQueue },
 
         spawn,
+        despawn,
+
+        inventory: inventoryController,
+        mother,
+        cpu,
+        navigator,
+        scanner,
 
         queryCommands(unitId) {
             if (cpu.has(unitId)) {
@@ -157,7 +207,13 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, engine:
         getLastUpdatedTime(id) {
             return unitUpdateTimes[id] ?? -1;
         },
+
+        getConfig(id) {
+            return unitConfigs[id] ?? null;
+        },
     };
 }
 
+export type { CPUData, NavigatorSystemData, MotherData, ScannerData };
 export { UnitModelType } from './signals';
+export { type InventoryController, type InventoryData } from './inventory';

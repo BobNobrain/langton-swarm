@@ -1,17 +1,28 @@
-import { createDefaultProgramText } from './program';
 import type { UnitConfiguration } from './types';
-
-export function createDefaultUnitConfig(): UnitConfiguration {
-    return {
-        cpu: createDefaultProgramText(),
-        battery: { capacity: 100 },
-        navigator: true,
-        receiver: true,
-        storage: { size: 100 },
-        scanner: true,
-    };
-}
 
 export function getProcessorTickRate(config: UnitConfiguration): number {
     return 4; // every 4 ticks, so 5 times per second
+}
+
+export function isStationary(config: UnitConfiguration): boolean {
+    return !config.engine;
+}
+
+export function isPile({ storage, ...rest }: UnitConfiguration): boolean {
+    if (!storage) {
+        return false;
+    }
+
+    return (
+        !Number.isFinite(storage.size) &&
+        Object.values(rest).every((value) => value === undefined || value === null || value === false)
+    );
+}
+
+export function getTicksPerMove(config: UnitConfiguration): number {
+    if (!config.engine) {
+        return 0;
+    }
+
+    return 12 / config.engine.power;
 }

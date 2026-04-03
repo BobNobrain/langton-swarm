@@ -1,8 +1,8 @@
-import { createSignal, onCleanup, onMount, type ParentComponent } from 'solid-js';
-import { createGame, type NodeId, createDefaultUnitConfig, createMotherConfig } from '@/game';
+import { createSignal, onCleanup, onMount, Show, type ParentComponent } from 'solid-js';
+import { createGame, type NodeId, type Game } from '@/game';
+import { MOTHER_PRESET, TEST_PRESET } from '@/game/presets';
 import { spawnFromDeck } from '@/game/utils';
 import { GameProvider } from '@/gameContext';
-import { createGlobalListener, KeyCode } from '@/lib/input';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
 import { GameTopBar } from '../GameTopBar/GameTopBar';
 import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
@@ -10,37 +10,39 @@ import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
 import styles from './GameUI.module.css';
 
 export const GameUI: ParentComponent = (props) => {
-    const game = createGame({});
+    const [game, setGame] = createSignal<Game | null>(null);
+    const [loadingProgress, setLoadingProgress] = createSignal('0% Loading...');
+
     onMount(() => {
-        game.start();
+        createGame({
+            onProgress: ({ progress, stage }) => setLoadingProgress(`${(progress * 100).toFixed(0)}% ${stage}...`),
+        }).then((g) => {
+            const coreBp = g.deck.create('core', MOTHER_PRESET);
+            const coreId = spawnFromDeck(g.deck, g.units, 15 as NodeId, coreBp.id)!;
+            g.units.inventory.add({ to: coreId, amounts: { titanium: 100, copper: 100 }, tick: 0 });
 
-        const core = game.deck.create('core', createMotherConfig());
-        spawnFromDeck(game.deck, game.units, 15 as NodeId, core.id);
+            const testBp = g.deck.create('test', TEST_PRESET);
 
-        const testBp = game.deck.create('test', createDefaultUnitConfig());
+            setGame(g);
+            g.start();
+        });
 
         onCleanup(() => {
-            game.stop();
+            game()?.stop();
         });
     });
 
-    createGlobalListener('keyup', (ev) => {
-        if (ev.code !== KeyCode.Space) {
-            return;
-        }
-
-        game.time.togglePause();
-    });
-
     return (
-        <GameProvider value={game}>
-            <main class={styles.wrapper}>
-                <section class={styles.scene}>{props.children}</section>
-                <GameTopBar />
-                <SelectedTilePanel />
-                <SelectedUnitsPanel />
-                <DeckBrowser />
-            </main>
-        </GameProvider>
+        <Show when={game()} fallback={<div class={styles.loading}>{loadingProgress()}</div>}>
+            <GameProvider value={game()!}>
+                <main class={styles.wrapper}>
+                    <section class={styles.scene}>{props.children}</section>
+                    <GameTopBar />
+                    <SelectedTilePanel />
+                    <SelectedUnitsPanel />
+                    <DeckBrowser />
+                </main>
+            </GameProvider>
+        </Show>
     );
 };

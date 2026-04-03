@@ -2,6 +2,7 @@ import type { BlueprintId } from '../deck';
 import type { NodeId } from '../types';
 
 export type BsmlValue =
+    | { type: 'null' }
     | { type: 'number'; value: number }
     | { type: 'flag'; value: boolean }
     | { type: 'position'; value: NodeId }

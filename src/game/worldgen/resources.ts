@@ -1,8 +1,10 @@
 import { pick, RandomNumberGenerator } from '@/lib/random';
 import { type NodeId, type Planet } from '../types';
 
+export type KnownResourceName = 'copper' | 'titanium';
+
 type ResourceData = {
-    resource: string;
+    resource: KnownResourceName;
     centerMin: number;
     centerMax: number;
     edgeMin: number;

@@ -3,6 +3,7 @@ import {
     CylinderGeometry,
     DoubleSide,
     MeshStandardMaterial,
+    SphereGeometry,
     type BufferGeometry,
     type Material,
 } from 'three';
@@ -35,6 +36,16 @@ const mother: UnitModel = {
     }),
 };
 
+const pile: UnitModel = {
+    geom: new SphereGeometry(0.01, 8, 4),
+    mat: new MeshStandardMaterial({
+        color: '#8e867f',
+        roughness: 1,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.1,
+    }),
+};
+
 const unknown: UnitModel = {
     geom: new BoxGeometry(0.03, 0.03, 0.03),
     mat: new MeshStandardMaterial({
@@ -53,6 +64,9 @@ export function getUnitModel(type: UnitModelType): UnitModel {
 
         case UnitModelType.Rover:
             return rover;
+
+        case UnitModelType.Pile:
+            return pile;
 
         default:
             return unknown;

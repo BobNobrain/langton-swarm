@@ -1,29 +1,70 @@
-import { createSignal } from 'solid-js';
+import { createSignal, onCleanup } from 'solid-js';
+import type { NavMesh } from '@/lib/NavMesh';
+import type { CreateGameProgressListener, NodeId, ResourceDeposit, SurfaceNode, WorldgenOptions } from './types';
 import { generatePlanet } from './worldgen/planet';
-import type { Planet } from './types';
 
 export type GameWorld = {
-    seed: () => string;
-    planet: () => Planet | null;
+    readonly seed: string;
 
-    init: (seed: string) => void;
+    readonly surface: SurfaceNode[];
+    readonly nav: NavMesh;
+
+    readonly resources: Map<NodeId, ResourceDeposit>;
+    mineResource(at: NodeId, resource: string, amount: number): boolean;
+    createResourceSignal(location: NodeId): () => ResourceDeposit | null;
 };
 
-export function createGameWorld(): GameWorld {
-    const [getSeed, setSeed] = createSignal('');
-    const [getWorld, setWorld] = createSignal<Planet | null>(null);
+type ResourceSignal = {
+    get: () => ResourceDeposit | null;
+    set: (val: ResourceDeposit | null) => void;
+    uses: number;
+};
+
+export async function createGameWorld(
+    opts: WorldgenOptions,
+    onProgress: CreateGameProgressListener | undefined,
+): Promise<GameWorld> {
+    const resourceSignals = new Map<NodeId, ResourceSignal>();
+    const { nav, nodes: surface, resources } = await generatePlanet(opts, onProgress);
+    onProgress?.({ progress: 1, stage: 'Done' });
 
     return {
-        seed: getSeed,
-        planet: getWorld,
+        seed: opts.seed,
 
-        init: (seed) => {
-            if (getWorld() !== null) {
-                throw new Error('already initialized');
+        surface,
+        nav,
+
+        resources,
+        mineResource(at, resource, amount) {
+            const deposit = resources.get(at);
+            if (!deposit || deposit.resource !== resource || deposit.amount < amount) {
+                return false;
             }
 
-            setSeed(seed);
-            setWorld(generatePlanet(seed));
+            deposit.amount -= amount;
+            return true;
+        },
+        createResourceSignal(location) {
+            const existing = resourceSignals.get(location);
+            if (existing) {
+                ++existing.uses;
+                return existing.get;
+            }
+
+            const [get, set] = createSignal(resources.get(location) ?? null);
+            resourceSignals.set(location, { get, set, uses: 1 });
+            onCleanup(() => {
+                const signal = resourceSignals.get(location);
+                if (!signal) {
+                    return;
+                }
+
+                --signal.uses;
+                if (signal.uses <= 0) {
+                    resourceSignals.delete(location);
+                }
+            });
+            return get;
         },
     };
 }

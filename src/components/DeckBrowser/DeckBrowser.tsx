@@ -1,7 +1,9 @@
-import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
+import { createMemo, For, Show, type Component } from 'solid-js';
+import { type BlueprintController, type BlueprintId, type UnitId } from '@/game';
+import { createDefaultUnitConfig } from '@/game/presets';
 import { useGame } from '@/gameContext';
-import { type BlueprintController, type BlueprintId, createDefaultUnitConfig, type UnitId } from '@/game';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
+import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
 import { Button } from '../Button/Button';
 import { Debugger } from '../Debugger/Debugger';
 import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
@@ -9,6 +11,10 @@ import { Header } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import { Select, type SelectOption } from '../Select/Select';
 import styles from './DeckBrowser.module.css';
+import { getConstructionCosts, getConstructionTime } from '@/game/construction';
+import { InventoryContent } from '../Inventory/Inventory';
+import { Symbols } from '@/lib/ascii';
+import { TimeLabel } from '../TimeLabel/TimeLabel';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -53,8 +59,13 @@ const DeckListItem: Component<{
             }
             onMainClick={() => props.onSelect(props.item.id)}
         >
-            <span class={styles.blueprintName}>{props.item.rName()}</span>
-            <span class={styles.blueprintVersion}>v.{props.item.rLastVersion().version}</span>
+            <div>
+                <BlueprintLabel name={props.item.rName()} version={props.item.rLastVersion().version} />
+            </div>
+            <div class={styles.deckItemProperties}>
+                <InventoryContent contents={getConstructionCosts(props.item.rLastVersion().config)} concise />
+                <TimeLabel ticks={getConstructionTime(props.item.rLastVersion().config)} />
+            </div>
         </ListItem>
     );
 };

@@ -20,5 +20,9 @@ export enum Symbols {
     QuadrantInverseTopRight = '▙',
     DiamondOutlined = '◈',
     DottedCircle = '◌',
+    Circle = '○',
+    ParallelogramOutline = '▱',
     Ellipsis = '…',
+    Lemniscate = '∞',
+    CircleQuarterTopRight = '◔',
 }

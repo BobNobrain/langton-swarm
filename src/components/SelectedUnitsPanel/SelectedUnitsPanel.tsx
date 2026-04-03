@@ -1,16 +1,15 @@
 import { createEffect, createSignal, Show, type Component } from 'solid-js';
 import type { UnitCommand, UnitId } from '@/game';
-import { renderEnergy, renderHealth, renderTileId } from '@/game/utils';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
 import { Header } from '../Header/Header';
-import { Inventory } from '../Inventory/Inventory';
 import { SelectedUnitsList } from '../SelectedUnitsList/SelectedUnitsList';
 import { CommandForm } from './CommandForm/CommandForm';
 import { CommandPanel } from './CommandPanel/CommandPanel';
-import { createUnitTracker } from './createUnitTracker';
+import { UnitDisplay } from './UnitDisplay/UnitDisplay';
 import styles from './SelectedUnitsPanel.module.css';
+import { StatusBar } from './StatusBar/StatusBar';
 
 type ActiveCommand = {
     cmd: UnitCommand;
@@ -27,17 +26,17 @@ export const SelectedUnitsPanel: Component = () => {
         setActiveCommand(null);
     });
 
-    const selectedUnitTracker = createUnitTracker(() => {
+    const selectedUnitId = () => {
         const selectedIds = ui.rSelectedUnits();
         if (selectedIds.length !== 1) {
             return null;
         }
 
         return selectedIds[0];
-    });
+    };
 
     return (
-        <FloatingPanel pinBottom pinLeft withMargin>
+        <FloatingPanel pinBottom pinLeft withMargin expandedWidth={selectedUnitId() !== null}>
             <FloatingPanelHeader sticky>
                 <Header size="sm">Units ({ui.rSelectedUnits().length})</Header>
                 <CommandPanel
@@ -57,9 +56,7 @@ export const SelectedUnitsPanel: Component = () => {
             </FloatingPanelHeader>
             <section class={styles.content}>
                 <SelectedUnitsList hoveredCommandTargets={hoveredCommandTargets()} />
-                <Show when={ui.rSelectedUnits().length === 1}>
-                    <Inventory contents={[]} />
-                </Show>
+                <UnitDisplay unitId={selectedUnitId()} />
             </section>
             <footer class={styles.actionsFooter}>
                 <Show when={ui.rSelectedUnits().length === 0}>
@@ -68,34 +65,7 @@ export const SelectedUnitsPanel: Component = () => {
                     </Button>
                 </Show>
                 <Show when={ui.rSelectedUnits().length === 1}>
-                    <Button
-                        inline
-                        style="secondary"
-                        onClick={() => {
-                            const unitId = ui.rSelectedUnits()[0];
-                            const found = deck.findByUnitId(unitId);
-
-                            if (!found) {
-                                return;
-                            }
-
-                            ui.deckSelectBlueprint(found.bp.id, found.v);
-                        }}
-                    >
-                        Debug
-                    </Button>
-                    <span class={styles.footerLabel} title="Health">
-                        {renderHealth(selectedUnitTracker.rHealth())}
-                    </span>
-                    <span class={styles.footerLabel} title="Energy">
-                        {renderEnergy(selectedUnitTracker.rEnergy())}
-                    </span>
-                    <span class={styles.footerLabel} title="Location">
-                        {renderTileId(selectedUnitTracker.rLocation())}
-                    </span>
-                    <span class={styles.footerLabel} title="CPU state">
-                        {selectedUnitTracker.rStateName()}
-                    </span>
+                    <StatusBar unitId={selectedUnitId()} />
                 </Show>
                 <Show when={ui.rSelectedUnits().length > 1}>
                     <Button style="secondary" onClick={() => ui.selectUnits([])}>

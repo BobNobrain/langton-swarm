@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import type { Engine } from './engine';
+import type { GameLoop } from './loop';
 
 export type GameTimeState = {
     rIsPaused: () => boolean;
@@ -8,11 +8,11 @@ export type GameTimeState = {
     getGameMonotonicTime(): number;
 };
 
-export function createGameTime(engine: Engine): GameTimeState {
+export function createGameTime(gameLoop: GameLoop): GameTimeState {
     const [rIsPaused, rSetIsPaused] = createSignal(false);
     let monotonicTime = 0;
-    engine.on((tick) => {
-        monotonicTime = tick * engine.tickDurationMs;
+    gameLoop.addGameTask((tick) => {
+        monotonicTime = tick * gameLoop.tickDurationMs;
     });
 
     return {
@@ -20,9 +20,9 @@ export function createGameTime(engine: Engine): GameTimeState {
         togglePause() {
             rSetIsPaused((wasPaused) => {
                 if (wasPaused) {
-                    engine.start();
+                    gameLoop.resume();
                 } else {
-                    engine.stop();
+                    gameLoop.pause();
                 }
                 return !wasPaused;
             });

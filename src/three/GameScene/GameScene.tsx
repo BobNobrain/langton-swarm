@@ -44,7 +44,7 @@ export const GameScene: Component = () => {
     return (
         <>
             <PlanetMesh
-                planetNodes={game.world.planet()?.nodes ?? []}
+                planetNodes={game.world.surface}
                 selectedTileId={game.ui.rSelectedTile()}
                 hilightedTiles={game.ui.rHighlightedTiles()}
                 onTileClick={(tileId) => {

@@ -7,8 +7,8 @@ export const WorldInfo: Component = () => {
 
     return (
         <DefList>
-            <DefListItem name="Seed">{game.world.seed()}</DefListItem>
-            <DefListItem name="Size">{game.world.planet()?.nodes.length ?? '--'} tiles</DefListItem>
+            <DefListItem name="Seed">{game.world.seed}</DefListItem>
+            <DefListItem name="Size">{game.world.surface.length ?? '--'} tiles</DefListItem>
         </DefList>
     );
 };

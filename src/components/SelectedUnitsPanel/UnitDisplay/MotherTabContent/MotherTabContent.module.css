@@ -1,0 +1,45 @@
+.currentSpawn {
+    background-color: var(--c-gray-d);
+    padding: 4px 8px;
+    margin-left: calc(-1 * var(--container-padding-l, 0));
+    margin-right: calc(-1 * var(--container-padding-r, 0));
+    margin-bottom: 8px;
+
+    position: relative;
+}
+
+.progressBar {
+    position: absolute;
+    left:0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(from var(--c-primary) r g b / 30%);
+}
+
+.currentSpawnCosts {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.assemblingLabel {
+    margin-right: 8px;
+    color: var(--c-gray-l);
+}
+
+.progressLabel {
+    margin-left: 8px;
+    color: var(--c-primary);
+}
+
+.queueItem {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.queueIndexLabel {
+    margin-right: 4px;
+    color: var(--c-gray-l);
+    font-weight: 300;
+}

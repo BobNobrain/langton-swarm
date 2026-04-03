@@ -1,6 +1,13 @@
 import type { UnitConfiguration } from '../types';
 import { getFunctions } from './functions';
-import type { BsmlExpression, BsmlFunctionCall, BsmlInstruction, BsmlProgram, CodePosition } from './program';
+import type {
+    BsmlArgument,
+    BsmlExpression,
+    BsmlFunctionCall,
+    BsmlInstruction,
+    BsmlProgram,
+    CodePosition,
+} from './program';
 import type { BsmlValueType } from './value';
 
 type TypecheckMessage = {
@@ -39,11 +46,11 @@ export function typecheck(program: BsmlProgram, config: UnitConfiguration | null
 
         state.stateArgTypes[stateDecl.name] = stateDecl.args.map((argDecl) => argDecl.type as BsmlValueType);
 
-        typecheckStatementBlock(stateDecl.body, state, emptyLocalState());
+        typecheckStatementBlock(stateDecl.body, state, localStateWithArgs(stateDecl.args));
     }
 
     for (const cmdDecl of program.commandDeclarations) {
-        typecheckStatementBlock(cmdDecl.body, state, emptyLocalState());
+        typecheckStatementBlock(cmdDecl.body, state, localStateWithArgs(cmdDecl.args));
     }
 
     for (const eventHandler of program.eventListeners) {
@@ -137,7 +144,7 @@ function typecheckFunctionCall(
         }
     }
 
-    return fn.returnType ?? null;
+    return fn.returnType;
 }
 
 function typecheckExpression(
@@ -176,4 +183,11 @@ function emptyLocalState(): LocalState {
 }
 function derivedLocalState(parent: LocalState): LocalState {
     return { variables: { ...parent.variables } };
+}
+function localStateWithArgs(args: BsmlArgument[]): LocalState {
+    const state = emptyLocalState();
+    for (const arg of args) {
+        state.variables[arg.name] = arg.type as BsmlValueType;
+    }
+    return state;
 }

@@ -1,0 +1,40 @@
+.wrapper {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    grid-template-rows: 1fr;
+    padding-top: 4px;
+}
+
+.tabs {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    border-right: 1px solid var(--c-primary);
+}
+
+.tab {
+    padding: 0;
+    margin: 0;
+
+    & > * {
+        display: block;
+        width: 100%;
+        text-align: left;
+    }
+}
+
+.content {
+    padding: 0 8px 4px;
+    --container-padding-t: 0;
+    --container-padding-b: 4px;
+    --container-padding-r: 8px;
+    --container-padding-l: 8px;
+
+    overflow: auto;
+    height: 200px;
+}
+
+.cpuFooter {
+    padding: 4px 0;
+    text-align: right;
+}

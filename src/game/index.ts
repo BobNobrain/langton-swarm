@@ -1,39 +1,46 @@
-import { createEngine, Engine, Ticker } from './engine';
+import { createGameLoop, GameLoop, Ticker } from './loop';
 import { createGameState, GameState } from './state';
+import type { CreateGameProgressListener, WorldgenOptionsInput } from './types';
+import { fillDefaults } from './worldgen/options';
 
 export type Game = GameState & {
     start: () => void;
     stop: () => void;
 
-    engine: Pick<Engine, 'on' | 'off'>;
+    gameTick: Pick<
+        GameLoop,
+        | 'addGameTask'
+        | 'removeGameTask'
+        | 'addUITask'
+        | 'removeUITask'
+        | 'getCurrentTick'
+        | 'isPaused'
+        | 'tickDurationMs'
+    >;
 };
 
 export type GameParams = {
     tickTime?: number;
-    worldSeed?: string;
+    worldgen?: WorldgenOptionsInput;
+    onProgress?: CreateGameProgressListener;
 };
 
 export const DEFAULT_TICK_TIME = 50;
-export const DEFAULT_SEED = 'deadmouse';
 
-export function createGame({ tickTime = DEFAULT_TICK_TIME, worldSeed = DEFAULT_SEED }: GameParams): Game {
-    const engine = createEngine(tickTime);
-    const state = createGameState(engine);
+export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onProgress }: GameParams): Promise<Game> {
+    const gameTick = createGameLoop(tickTime);
+    const state = await createGameState({ gameTick, worldgen: fillDefaults(worldgen), onProgress });
 
     const game: Game = {
         ...state,
-        engine,
+        gameTick,
 
         start: () => {
-            state.world.init(worldSeed);
-
-            state.units.providePlanet(state.world.planet()!);
-
-            engine.start();
+            gameTick.start();
         },
         stop: () => {
-            engine.stop();
-            engine.clear();
+            gameTick.stop();
+            gameTick.clear();
         },
     };
 
@@ -43,12 +50,20 @@ export function createGame({ tickTime = DEFAULT_TICK_TIME, worldSeed = DEFAULT_S
 }
 
 export type { GameState };
-export type { Engine, Ticker };
+export type { GameLoop as Engine, Ticker };
 
-export { createDefaultUnitConfig, getProcessorTickRate } from './config';
+export { getProcessorTickRate } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
-export { createMotherConfig } from './mother';
-export { type GameUnitSystems, UnitModelType } from './systems';
+export {
+    type GameUnitSystems,
+    UnitModelType,
+    type InventoryController,
+    type InventoryData,
+    type CPUData,
+    type MotherData,
+    type NavigatorSystemData,
+    type ScannerData,
+} from './systems';
 export type * from './types';
 export type { HighlightedTile } from './ui';
 export type { GameWorld } from './world';

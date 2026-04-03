@@ -1,0 +1,94 @@
+import { PILE_PRESET } from '@/game/presets';
+import { returnToCpu, type CallableUnitSystemFunctions } from '../utils';
+import type { InventoryData, InventoryDeps } from './types';
+import { measure } from './utils';
+
+export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, InventoryDeps> = {
+    unload_all: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'flag',
+        init(_, ctx, env, { inventories, stationaries, spawn }) {
+            const inv = ctx.systemData;
+            const loc = ctx.state.location;
+
+            let target = stationaries.getAt(loc);
+            if (target === ctx.unitId) {
+                // a stationary object cannot dump its inventory
+                returnToCpu(ctx, { type: 'flag', value: false });
+                return false;
+            }
+
+            if (!target) {
+                // a pile of material on the ground
+                target = spawn({ at: loc, config: PILE_PRESET });
+            }
+
+            const transfered = inventories.transfer({
+                from: ctx.unitId,
+                to: target,
+                tick: env.currentTick,
+                amounts: null,
+                strategy: 'all',
+            });
+
+            returnToCpu(ctx, { type: 'flag', value: transfered !== null });
+            return false;
+        },
+    },
+
+    pickup_all: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'number',
+        init(args, ctx, env, { inventories, stationaries }) {
+            const inv = ctx.systemData;
+            const loc = ctx.state.location;
+
+            let pickupFrom = stationaries.getAt(loc);
+            if (pickupFrom === ctx.unitId) {
+                // a stationary object cannot pickup
+                returnToCpu(ctx, { type: 'number', value: 0 });
+                return false;
+            }
+
+            if (!pickupFrom) {
+                // there's no storage to pick up from
+                returnToCpu(ctx, { type: 'number', value: 0 });
+                return false;
+            }
+
+            const transfered = inventories.transfer({
+                from: pickupFrom,
+                to: ctx.unitId,
+                tick: env.currentTick,
+                amounts: null,
+                strategy: 'max',
+            });
+
+            returnToCpu(ctx, { type: 'number', value: transfered === null ? 0 : measure(transfered) });
+            return false;
+        },
+    },
+
+    get_free_space: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'number',
+        init(_, ctx) {
+            const inv = ctx.systemData;
+            returnToCpu(ctx, { type: 'number', value: inv.capacity - inv.size });
+            return false;
+        },
+    },
+    is_empty: {
+        argNames: [],
+        argTypes: [],
+        returnType: 'flag',
+        init(_, ctx) {
+            const inv = ctx.systemData;
+            returnToCpu(ctx, { type: 'flag', value: inv.size === 0 });
+            return false;
+        },
+    },
+};

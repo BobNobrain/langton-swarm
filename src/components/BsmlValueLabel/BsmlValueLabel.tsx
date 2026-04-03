@@ -46,6 +46,9 @@ export const BsmlValueLabel: Component<{ value: BsmlValue | null }> = (props) =>
             case 'magic':
                 return <span class={styles.magic}>{rendered}</span>;
 
+            case 'null':
+                return <span class={styles.null}>{rendered}</span>;
+
             default:
                 return absurd(value);
         }

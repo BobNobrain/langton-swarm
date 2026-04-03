@@ -64,7 +64,7 @@
     &:active {
         transform: scale(0.95);
     }
-    &:focus {
+    &:focus-visible, &.vibrantFocus:focus {
         outline: 3px double var(--c-primary);
         animation: focusedButton infinite alternate 1s ease-in-out;
 

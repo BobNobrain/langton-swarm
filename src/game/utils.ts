@@ -1,6 +1,6 @@
 import type { BlueprintDeck, BlueprintId } from './deck';
 import type { createGameSystems } from './systems';
-import type { NodeId } from './types';
+import type { NodeId, UnitId } from './types';
 
 export function renderTileId(tid: NodeId | null | undefined) {
     if (typeof tid !== 'number') {
@@ -52,11 +52,11 @@ export function spawnFromDeck(
     at: NodeId,
     bpId: BlueprintId,
     bpVersionNumber?: number,
-) {
+): UnitId | null {
     const bp = deck.getBlueprint(bpId);
     if (!bp) {
         console.error('[WARN] spawnFromDeck: blueprint not found', bpId);
-        return;
+        return null;
     }
 
     const version =
@@ -68,10 +68,11 @@ export function spawnFromDeck(
             bpVersion: bpVersionNumber,
             vs: bp.rVersions(),
         });
-        return;
+        return null;
     }
 
     bp.lockVersion(version.version);
     const unitId = systems.spawn({ at, config: version.config });
     bp.registerUnit(unitId, version.version);
+    return unitId;
 }

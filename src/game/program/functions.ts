@@ -1,16 +1,20 @@
 import { CPU_FNS } from '../systems/cpu';
-import { NAVIGATOR_FNS } from '../systems/navigator';
+import { DRILL_FNS, DRILL_SYSTEM_NAME } from '../systems/drill';
+import { ENGINE_FNS, ENGINE_SYSTEM_NAME } from '../systems/engine';
+import { INVENTORY_FNS, INVENTORY_SYSTEM_NAME } from '../systems/inventory';
+import { NAVIGATOR_FNS, NAVIGATOR_SYSTEM_NAME } from '../systems/navigator';
+import { SCANNER_FNS, SCANNER_SYSTEM_NAME } from '../systems/scanner';
 import type { UnitConfiguration } from '../types';
 import type { BsmlValue, BsmlValueType } from './value';
 
 type BuiltinFn = {
     argTypes: BsmlValueType[];
-    returnType: BsmlValueType | null;
+    returnType: BsmlValueType;
 };
 
 export function getFunctions(config: UnitConfiguration | null) {
     const result: Record<string, BuiltinFn> = {};
-    const add = (namespace: string, name: string, args: BsmlValueType[], ret: BsmlValueType | null) => {
+    const add = (namespace: string, name: string, args: BsmlValueType[], ret: BsmlValueType) => {
         result[[namespace, name].filter(Boolean).join('.')] = { argTypes: args, returnType: ret };
     };
 
@@ -18,9 +22,33 @@ export function getFunctions(config: UnitConfiguration | null) {
         add('', name, fn.argTypes, fn.returnType);
     }
 
-    if (config?.navigator ?? true) {
+    if (config?.navigator) {
         for (const [name, fn] of Object.entries(NAVIGATOR_FNS)) {
-            add('navigator', name, fn.argTypes, fn.returnType);
+            add(NAVIGATOR_SYSTEM_NAME, name, fn.argTypes, fn.returnType);
+        }
+    }
+
+    if (config?.engine) {
+        for (const [name, fn] of Object.entries(ENGINE_FNS)) {
+            add(ENGINE_SYSTEM_NAME, name, fn.argTypes, fn.returnType);
+        }
+    }
+
+    if (config?.drill) {
+        for (const [name, fn] of Object.entries(DRILL_FNS)) {
+            add(DRILL_SYSTEM_NAME, name, fn.argTypes, fn.returnType);
+        }
+    }
+
+    if (config?.scanner) {
+        for (const [name, fn] of Object.entries(SCANNER_FNS)) {
+            add(SCANNER_SYSTEM_NAME, name, fn.argTypes, fn.returnType);
+        }
+    }
+
+    if (config?.storage) {
+        for (const [name, fn] of Object.entries(INVENTORY_FNS)) {
+            add(INVENTORY_SYSTEM_NAME, name, fn.argTypes, fn.returnType);
         }
     }
 
