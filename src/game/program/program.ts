@@ -60,6 +60,8 @@ export type BsmlExpression = { pos: CodePosition } & (
     | BsmlIdentifierExpression
     | BsmlStateNameIdentifier
     | BsmlFunctionCall
+    | BsmlBinaryExpression
+    | BsmlUnaryExpression
 );
 export type BsmlNumberLiteral = {
     type: 'number';
@@ -89,6 +91,17 @@ export type BsmlFunctionCall = {
     type: 'call';
     name: string;
     args: BsmlExpression[];
+};
+export type BsmlBinaryExpression = {
+    type: 'binary';
+    operator: string;
+    left: BsmlExpression;
+    right: BsmlExpression;
+};
+export type BsmlUnaryExpression = {
+    type: 'unary';
+    operator: string;
+    operand: BsmlExpression;
 };
 
 export type CodePosition = {

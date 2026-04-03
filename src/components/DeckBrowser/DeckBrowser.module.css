@@ -13,7 +13,7 @@
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
-    height: 100%;
+    height: calc(100% - 77px);
 
     &.hasDebugger {
         grid-template-rows: 1fr 1fr;

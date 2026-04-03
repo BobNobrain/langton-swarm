@@ -1,3 +1,5 @@
+@precedence { mul @left, sum @left, cmp @left, logic @left }
+
 @top Program { declaration* }
 
 declaration {
@@ -27,7 +29,7 @@ ConditionalStatement { @specialize[@name=Declkw]<Identifier, "when"> Expression 
 
 ProcedureCall { NestedIdentifier ~amb1 ArgumentsList? }
 
-VariableRead { NestedIdentifier ~amb1 }
+VariableRead { Identifier ~amb1 }
 
 VariableAssignment { Identifier "=" Expression }
 
@@ -48,20 +50,41 @@ Expression {
     StringLiteral |
     IntegerLiteral |
     StateNameLiteral |
+    UnaryExpression |
+    BinaryExpression |
     nestedExpression
 }
 
 nestedExpression { "(" Expression ")" }
+
+UnaryExpression { UnaryOperator Expression }
+
+UnaryOperator {
+    @specialize[@name=UnaryOp]<Identifier, "not"> | "-" | "+"
+}
+
+BinaryExpression {
+    Expression !mul BinaryOperatorMul Expression |
+    Expression !sum BinaryOperatorSum Expression |
+    Expression !cmp BinaryOperatorCmp Expression |
+    Expression !logic BinaryOperatorLogic Expression
+}
+
+// binaryOperatorPow { "^" }
+BinaryOperatorMul { "*" | "/" | "%" }
+BinaryOperatorSum { "+" | "-" }
+BinaryOperatorCmp { "<" | ">" | ">=" | "<=" | "==" | "/=" }
+BinaryOperatorLogic { @specialize[@name=BinOpLogic]<Identifier, "and" | "or" | "xor"> }
 
 BoolLiteral {
     @specialize[@name=Boolkw]<Identifier, "yes" | "no">
 }
 
 @tokens {
-    Identifier { $[a-zA-Z_]+ }
+    Identifier { $[a-zA-Z_] $[a-zA-Z_0-9]* }
     StateNameLiteral { ":" $[a-zA-Z_]+ }
     StringLiteral { '"' (!["\\] | "\\" _)* '"' }
-    IntegerLiteral { "-"? $[0-9]+ }
+    IntegerLiteral { $[0-9]+ }
     LineComment { "#" ![\n]* }
     whitespace { $[ \t\n\r]+ }
     "(" ")"

@@ -175,6 +175,118 @@ function typecheckExpression(
 
         case 'call':
             return typecheckFunctionCall(expr, state, localState);
+
+        case 'unary':
+            return typecheckUnaryExpression(expr, state, localState, expectedType);
+
+        case 'binary':
+            return typecheckBinaryExpression(expr, state, localState, expectedType);
+    }
+}
+
+function typecheckUnaryExpression(
+    expr: Extract<BsmlExpression, { type: 'unary' }>,
+    state: TypecheckState,
+    localState: LocalState,
+    expectedType: BsmlValueType | null,
+): BsmlValueType | null {
+    switch (expr.operator) {
+        case 'not':
+            return 'flag';
+
+        case '-':
+        case '+': {
+            const operandType = typecheckExpression(expr.operand, state, localState, 'number');
+            if (operandType !== 'number') {
+                state.result.push({
+                    pos: expr.operand.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${operandType ?? '??'}`,
+                });
+            }
+            return 'number';
+        }
+
+        default:
+            return null;
+    }
+}
+
+function typecheckBinaryExpression(
+    expr: Extract<BsmlExpression, { type: 'binary' }>,
+    state: TypecheckState,
+    localState: LocalState,
+    expectedType: BsmlValueType | null,
+): BsmlValueType | null {
+    switch (expr.operator) {
+        case 'and':
+        case 'or':
+        case 'xor': {
+            const leftType = typecheckExpression(expr.left, state, localState, 'flag');
+            const rightType = typecheckExpression(expr.right, state, localState, 'flag');
+            if (leftType !== 'flag') {
+                state.result.push({
+                    pos: expr.left.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${leftType ?? '??'}`,
+                });
+            }
+            if (rightType !== 'flag') {
+                state.result.push({
+                    pos: expr.right.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${rightType ?? '??'}`,
+                });
+            }
+            return 'flag';
+        }
+
+        case '==':
+        case '/=':
+            return 'flag';
+
+        case '>':
+        case '>=':
+        case '<':
+        case '<=': {
+            const leftType = typecheckExpression(expr.left, state, localState, 'number');
+            const rightType = typecheckExpression(expr.right, state, localState, 'number');
+            if (leftType !== 'number') {
+                state.result.push({
+                    pos: expr.left.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${leftType ?? '??'}`,
+                });
+            }
+            if (rightType !== 'number') {
+                state.result.push({
+                    pos: expr.right.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${rightType ?? '??'}`,
+                });
+            }
+            return 'flag';
+        }
+
+        case '*':
+        case '/':
+        case '+':
+        case '-':
+        case '%': {
+            const leftType = typecheckExpression(expr.left, state, localState, 'number');
+            const rightType = typecheckExpression(expr.right, state, localState, 'number');
+            if (leftType !== 'number') {
+                state.result.push({
+                    pos: expr.left.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${leftType ?? '??'}`,
+                });
+            }
+            if (rightType !== 'number') {
+                state.result.push({
+                    pos: expr.right.pos,
+                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${rightType ?? '??'}`,
+                });
+            }
+            return 'number';
+        }
+
+        default:
+            return null;
     }
 }
 

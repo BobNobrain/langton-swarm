@@ -9,7 +9,8 @@ export type CompiledInstruction =
     | { type: 'call'; fname: string; nargs: number }
     | { type: 'assign'; name: string }
     | { type: 'read'; name: string }
-    // | { type: 'binop'; operator: '+' | '-' }
+    | { type: 'binop'; operator: string }
+    | { type: 'unop'; operator: string }
     | { type: 'setstate'; nargs: number }
     | { type: 'jumpz'; position: number };
 
@@ -131,5 +132,19 @@ function compileExpression(expr: BsmlExpression, into: CompiledInstruction[]) {
             }
             into.push({ type: 'call', fname: expr.name, nargs: expr.args.length });
             break;
+
+        case 'unary':
+            compileExpression(expr.operand, into);
+            into.push({ type: 'unop', operator: expr.operator });
+            break;
+
+        case 'binary':
+            compileExpression(expr.left, into);
+            compileExpression(expr.right, into);
+            into.push({ type: 'binop', operator: expr.operator });
+            break;
+
+        default:
+            absurd(expr);
     }
 }

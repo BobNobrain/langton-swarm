@@ -113,13 +113,12 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                 }
 
                 case 'call': {
-                    const argv: BsmlValue[] = cpu.stack.slice(-instruction.nargs);
+                    const argv = popStack(cpu, instruction.nargs);
                     if (argv.length !== instruction.nargs) {
                         toErrorState(cpu, `need at least ${instruction.nargs} elements in stack`);
                         break;
                     }
 
-                    cpu.stack.length -= instruction.nargs;
                     if (CPU_FNS[instruction.fname]) {
                         cpu.stack.push(CPU_FNS[instruction.fname].call(...argv));
                         break;
@@ -171,6 +170,31 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
                     break;
                 }
 
+                case 'binop': {
+                    const result = binop(cpu, instruction.operator);
+                    if (!result) {
+                        if (cpu.state !== 'error') {
+                            toErrorState(cpu, `cound not run a binary operation: ${instruction.operator}`);
+                        }
+                        break;
+                    }
+
+                    cpu.stack.push(result);
+                    break;
+                }
+
+                case 'unop':
+                    const result = unop(cpu, instruction.operator);
+                    if (!result) {
+                        if (cpu.state !== 'error') {
+                            toErrorState(cpu, `cound not run an unary operation: ${instruction.operator}`);
+                        }
+                        break;
+                    }
+
+                    cpu.stack.push(result);
+                    break;
+
                 default:
                     return absurd(instruction);
             }
@@ -210,11 +234,12 @@ export const CPU_FNS: Record<
 > = {};
 
 function toErrorState(cpu: CPUData, msg: string) {
+    const prev = { ...cpu };
     setState(cpu, 'error');
     cpu.variables.message = { type: 'string', value: msg };
-    cpu.variables.prev = { type: 'state', value: cpu.state };
-    cpu.variables.ptr = { type: 'number', value: cpu.ptr };
-    cpu.variables.stack = { type: 'string', value: cpu.stack.map(renderValue).join(', ') };
+    cpu.variables.prev = { type: 'state', value: prev.state };
+    cpu.variables.ptr = { type: 'number', value: prev.ptr };
+    cpu.variables.stack = { type: 'string', value: prev.stack.map(renderValue).join(', ') };
 }
 
 function setState(cpu: CPUData, state: string) {
@@ -226,6 +251,10 @@ function setState(cpu: CPUData, state: string) {
 }
 
 function popStack(cpu: CPUData, n = 1): BsmlValue[] {
+    if (n === 0) {
+        return [];
+    }
+
     if (cpu.stack.length < n) {
         toErrorState(cpu, `not enough items in stack: expected ${n}, got ${cpu.stack.length}`);
         return [];
@@ -234,4 +263,115 @@ function popStack(cpu: CPUData, n = 1): BsmlValue[] {
     const result = cpu.stack.slice(-n);
     cpu.stack.length -= n;
     return result;
+}
+
+function binop(cpu: CPUData, op: string): BsmlValue | null {
+    const [left, right] = popStack(cpu, 2);
+    if (!right) {
+        return null;
+    }
+
+    switch (op) {
+        case '==':
+            if (left.type !== right.type) {
+                return { type: 'flag', value: false };
+            }
+            if (left.type === 'null') {
+                return { type: 'flag', value: true };
+            }
+            if (left.type === 'magic') {
+                return { type: 'flag', value: false };
+            }
+            return { type: 'flag', value: left.value === (right as typeof left).value };
+
+        case '/=':
+            if (left.type !== right.type) {
+                return { type: 'flag', value: true };
+            }
+            if (left.type === 'null') {
+                return { type: 'flag', value: false };
+            }
+            if (left.type === 'magic') {
+                return { type: 'flag', value: true };
+            }
+            return { type: 'flag', value: left.value !== (right as typeof left).value };
+
+        case '>':
+            return {
+                type: 'flag',
+                value: left.type === 'number' && right.type === 'number' && left.value > right.value,
+            };
+        case '>=':
+            return {
+                type: 'flag',
+                value: left.type === 'number' && right.type === 'number' && left.value >= right.value,
+            };
+        case '<':
+            return {
+                type: 'flag',
+                value: left.type === 'number' && right.type === 'number' && left.value < right.value,
+            };
+        case '<=':
+            return {
+                type: 'flag',
+                value: left.type === 'number' && right.type === 'number' && left.value <= right.value,
+            };
+
+        case '*':
+            return left.type === 'number' && right.type === 'number'
+                ? { type: 'number', value: left.value * right.value }
+                : null;
+        case '/':
+            return left.type === 'number' && right.type === 'number'
+                ? { type: 'number', value: left.value / right.value }
+                : null;
+        case '%':
+            return left.type === 'number' && right.type === 'number'
+                ? { type: 'number', value: left.value % right.value }
+                : null;
+        case '+':
+            return left.type === 'number' && right.type === 'number'
+                ? { type: 'number', value: left.value + right.value }
+                : null;
+        case '-':
+            return left.type === 'number' && right.type === 'number'
+                ? { type: 'number', value: left.value - right.value }
+                : null;
+
+        case 'and':
+            return left.type === 'flag' && right.type === 'flag'
+                ? { type: 'flag', value: left.value && right.value }
+                : null;
+        case 'or':
+            return left.type === 'flag' && right.type === 'flag'
+                ? { type: 'flag', value: left.value || right.value }
+                : null;
+        case 'xor':
+            return left.type === 'flag' && right.type === 'flag'
+                ? { type: 'flag', value: left.value !== right.value }
+                : null;
+
+        default:
+            return null;
+    }
+}
+
+function unop(cpu: CPUData, op: string): BsmlValue | null {
+    const [operand] = popStack(cpu);
+    if (!operand) {
+        return null;
+    }
+
+    switch (op) {
+        case '-':
+            return operand.type === 'number' ? { type: 'number', value: -operand.value } : null;
+        case '+':
+            return operand.type === 'number' ? { type: 'number', value: -operand.value } : null;
+
+        case 'not':
+            return { type: 'flag', value: !isTruthy(operand) };
+
+        default:
+            return null;
+    }
 }

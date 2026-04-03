@@ -16,7 +16,7 @@ command move(position to) {
 }
 
 command mine {
-    drill.mine
+    state :mining
 }
 
 command roam {
@@ -27,8 +27,8 @@ command idle {}
 
 command scan {
     when scanner.find_largest_deposit(3) {
-        navigator.navigate(scanner.found_location())
-        drill.mine
+        navigator.find_route(scanner.found_location())
+        state :navigating
     }
 
     state :idle
@@ -46,11 +46,18 @@ state roaming default {
 }
 
 state navigating {
-    # TODO
-    state :idle
-    when navigator.has_next {
-        engine.move(navigator.next_step)
+    when not navigator.has_next {
+        state :idle
     }
+    engine.move(navigator.next_step)
+}
+
+state mining {
+    when storage.get_free_space <= 0 or not drill.probe {
+        state :idle
+    }
+
+    drill.mine
 }
 `,
 

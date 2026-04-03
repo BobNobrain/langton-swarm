@@ -227,6 +227,59 @@ function matchExpression(node: SyntaxNode, state: MatcherState): BsmlExpression 
         StateNameLiteral: (node) => {
             result = { pos: nodePos(node), type: 'state', stateName: state.src(node).substring(1) };
         },
+        UnaryExpression: (node) => {
+            let operand: BsmlExpression | null = null;
+            let operator = '';
+
+            matchChildNodes(node, {
+                UnaryOperator: (node) => {
+                    operator = state.src(node);
+                },
+                Expression: (node) => {
+                    operand = matchExpression(node, state);
+                },
+            });
+
+            if (!operand) {
+                throw new Error('cannot parse unary expression');
+            }
+
+            result = { pos: nodePos(node), type: 'unary', operator, operand };
+        },
+        BinaryExpression: (node) => {
+            let left: BsmlExpression | null = null;
+            let right: BsmlExpression | null = null;
+            let operator = '';
+
+            matchChildNodes(node, {
+                BinaryOperatorMul: (node) => {
+                    operator = state.src(node);
+                },
+                BinaryOperatorSum: (node) => {
+                    operator = state.src(node);
+                },
+                BinaryOperatorLogic: (node) => {
+                    operator = state.src(node);
+                },
+                BinaryOperatorCmp: (node) => {
+                    operator = state.src(node);
+                },
+                Expression: (node) => {
+                    const expr = matchExpression(node, state);
+                    if (left) {
+                        right = expr;
+                    } else {
+                        left = expr;
+                    }
+                },
+            });
+
+            if (!left || !right) {
+                throw new Error('cannot parse binary expression');
+            }
+
+            result = { pos: nodePos(node), type: 'binary', operator, left, right };
+        },
         Expression: (node) => {
             result = matchExpression(node, state);
         },
