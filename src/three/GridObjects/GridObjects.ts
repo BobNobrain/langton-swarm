@@ -14,6 +14,7 @@ import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
 import { useInScene } from '../hooks/useInScene';
 
 type GridObjectState = {
+    objectId: string;
     location: number;
     targetPos: Vector3;
     sourcePos: Vector3;
@@ -60,32 +61,39 @@ export const GridObjects: Component<{
         });
     }
 
-    const states: Record<string | number, GridObjectState> = {};
+    const states: GridObjectState[] = [];
+    const stateIndexByObjectId: Record<string, number> = {};
+
     const syncStates = (time: number) => {
         const grid = props.grid;
         const objects = props.objects;
         const objectIds = Object.keys(objects);
 
-        const obsoleteStateIds = new Set(Object.keys(states));
+        const obsoleteObjectIds = new Set(Object.keys(stateIndexByObjectId));
 
         for (const objectId of objectIds) {
             const { location } = objects[objectId];
-            const state = states[objectId];
+            const stateIndex: number | undefined = stateIndexByObjectId[objectId];
 
-            if (!state) {
+            if (stateIndex === undefined) {
                 // this is a new object, we should create a state for it
-                states[objectId] = {
+                const newStateIndex = states.length;
+                states.push({
+                    objectId,
                     location,
                     targetPos: grid[location].position,
                     sourcePos: grid[location].position,
                     interpolationStarted: -1,
                     isDirty: true,
-                };
+                });
+                stateIndexByObjectId[objectId] = newStateIndex;
                 continue;
             }
 
+            const state = states[stateIndex];
+
             // this state already exists and should be appropriately updated
-            obsoleteStateIds.delete(objectId);
+            obsoleteObjectIds.delete(objectId);
 
             if (location === state.location) {
                 // the state hasn't changed
@@ -101,15 +109,23 @@ export const GridObjects: Component<{
         }
 
         // removing the states that are no longer required
-        for (const obsoleteId of obsoleteStateIds.values()) {
-            delete states[obsoleteId];
+        for (const obsoleteId of obsoleteObjectIds.values()) {
+            const stateIndex = stateIndexByObjectId[obsoleteId];
+            delete stateIndexByObjectId[obsoleteId];
+
+            if (stateIndex !== states.length - 1) {
+                states[stateIndex] = states[states.length - 1];
+                states[stateIndex].isDirty = true;
+                stateIndexByObjectId[states[stateIndex].objectId] = stateIndex;
+            }
+
+            states.pop();
         }
     };
 
     const updateInstanced = (time: number) => {
         const instanced = mesh();
-        const ids = Object.keys(states);
-        const N = Math.min(ids.length, props.maxCount ?? DEFAULT_MAX_COUNT);
+        const N = Math.min(states.length, props.maxCount ?? DEFAULT_MAX_COUNT);
         const dummy = new Object3D();
         const up = new Vector3(0, 1, 0);
 
@@ -121,7 +137,7 @@ export const GridObjects: Component<{
         }
 
         for (let i = 0; i < N; i++) {
-            const state = states[ids[i]];
+            const state = states[i];
             if (!state.isDirty) {
                 continue;
             }

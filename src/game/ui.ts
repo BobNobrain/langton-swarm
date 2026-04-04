@@ -11,7 +11,7 @@ export type HighlightedTile = {
 
 export type GameUIState = {
     rSelectedTile(): NodeId | null;
-    selectTile(value: NodeId | null): void;
+    selectTile(value: NodeId | null, opts?: { selectUnits?: boolean }): void;
     hijackTileSelection(listener: null | ((selected: NodeId | null) => boolean | void)): void;
     tileRightClick: Event<(tileId: NodeId, ev: MouseEvent) => void>;
 
@@ -50,7 +50,7 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
         rHoveredTile,
         rHighlightedTiles: createMemo(() => Object.values(rHighlightedTiles())),
 
-        selectTile(value) {
+        selectTile(value, { selectUnits } = {}) {
             if (tileSelectionHijacker) {
                 const shouldKeep = tileSelectionHijacker(value);
                 if (!shouldKeep) {
@@ -60,10 +60,8 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
             }
 
             rSetSelectedTile(value);
-            if (value !== null) {
-                rSetSelectedUnits(units.findByLocation(value));
-            } else {
-                rSetSelectedUnits([]);
+            if (selectUnits) {
+                rSetSelectedUnits(value === null ? [] : units.findByLocation(value));
             }
         },
         hoverTile: rSetHoveredTile,

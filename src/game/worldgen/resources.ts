@@ -69,6 +69,7 @@ export function generateResourceDeposits(seed: string, planet: Planet) {
             planet.resources.set(centerId, {
                 resource: resourceData.resource,
                 amount: resourceData.centerMin + Math.floor((resourceData.centerMax - resourceData.centerMin) * seq()),
+                isDiscovered: false,
             });
         }
 
@@ -76,6 +77,7 @@ export function generateResourceDeposits(seed: string, planet: Planet) {
             planet.resources.set(edgeId, {
                 resource: resourceData.resource,
                 amount: resourceData.edgeMin + Math.floor((resourceData.edgeMax - resourceData.edgeMin) * seq()),
+                isDiscovered: false,
             });
         }
     }

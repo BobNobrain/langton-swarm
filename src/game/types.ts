@@ -21,6 +21,7 @@ export type Planet = {
 export type ResourceDeposit = {
     resource: string;
     amount: number;
+    isDiscovered: boolean;
 };
 
 // TODO: maybe just move it to tick context?

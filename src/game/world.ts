@@ -1,7 +1,10 @@
 import { createSignal, onCleanup } from 'solid-js';
 import type { NavMesh } from '@/lib/NavMesh';
+import { createEvent, type Event } from '@/lib/sparse';
 import type { CreateGameProgressListener, NodeId, ResourceDeposit, SurfaceNode, WorldgenOptions } from './types';
 import { generatePlanet } from './worldgen/planet';
+
+type ResourceUpdateEvent = Event<(at: NodeId, dep: ResourceDeposit) => void>;
 
 export type GameWorld = {
     readonly seed: string;
@@ -11,7 +14,7 @@ export type GameWorld = {
 
     readonly resources: Map<NodeId, ResourceDeposit>;
     mineResource(at: NodeId, resource: string, amount: number): boolean;
-    createResourceSignal(location: NodeId): () => ResourceDeposit | null;
+    readonly resourceUpdate: ResourceUpdateEvent;
 };
 
 type ResourceSignal = {
@@ -28,6 +31,8 @@ export async function createGameWorld(
     const { nav, nodes: surface, resources } = await generatePlanet(opts, onProgress);
     onProgress?.({ progress: 1, stage: 'Done' });
 
+    const resourceUpdate: ResourceUpdateEvent = createEvent();
+
     return {
         seed: opts.seed,
 
@@ -35,6 +40,7 @@ export async function createGameWorld(
         nav,
 
         resources,
+        resourceUpdate,
         mineResource(at, resource, amount) {
             const deposit = resources.get(at);
             if (!deposit || deposit.resource !== resource || deposit.amount < amount) {
@@ -42,29 +48,8 @@ export async function createGameWorld(
             }
 
             deposit.amount -= amount;
+            resourceUpdate.trigger(at, deposit);
             return true;
-        },
-        createResourceSignal(location) {
-            const existing = resourceSignals.get(location);
-            if (existing) {
-                ++existing.uses;
-                return existing.get;
-            }
-
-            const [get, set] = createSignal(resources.get(location) ?? null);
-            resourceSignals.set(location, { get, set, uses: 1 });
-            onCleanup(() => {
-                const signal = resourceSignals.get(location);
-                if (!signal) {
-                    return;
-                }
-
-                --signal.uses;
-                if (signal.uses <= 0) {
-                    resourceSignals.delete(location);
-                }
-            });
-            return get;
         },
     };
 }

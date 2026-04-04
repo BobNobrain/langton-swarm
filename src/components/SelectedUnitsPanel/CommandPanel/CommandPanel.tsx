@@ -88,10 +88,12 @@ export const CommandPanel: Component<{
             return;
         }
 
+        ev.preventDefault();
+
         props.onExecute({ name: positionalCommand.name, args: [] }, positionalCommand.appliesTo, [
             { type: 'position', value: tileId },
         ]);
-        ev.preventDefault();
+        ui.selectTile(tileId, { selectUnits: false });
     });
 
     return (

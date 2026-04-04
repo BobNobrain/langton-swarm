@@ -48,7 +48,7 @@ export const GameScene: Component = () => {
                 selectedTileId={game.ui.rSelectedTile()}
                 hilightedTiles={game.ui.rHighlightedTiles()}
                 onTileClick={(tileId) => {
-                    game.ui.selectTile(tileId);
+                    game.ui.selectTile(tileId, { selectUnits: true });
                 }}
                 onTileRightClick={game.ui.tileRightClick.trigger}
                 onTileHover={game.ui.hoverTile}

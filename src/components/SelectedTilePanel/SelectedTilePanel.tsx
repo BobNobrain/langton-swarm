@@ -1,12 +1,27 @@
-import { createMemo, Show, type Component } from 'solid-js';
+import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
+import { ResourceDeposit } from '@/game';
 import { useGame } from '@/gameContext';
+import { createEventListener } from '@/hooks/events';
 import { DefList, DefListItem } from '../DefList/DefList';
+import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
 import { Header } from '../Header/Header';
 import { WorldInfo } from '../WorldInfo/WorldInfo';
-import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
 
 export const SelectedTilePanel: Component = () => {
     const { ui, world } = useGame();
+
+    const [getDeposit, setDeposit] = createSignal<ResourceDeposit | null>(null);
+    createEffect(() => {
+        const selectedTile = ui.rSelectedTile();
+        setDeposit((selectedTile && world.resources.get(selectedTile)) || null);
+    });
+    createEventListener(world.resourceUpdate, (at, deposit) => {
+        if (at !== ui.rSelectedTile()) {
+            return;
+        }
+
+        setDeposit({ ...deposit });
+    });
 
     const tileInfo = createMemo(() => {
         const selectedTile = ui.rSelectedTile();
@@ -14,12 +29,9 @@ export const SelectedTilePanel: Component = () => {
             return null;
         }
 
-        // TODO: this is not reactive
-        const deposit = world.resources.get(selectedTile);
-
         return {
             id: selectedTile.toString(16).padStart(3, '0'),
-            resources: deposit,
+            resources: getDeposit(),
         };
     });
 

@@ -1,29 +1,35 @@
-import type { NodeId } from '@/game';
+import { For, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
-import { createMemo, For, type Component } from 'solid-js';
 import { GridObjects, GridObjectData } from '../GridObjects/GridObjects';
 import { depositModel, materialsByResource, defaultMat } from '../models/deposit';
+import { createEventListener } from '@/hooks/events';
 
 export const PlanetResources: Component = () => {
     const { world } = useGame();
 
-    const resourceDeposits = createMemo(() => {
-        // TODO: data updates
-        const byResource: Record<string, Record<string, GridObjectData>> = {};
+    const byResource: Record<string, Record<string, GridObjectData>> = {};
 
-        for (const [nodeId, deposit] of world.resources.entries()) {
-            byResource[deposit.resource] ??= {};
-            byResource[deposit.resource][nodeId] = { location: nodeId };
+    for (const [nodeId, deposit] of world.resources.entries()) {
+        byResource[deposit.resource] ??= {};
+        byResource[deposit.resource][nodeId] = { location: nodeId };
+    }
+
+    const resourceDeposits = Object.entries(byResource).map(([resource, objects]) => ({
+        resource,
+        objects,
+    }));
+
+    createEventListener(world.resourceUpdate, (tileId, deposit) => {
+        if (deposit.amount > 0) {
+            return;
         }
 
-        return Object.entries(byResource).map(([resource, objects]) => ({
-            resource,
-            objects,
-        }));
+        const objects = byResource[deposit.resource];
+        delete objects[tileId];
     });
 
     return (
-        <For each={resourceDeposits()}>
+        <For each={resourceDeposits}>
             {({ resource, objects }) => {
                 return (
                     <GridObjects
@@ -31,7 +37,6 @@ export const PlanetResources: Component = () => {
                         material={materialsByResource[resource] ?? defaultMat}
                         grid={world.surface}
                         objects={objects}
-                        isStatic // to be removed when resources will be mineable
                         maxCount={Object.keys(objects).length}
                     />
                 );
