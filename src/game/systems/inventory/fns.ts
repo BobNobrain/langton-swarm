@@ -5,6 +5,8 @@ import { measure } from './utils';
 
 export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, InventoryDeps> = {
     unload_all: {
+        description:
+            "Unloads everything in unit's inventory into storage at its location (or just drops it on the ground)",
         argNames: [],
         argTypes: [],
         returnType: 'flag',
@@ -38,6 +40,7 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
     },
 
     pickup_all: {
+        description: "Picks up everything in the storage/pile at current unit's location into unit's own storage",
         argNames: [],
         argTypes: [],
         returnType: 'number',
@@ -72,6 +75,7 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
     },
 
     get_free_space: {
+        description: "Allows to check, how much free space is left in unit's storage",
         argNames: [],
         argTypes: [],
         returnType: 'number',
@@ -82,6 +86,7 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
         },
     },
     is_empty: {
+        description: "Allows to check is unit's storage is empty",
         argNames: [],
         argTypes: [],
         returnType: 'flag',

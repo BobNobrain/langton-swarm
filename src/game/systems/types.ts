@@ -13,6 +13,7 @@ export type UnitSystemTickContext<Data> = {
 };
 
 export type UnitSystemFunction = {
+    description?: string;
     argNames: string[];
     argTypes: BsmlValueType[];
     returnType: BsmlValueType;

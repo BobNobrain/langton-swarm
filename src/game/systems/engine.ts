@@ -25,6 +25,7 @@ const schedule = createScheduler(ENGINE_SYSTEM_NAME);
 
 export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
     move: {
+        description: 'Commands the unit to move to a specified position (must be a neighbouring tile)',
         argNames: ['to'],
         argTypes: ['position'],
         returnType: 'flag',

@@ -30,6 +30,7 @@ import styles from './ProgramEditor.module.css';
 
 export type ProgramEditorController = {
     getProgramText: () => string;
+    reset: () => void;
 };
 
 export const ProgramEditor: Component<{
@@ -41,7 +42,7 @@ export const ProgramEditor: Component<{
     let editorWrapper!: HTMLDivElement;
     let view: EditorView | null = null;
     const readonlyCompartment = new Compartment();
-    const linterCompartment = new Compartment();
+    const languageCompartment = new Compartment();
 
     onMount(() => {
         view = new EditorView({
@@ -88,8 +89,7 @@ export const ProgramEditor: Component<{
                     }
                 }),
 
-                bsml(),
-                linterCompartment.of(bsmlLinter(props.config)),
+                languageCompartment.of([bsml(props.config), bsmlLinter(props.config)]),
             ],
         });
 
@@ -118,7 +118,7 @@ export const ProgramEditor: Component<{
         }
 
         view.dispatch({
-            effects: linterCompartment.reconfigure(bsmlLinter(props.config)),
+            effects: languageCompartment.reconfigure([bsml(props.config), bsmlLinter(props.config)]),
         });
 
         props.onChanged(false);
@@ -138,6 +138,16 @@ export const ProgramEditor: Component<{
     provideController<ProgramEditorController>(
         {
             getProgramText: () => view?.state.doc.toString() ?? '',
+            reset() {
+                if (!view) {
+                    return;
+                }
+
+                view.dispatch({
+                    effects: languageCompartment.reconfigure([bsml(props.config), bsmlLinter(props.config)]),
+                });
+                props.onChanged(false);
+            },
         },
         () => props.controllerRef,
     );
@@ -155,5 +165,6 @@ export const ProgramEditor: Component<{
 export function useProgramEditorController() {
     return createControllerRef<ProgramEditorController>({
         getProgramText: () => '',
+        reset: () => {},
     });
 }

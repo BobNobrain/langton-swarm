@@ -1,5 +1,36 @@
 .configurator {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 29px;
+
+    border-bottom: 1px solid var(--c-gray-m);
+}
+
+.toggles {
     padding: 8px 16px;
     display: flex;
     flex-flow: column wrap;
+    min-height: 0;
+}
+
+.costs {
+    padding: 0 16px;
+    display: flex;
+    align-content: center;
+    gap: 8px;
+    min-height: 0;
+    background-color: var(--c-gray-d);
+}
+
+.costLabel {
+    padding: 4px 0;
+    color: var(--c-gray-l);
+}
+
+.timeCost {
+    padding: 4px 0;
+
+    & > * {
+        display: block;
+    }
 }

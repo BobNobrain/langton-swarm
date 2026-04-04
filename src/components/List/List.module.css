@@ -92,4 +92,6 @@
         padding-left: calc(16px + var(--container-padding-l, 0));
         padding-right: calc(16px + var(--container-padding-r, 0));
     }
+
+    overflow: hidden;
 }

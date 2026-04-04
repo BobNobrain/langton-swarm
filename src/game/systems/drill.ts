@@ -23,6 +23,7 @@ const schedule = createScheduler(DRILL_SYSTEM_NAME);
 
 export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
     mine: {
+        description: 'Commands the drill to mine 1 unit of any resource deposit that unit has underneath it',
         argNames: [],
         argTypes: [],
         returnType: 'flag',
@@ -55,6 +56,7 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
         },
     },
     probe: {
+        description: 'Allows to check if there is a resource deposit underneath',
         argNames: [],
         argTypes: [],
         returnType: 'flag',

@@ -22,6 +22,7 @@ export const NAVIGATOR_SYSTEM_NAME = 'navigator';
 
 export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, NavigatorDeps> = {
     home: {
+        description: 'Returns the spawn location of this unit',
         argNames: [],
         argTypes: [],
         returnType: 'position',
@@ -31,6 +32,8 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         },
     },
     find_route: {
+        description:
+            'Finds a route to specified location. Call navigator.next_step and navigator.has_next to use the found route',
         argNames: ['to'],
         argTypes: ['position'],
         returnType: 'flag',
@@ -50,6 +53,7 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         },
     },
     next_step: {
+        description: 'Retrieves the next position of the route found with navigator.find_route(to)',
         argNames: [],
         argTypes: [],
         returnType: 'position',
@@ -61,6 +65,8 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         },
     },
     has_next: {
+        description:
+            "Allows to check whether the route found with navigator.find_route(to) still hasn't been completed",
         argNames: [],
         argTypes: [],
         returnType: 'flag',

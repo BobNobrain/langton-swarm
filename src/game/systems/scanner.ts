@@ -30,6 +30,7 @@ export const SCANNER_SYSTEM_NAME = 'scanner';
 
 export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> = {
     find_largest_deposit: {
+        description: 'Finds the largest resource deposit in specified radius',
         argNames: ['distance'],
         argTypes: ['number'],
         returnType: 'flag',
@@ -61,6 +62,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
     },
 
     find_closest_deposit: {
+        description: 'Finds the closest resource deposit',
         argNames: [],
         argTypes: [],
         returnType: 'flag',
@@ -82,6 +84,8 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
     },
 
     found_location: {
+        description:
+            'Allows to retrieve the location of a resource deposit that has been previously found with scanner.find_closest_deposit or scanner.find_largest_deposit(radius)',
         argNames: [],
         argTypes: [],
         returnType: 'position',

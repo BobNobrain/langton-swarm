@@ -2,7 +2,7 @@ import type { UnitConfiguration } from '../types';
 
 export const MOTHER_PRESET: UnitConfiguration = {
     battery: { capacity: 10_000 },
-    storage: { size: 10_000 },
+    storage: { size: 1_000 },
     navigator: false,
     mother: true,
 };

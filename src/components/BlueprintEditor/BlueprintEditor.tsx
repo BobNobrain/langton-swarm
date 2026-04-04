@@ -1,16 +1,17 @@
 import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
 import type { UnitConfiguration, BlueprintController } from '@/game';
+import { useGame } from '@/gameContext';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { Configurator } from '../Configurator/Configurator';
 import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
 import styles from './BlueprintEditor.module.css';
-import { useGame } from '@/gameContext';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
     rCanSave: () => boolean;
     getCurrentState: () => UnitConfiguration | null;
     markSaved: () => void;
+    reset: () => void;
 };
 
 export const BlueprintEditor: Component<{
@@ -62,6 +63,16 @@ export const BlueprintEditor: Component<{
 
     const programEditor = useProgramEditorController();
 
+    const [configuratorValue, setConfiguratorValue] = createSignal<UnitConfiguration>(selectedVersion()?.config ?? {});
+    createEffect(() => {
+        const selected = selectedVersion();
+        if (!selected) {
+            return;
+        }
+
+        setConfiguratorValue({ ...selected.config });
+    });
+
     provideController(
         {
             getCurrentState() {
@@ -69,13 +80,9 @@ export const BlueprintEditor: Component<{
                     return null;
                 }
 
-                const selected = selectedVersion();
-                if (!selected) {
-                    return null;
-                }
-
                 const program = programEditor.rGet().getProgramText();
-                const newConfig: UnitConfiguration = { ...selected.config, cpu: program };
+                const config = configuratorValue();
+                const newConfig: UnitConfiguration = { ...config, cpu: program };
                 return newConfig;
             },
             rCanSave: createMemo(() => {
@@ -86,6 +93,16 @@ export const BlueprintEditor: Component<{
                 setProgramChanged(false);
                 setConfigChanged(false);
             },
+            reset() {
+                const selected = selectedVersion();
+                if (!selected) {
+                    return;
+                }
+
+                setConfiguratorValue({ ...selected.config });
+                setConfigChanged(false);
+                programEditor.rGet().reset();
+            },
         },
         () => props.controllerRef,
     );
@@ -93,17 +110,19 @@ export const BlueprintEditor: Component<{
     return (
         <div class={styles.editor}>
             <Configurator
-                value={selectedVersion()?.config ?? null}
-                onUpdate={() => {
-                    // TODO
+                value={configuratorValue()}
+                readonly={isReadonly()}
+                onUpdate={(patch) => {
+                    setConfiguratorValue((old) => ({ ...old, ...patch }));
+                    setConfigChanged(true);
                 }}
             />
             <Show
-                when={typeof selectedVersion()?.config.cpu === 'string'}
+                when={typeof configuratorValue().cpu === 'string'}
                 fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
             >
                 <ProgramEditor
-                    config={selectedVersion()?.config ?? null}
+                    config={configuratorValue()}
                     readonly={isReadonly()}
                     controllerRef={programEditor.ref}
                     onChanged={setProgramChanged}
@@ -119,5 +138,6 @@ export function useBlueprintEditorController() {
         rCanSave: () => false,
         rHasChanges: () => false,
         markSaved: () => {},
+        reset: () => {},
     });
 }

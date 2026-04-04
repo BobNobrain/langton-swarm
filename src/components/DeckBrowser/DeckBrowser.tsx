@@ -1,20 +1,17 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
 import { type BlueprintController, type BlueprintId, type UnitId } from '@/game';
-import { createDefaultUnitConfig } from '@/game/presets';
+import { getConstructionCosts, getConstructionTime } from '@/game/construction';
 import { useGame } from '@/gameContext';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
 import { Button } from '../Button/Button';
 import { Debugger } from '../Debugger/Debugger';
-import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
-import { Header } from '../Header/Header';
-import { List, ListEmptyContent, ListItem } from '../List/List';
-import { Select, type SelectOption } from '../Select/Select';
-import styles from './DeckBrowser.module.css';
-import { getConstructionCosts, getConstructionTime } from '@/game/construction';
+import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
 import { InventoryContent } from '../Inventory/Inventory';
-import { Symbols } from '@/lib/ascii';
+import { List, ListEmptyContent, ListItem } from '../List/List';
 import { TimeLabel } from '../TimeLabel/TimeLabel';
+import { DeckHeader } from './DeckHeader';
+import styles from './DeckBrowser.module.css';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -101,26 +98,6 @@ export const DeckBrowser: Component = () => {
 
     const editor = useBlueprintEditorController();
 
-    const versionOptions = createMemo((): SelectOption<number>[] => {
-        const bp = selectedBlueprint();
-        if (!bp) {
-            return [];
-        }
-
-        return Object.values(bp.rVersions())
-            .map(
-                (version): SelectOption<number> => ({
-                    text: 'v' + version.version.toFixed(0),
-                    value: version.version,
-                }),
-            )
-            .sort((a, b) => b.value - a.value);
-    });
-    const selectedVersionOption = createMemo((): SelectOption<number> | null => {
-        const selected = ui.rDeckSelectedVersion() ?? selectedBlueprint()?.rLastVersion().version;
-        return versionOptions().find((option) => option.value === selected) ?? null;
-    });
-
     const debuggingUnitId = createMemo((): UnitId | null => {
         const openBlueprint = ui.rDeckSelectedBlueprint();
         if (openBlueprint === null) {
@@ -150,77 +127,31 @@ export const DeckBrowser: Component = () => {
 
     return (
         <FloatingPanel pinRight pinBottom pinTop expandedWidth={ui.rDeckSelectedBlueprint() !== null}>
-            <FloatingPanelHeader>
-                <Header size="md" withMargin>
-                    <Show when={ui.rDeckSelectedBlueprint() !== null} fallback="Blueprints">
-                        {selectedBlueprint()?.rName()} v.{selectedBlueprint()?.rLastVersion().version ?? '?'}
-                    </Show>
-                </Header>
-                <div class={styles.toolbar}>
-                    <Show
-                        when={ui.rDeckSelectedBlueprint() === null}
-                        fallback={
-                            <>
-                                <Select
-                                    value={selectedVersionOption()}
-                                    options={versionOptions()}
-                                    onUpdate={(option) => {
-                                        ui.deckSelectVersion(option.value);
-                                    }}
-                                    dark
-                                    popupOpening="manual"
-                                />
-                                <Button>Reset</Button>
-                                <Show
-                                    when={editor.rGet().rHasChanges()}
-                                    fallback={<Button onClick={ui.deckUnselectBlueprint}>Close</Button>}
-                                >
-                                    <Button
-                                        style="primary"
-                                        disabled={!editor.rGet().rCanSave()}
-                                        onClick={() => {
-                                            const id = ui.rDeckSelectedBlueprint();
-                                            if (id === null) {
-                                                return;
-                                            }
+            <DeckHeader
+                bp={selectedBlueprint()}
+                canSave={editor.rGet().rCanSave()}
+                hasChanges={editor.rGet().rHasChanges()}
+                onReset={() => editor.rGet().reset()}
+                onSave={() => {
+                    const id = ui.rDeckSelectedBlueprint();
+                    if (id === null) {
+                        return;
+                    }
 
-                                            const controller = deck.getBlueprint(id);
-                                            if (!controller) {
-                                                return;
-                                            }
+                    const controller = deck.getBlueprint(id);
+                    if (!controller) {
+                        return;
+                    }
 
-                                            const config = editor.rGet().getCurrentState();
-                                            if (!config) {
-                                                return;
-                                            }
+                    const config = editor.rGet().getCurrentState();
+                    if (!config) {
+                        return;
+                    }
 
-                                            controller.updateConfiguration(config);
-                                            editor.rGet().markSaved();
-                                        }}
-                                    >
-                                        Save
-                                    </Button>
-                                </Show>
-                            </>
-                        }
-                    >
-                        <Button>Import...</Button>
-                        <Button
-                            style="primary"
-                            onClick={() => {
-                                const name = prompt('Blueprint name:');
-                                if (!name) {
-                                    return;
-                                }
-
-                                deck.create(name, createDefaultUnitConfig());
-                            }}
-                        >
-                            Create
-                        </Button>
-                    </Show>
-                </div>
-            </FloatingPanelHeader>
+                    controller.updateConfiguration(config);
+                    editor.rGet().markSaved();
+                }}
+            />
             <Show
                 when={ui.rDeckSelectedBlueprint() === null}
                 fallback={
@@ -238,6 +169,10 @@ export const DeckBrowser: Component = () => {
                 }
             >
                 <DeckList items={deck.rBlueprints()} onSelect={(id) => ui.deckSelectBlueprint(id)} />
+                <footer class={styles.footer}>
+                    <Button style="text">Show Archived</Button>
+                    <Button style="text">Show Library</Button>
+                </footer>
             </Show>
         </FloatingPanel>
     );

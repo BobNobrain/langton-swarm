@@ -7,7 +7,7 @@ import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderV
 import type { BsmlValue, BsmlValueType } from '../program/value';
 import type { UnitCommand } from '../types';
 import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { CreateUnitSystemCommonOptions, UnitSystemFunction } from './types';
 import { fcall } from './utils';
 
 export type CPUData = {
@@ -226,9 +226,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
 
 export const CPU_FNS: Record<
     string,
-    {
-        argTypes: BsmlValueType[];
-        returnType: BsmlValueType;
+    UnitSystemFunction & {
         call: (...args: BsmlValue[]) => BsmlValue;
     }
 > = {};

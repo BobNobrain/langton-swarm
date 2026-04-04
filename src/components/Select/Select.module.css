@@ -2,10 +2,25 @@
     display: flex;
     flex-flow: column;
     position: relative;
-}
 
-.value {
-    padding: 4px 8px 4px 4px;
+    .icon {
+        position: absolute;
+        right: 8px;
+        top: 0;
+        bottom: 0;
+        align-content: center;
+
+        opacity: 1;
+        transition: opacity ease-in-out 0.2s;
+    }
+
+    &:focus-within .icon {
+        opacity: 0.5;
+    }
+
+    & > :first-child {
+        padding-right: 24px;
+    }
 }
 
 .optionsWrapper {
@@ -19,12 +34,14 @@
     flex-flow: column;
 
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.1s ease-in-out;
     background-color: var(--c-gray-d);
     color: var(--c-gray-l);
 
     &.open {
         opacity: 1;
+        pointer-events: all;
     }
 
     &.directionUp {

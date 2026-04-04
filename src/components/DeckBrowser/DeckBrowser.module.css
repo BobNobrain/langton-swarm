@@ -1,3 +1,21 @@
+.header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+
+    & > :first-child {
+        margin-right: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    & > button {
+        min-width: 100px;
+    }
+}
+
 .toolbar {
     display: grid;
     grid-template-rows: 1fr;
@@ -7,6 +25,8 @@
     margin-left: calc(-1 * var(--container-padding-l, 0));
     margin-right: calc(-1 * var(--container-padding-r, 0));
     margin-bottom: calc(-1 * var(--container-padding-b, 0));
+
+    background-color: var(--c-gray-d);
 }
 
 .editorDebugger {
@@ -25,4 +45,11 @@
     gap: 8px;
     align-items: center;
     padding-top: 4px;
+}
+
+.footer {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
 }

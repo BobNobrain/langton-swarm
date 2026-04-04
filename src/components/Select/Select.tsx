@@ -4,6 +4,7 @@ import { KeyCode } from '@/lib/input';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import { createTextInputController, TextInput } from '../TextInput/TextInput';
 import styles from './Select.module.css';
+import { Symbols } from '@/lib/ascii';
 
 export type SelectOption<T> = {
     text: string;
@@ -187,6 +188,7 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                     </For>
                 </List>
             </div>
+            <div class={styles.icon}>{Symbols.TriangleDownSmall}</div>
         </div>
     );
 }
