@@ -9,3 +9,17 @@
 .scene {
     height: 100%;
 }
+
+.loadingWrapper {
+    display: flex;
+    height: 100%;
+}
+
+.loading {
+    width: 50dvw;
+    margin: auto;
+    padding: 64px;
+    border: 3px double var(--c-white);
+    text-align: center;
+    background-color: var(--c-gray-d);
+}

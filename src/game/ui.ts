@@ -2,6 +2,7 @@ import { createMemo, createSignal } from 'solid-js';
 import type { BlueprintId } from './deck';
 import type { NodeId, UnitId } from './types';
 import type { GameUnitSystems } from './systems';
+import { createEvent, type Event } from '@/lib/sparse';
 
 export type HighlightedTile = {
     tileId: NodeId;
@@ -12,6 +13,7 @@ export type GameUIState = {
     rSelectedTile(): NodeId | null;
     selectTile(value: NodeId | null): void;
     hijackTileSelection(listener: null | ((selected: NodeId | null) => boolean | void)): void;
+    tileRightClick: Event<(tileId: NodeId, ev: MouseEvent) => void>;
 
     rHoveredTile(): NodeId | null;
     hoverTile(value: NodeId | null): void;
@@ -114,5 +116,7 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
             rSetDeckSelectedBlueprint(null);
             rSetDeckSelectedVersion(null);
         },
+
+        tileRightClick: createEvent(),
     };
 }

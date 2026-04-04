@@ -2,6 +2,7 @@ import { createMemo, For, type Component, type JSX } from 'solid-js';
 import type { CompiledInstruction } from '@/game/program/compile';
 import { BsmlValueLabel } from '../BsmlValueLabel/BsmlValueLabel';
 import styles from './Debugger.module.css';
+import { absurd } from '@/lib/errors';
 
 export const DebuggerInstruction: Component<{ instruction: CompiledInstruction }> = (props) => {
     const args = createMemo(() => {
@@ -29,6 +30,11 @@ export const DebuggerInstruction: Component<{ instruction: CompiledInstruction }
 
             case 'setstate':
                 result.push(<span class={styles.nargs}>{instr.nargs}</span>);
+                break;
+
+            case 'binop':
+            case 'unop':
+                result.push(<span class={styles.operator}>{instr.operator}</span>);
                 break;
         }
 

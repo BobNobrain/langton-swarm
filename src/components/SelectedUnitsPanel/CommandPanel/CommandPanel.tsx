@@ -1,10 +1,11 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
 import { Button } from '@/components/Button/Button';
-import type { UnitId, UnitCommandArg, UnitCommand } from '@/game';
+import type { UnitId, UnitCommandArg, UnitCommand, BsmlValue } from '@/game';
 import { useGame } from '@/gameContext';
 import { Symbols } from '@/lib/ascii';
 import { DIGIT_KEY_CODES, type KeyCode } from '@/lib/input';
 import styles from './CommandPanel.module.css';
+import { createEventListener } from '@/hooks/events';
 
 type CommandData = {
     name: string;
@@ -18,7 +19,7 @@ type CommandData = {
 };
 
 export const CommandPanel: Component<{
-    onExecute: (cmd: UnitCommand, targets: Set<UnitId>) => void;
+    onExecute: (cmd: UnitCommand, targets: Set<UnitId>, args?: BsmlValue[]) => void;
     setHoveredCommandTargets: (value: Set<UnitId> | null) => void;
 }> = (props) => {
     const { ui, units, deck } = useGame();
@@ -35,6 +36,7 @@ export const CommandPanel: Component<{
 
             const bpId = `${found.bp.id}v${found.v}`;
             const unitCommands = units.queryCommands(unitId);
+            let foundPositional = false;
 
             for (const cmd of unitCommands) {
                 const cmdId = `${cmd.name}:${bpId}`;
@@ -51,20 +53,45 @@ export const CommandPanel: Component<{
                     appliesTo: new Set([unitId]),
                     canImmediatelyRun: cmd.args.every((arg) => arg.defaultValue !== null),
                     isConfigurable: cmd.args.length > 0,
-                    isPositional: cmd.args.length === 1 && cmd.args[0].type === 'position',
+                    isPositional: foundPositional ? false : cmd.args.length === 1 && cmd.args[0].type === 'position',
                     isPartial: true,
                 };
+                if (command.isPositional) {
+                    foundPositional = true;
+                }
                 allCommands[cmdId] = command;
             }
         }
 
-        return Object.values(allCommands).map((cmd, i) => {
+        let hotkeyIndex = 0;
+        const cmdList = Object.values(allCommands);
+        for (const cmd of cmdList) {
             cmd.isPartial = cmd.appliesTo.size < selectedUnitIds.length;
-            if (i < DIGIT_KEY_CODES.length) {
-                cmd.hotkey = DIGIT_KEY_CODES[i];
+
+            if (cmd.isPositional) {
+                continue;
             }
-            return cmd;
-        });
+            if (hotkeyIndex >= DIGIT_KEY_CODES.length) {
+                break;
+            }
+
+            cmd.hotkey = DIGIT_KEY_CODES[hotkeyIndex];
+            ++hotkeyIndex;
+        }
+
+        return cmdList;
+    });
+
+    createEventListener(ui.tileRightClick, (tileId, ev) => {
+        const positionalCommand = availableCommands().find((cmd) => cmd.isPositional);
+        if (!positionalCommand) {
+            return;
+        }
+
+        props.onExecute({ name: positionalCommand.name, args: [] }, positionalCommand.appliesTo, [
+            { type: 'position', value: tileId },
+        ]);
+        ev.preventDefault();
     });
 
     return (
@@ -80,7 +107,7 @@ export const CommandPanel: Component<{
                         text = `${text}*`;
                     }
 
-                    if (commandData.isConfigurable && !commandData.canImmediatelyRun) {
+                    if (commandData.isConfigurable && !commandData.canImmediatelyRun && !commandData.isPositional) {
                         text = `${text}…`;
                     }
 
@@ -104,6 +131,7 @@ export const CommandPanel: Component<{
                                           }
                                         : undefined
                                 }
+                                rmbHotkey={commandData.isPositional}
                                 onClick={() =>
                                     props.onExecute(
                                         { name: commandData.name, args: commandData.args },

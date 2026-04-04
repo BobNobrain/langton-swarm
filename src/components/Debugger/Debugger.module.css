@@ -27,6 +27,11 @@
     color: var(--c-white);
 }
 
+.operator {
+    color: var(--c-white);
+    font-weight: 600;
+}
+
 .nargs {
     font-style: italic;
     font-weight: 300;

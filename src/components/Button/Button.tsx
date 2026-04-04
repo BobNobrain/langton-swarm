@@ -2,6 +2,7 @@ import { Show, type ParentComponent } from 'solid-js';
 import { createHotkey, renderHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
 import styles from './Button.module.css';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
+import { Symbols } from '@/lib/ascii';
 
 type ButtonStyle = 'primary' | 'secondary' | 'text';
 
@@ -22,6 +23,7 @@ export const Button: ParentComponent<{
     inline?: boolean;
     vibrantFocus?: boolean;
     hotkey?: HotkeyDescriptor;
+    rmbHotkey?: boolean;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
     onMouseEnter?: (ev: MouseEvent) => void;
     onMouseLeave?: (ev: MouseEvent) => void;
@@ -66,8 +68,15 @@ export const Button: ParentComponent<{
             onMouseLeave={props.onMouseLeave}
         >
             <span class={styles.label}>{props.children}</span>
-            <Show when={props.hotkey}>
-                <span class={styles.hotkey}>{renderHotkey(props.hotkey!)}</span>
+            <Show when={props.hotkey || props.rmbHotkey}>
+                <span
+                    class={styles.hotkey}
+                    classList={{
+                        [styles.mouseButton]: props.rmbHotkey && !props.hotkey,
+                    }}
+                >
+                    {props.hotkey ? renderHotkey(props.hotkey) : <span class={styles.mouseButtonFill}></span>}
+                </span>
             </Show>
         </button>
     );

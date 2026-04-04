@@ -50,6 +50,7 @@ export const GameScene: Component = () => {
                 onTileClick={(tileId) => {
                     game.ui.selectTile(tileId);
                 }}
+                onTileRightClick={game.ui.tileRightClick.trigger}
                 onTileHover={game.ui.hoverTile}
             />
             <PlanetResources />

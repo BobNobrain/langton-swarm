@@ -25,4 +25,5 @@ export enum Symbols {
     Ellipsis = '…',
     Lemniscate = '∞',
     CircleQuarterTopRight = '◔',
+    SquareQuadrantTopRight = '◳',
 }

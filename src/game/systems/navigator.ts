@@ -44,7 +44,7 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
             }
 
             const map = ctx.systemData;
-            map.currentRoute = route;
+            map.currentRoute = route.slice(1);
 
             return false;
         },

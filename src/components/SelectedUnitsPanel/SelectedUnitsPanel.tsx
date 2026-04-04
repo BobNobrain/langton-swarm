@@ -41,11 +41,11 @@ export const SelectedUnitsPanel: Component = () => {
                 <Header size="sm">Units ({ui.rSelectedUnits().length})</Header>
                 <CommandPanel
                     setHoveredCommandTargets={setHoveredCommandTargets}
-                    onExecute={(cmd, targets) => {
-                        if (cmd.args.length === 0) {
+                    onExecute={(cmd, targets, argv) => {
+                        if (cmd.args.length === 0 || argv) {
                             units.executeCommandMany(ui.rSelectedUnits(), {
                                 name: cmd.name,
-                                args: [],
+                                args: argv ?? [],
                             });
                             return;
                         }

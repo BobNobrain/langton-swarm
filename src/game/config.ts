@@ -24,5 +24,5 @@ export function getTicksPerMove(config: UnitConfiguration): number {
         return 0;
     }
 
-    return 12 / config.engine.power;
+    return 6 / config.engine.power;
 }

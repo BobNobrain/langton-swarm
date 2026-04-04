@@ -34,6 +34,7 @@ export const PlanetMesh: Component<{
     selectedTileId?: NodeId | null;
     hilightedTiles?: HighlightedTile[];
     onTileClick: (tileId: NodeId) => void;
+    onTileRightClick: (tileId: NodeId, ev: MouseEvent) => void;
     onTileHover: (tileId: NodeId | null) => void;
 }> = (props) => {
     const graphBuilder = createMemo(() => {
@@ -119,16 +120,22 @@ export const PlanetMesh: Component<{
     });
     useClickableMesh({
         object: planetMesh,
-        button: MouseButton.Left,
-        onClick: ({ intersection }) => {
+        button: [MouseButton.Left, MouseButton.Right],
+        onClick: ({ intersection, source }) => {
             const faceIndexMap = intersection.object.userData.faceIndexMap as Record<number, NodeId> | undefined;
             if (!faceIndexMap) {
                 return;
             }
 
             const originalFaceIndex = faceIndexMap[intersection.faceIndex ?? -1] ?? -1;
-            if (originalFaceIndex !== -1) {
+            if (originalFaceIndex === -1) {
+                return;
+            }
+
+            if (source.button === MouseButton.Left) {
                 props.onTileClick(originalFaceIndex);
+            } else {
+                props.onTileRightClick(originalFaceIndex, source);
             }
         },
     });

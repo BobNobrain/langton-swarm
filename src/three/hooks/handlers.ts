@@ -21,9 +21,9 @@ export function onSceneEmptyClick(listener: ClickHandler) {
 
 /** Associates a click handler with a given mesh (or multiple meshes) */
 export function useClickableMesh(cm: ClickableObject3D) {
-    const { clickableObjects: clickableMeshes } = useSceneRenderer();
+    const { clickableObjects } = useSceneRenderer();
     onMount(() => {
-        const id = clickableMeshes.add(cm);
-        onCleanup(() => clickableMeshes.delete(id));
+        const id = clickableObjects.add(cm);
+        onCleanup(() => clickableObjects.delete(id));
     });
 }

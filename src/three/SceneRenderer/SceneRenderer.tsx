@@ -3,8 +3,8 @@ import { Raycaster, Scene, WebGLRenderer, type Camera, type ColorRepresentation 
 import { createBoundsTracker } from '@/lib/BoundsTracker';
 import { createEvent, createSparseCollection } from '@/lib/sparse';
 import { type ClickHandler, SceneRendererContext, type Repainter, type ClickableObject3D } from '../context';
-import styles from './SceneRenderer.module.css';
 import { createMouseTracker, handleSceneClick, setupRaycaster } from './mouse';
+import styles from './SceneRenderer.module.css';
 
 type SceneRendererProps = {
     clearColor?: ColorRepresentation;
@@ -130,6 +130,7 @@ export const SceneRenderer: ParentComponent<SceneRendererProps> = (props) => {
                 ref={canvas}
                 class={styles.canvas}
                 onClick={handleCanvasClick}
+                onContextMenu={handleCanvasClick}
                 onMouseMove={mouseTracker.onMouseMove}
                 onMouseLeave={mouseTracker.onMouseLeave}
             />

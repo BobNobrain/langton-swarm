@@ -33,7 +33,14 @@ export const GameUI: ParentComponent = (props) => {
     });
 
     return (
-        <Show when={game()} fallback={<div class={styles.loading}>{loadingProgress()}</div>}>
+        <Show
+            when={game()}
+            fallback={
+                <div class={styles.loadingWrapper}>
+                    <div class={styles.loading}>{loadingProgress()}</div>
+                </div>
+            }
+        >
             <GameProvider value={game()!}>
                 <main class={styles.wrapper}>
                     <section class={styles.scene}>{props.children}</section>

@@ -56,6 +56,22 @@
         min-width: 18px;
         text-align: center;
         opacity: 1;
+
+        &.mouseButton {
+            padding: 0;
+            border-radius: 5px 5px 0 0;
+            height: 18px;
+            overflow: hidden;
+
+            .mouseButtonFill {
+                background-color: var(--button-text);
+                width: 8px;
+                height: 9px;
+                position: absolute;
+                top: 0;
+                right: 0;
+            }
+        }
     }
     &:hover .hotkey {
         opacity: 0.2;
