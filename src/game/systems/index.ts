@@ -25,7 +25,7 @@ import type { CreateUnitSystemCommonOptions, DespawnFn, SendMessage, SpawnFn, Un
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
-    readonly unitStates: Readonly<Record<string, UnitState>>;
+    readonly unitStates: Readonly<Record<UnitId, UnitState>>;
 
     readonly inventory: InventoryController;
     readonly mother: UnitSystemPublic<MotherData>;
@@ -44,6 +44,7 @@ export type GameUnitSystems = {
     findByLocation(location: NodeId | Set<NodeId>): UnitId[];
     getLastUpdatedTime(id: UnitId): number;
     getConfig(id: UnitId): UnitConfiguration | null;
+    getSpawnTime(id: UnitId): number;
 };
 
 export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTick: GameLoop): GameUnitSystems {
@@ -52,6 +53,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
     const unitId = sequentialId<UnitId>();
     const unitStates: Record<UnitId, UnitState> = {};
+    const unitSpawnTimes: Record<UnitId, number> = {};
     const unitUpdateTimes: Record<UnitId, number> = {};
     const unitConfigs: Record<UnitId, UnitConfiguration> = {};
 
@@ -71,6 +73,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         unitStates[id] = state;
         unitUpdateTimes[id] = -1;
         unitConfigs[id] = config;
+        unitSpawnTimes[id] = env.currentTick;
 
         for (const system of Object.values(systems)) {
             system.create(id, config, state);
@@ -92,6 +95,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         delete unitStates[unitId];
         delete unitUpdateTimes[unitId];
         delete unitConfigs[unitId];
+        delete unitSpawnTimes[unitId];
     };
 
     const updateUnitState = (id: UnitId, patch: Partial<UnitState>) => {
@@ -210,6 +214,9 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         getConfig(id) {
             return unitConfigs[id] ?? null;
+        },
+        getSpawnTime(id) {
+            return unitSpawnTimes[id] ?? -1;
         },
     };
 }

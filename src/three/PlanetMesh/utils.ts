@@ -14,7 +14,7 @@ export function intersectionToTileId(closestIntersection: Intersection): NodeId 
     }
 
     const originalFaceIndex = faceIndexMap[closestIntersection.faceIndex ?? -1] ?? -1;
-    return originalFaceIndex;
+    return originalFaceIndex as NodeId;
 }
 
 export function getTileVerticies(surface: MeshBuilder, tileId: NodeId): RawVertex[] {

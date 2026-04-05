@@ -3,8 +3,8 @@ import { createHotkey } from '@/lib/hotkey';
 import { KeyCode } from '@/lib/input';
 import { onBeforeRepaint } from '../hooks/handlers';
 
-const YAW_SPEED = Math.PI / 5000;
-const PITCH_SPEED = Math.PI / 4000;
+const YAW_SPEED = Math.PI / 12000;
+const PITCH_SPEED = Math.PI / 11000;
 
 export function createCameraKeyboardControls(camera: GameCamera) {
     const pressedSince = {

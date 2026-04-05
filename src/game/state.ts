@@ -28,7 +28,7 @@ export async function createGameState({ gameTick, onProgress, worldgen }: Option
     const deck = createBlueprintDeck();
     const units = createGameSystems(world, deck, gameTick);
     const ui = createGameUIState(units);
-    const camera = createGameCamera();
+    const camera = createGameCamera(world.radius);
 
     const state: GameState = {
         world,

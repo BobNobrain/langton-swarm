@@ -9,7 +9,7 @@ export type CameraOrbit = {
 export type CameraOrbitChange = {
     deltaPitch?: number;
     deltaYaw?: number;
-    deltaDistance?: number;
+    distanceFactor?: number;
 };
 
 export type GameCamera = {
@@ -20,8 +20,6 @@ export type GameCamera = {
 
 const PITCH_MIN = 0.087; // ~5deg
 const PITCH_MAX = Math.PI - PITCH_MIN;
-const YAW_SPEED = Math.PI / 5000;
-const PITCH_SPEED = Math.PI / 4000;
 
 type AnimationState = {
     origin: CameraOrbit;
@@ -51,8 +49,10 @@ function interpolate(animation: AnimationState, t: number): { result: CameraOrbi
     };
 }
 
-export function createGameCamera(): GameCamera {
-    const orbit: CameraOrbit = { pitch: Math.PI / 2, yaw: 0, distance: 2 };
+export function createGameCamera(planetRadius: number): GameCamera {
+    const MIN_DISTANCE = planetRadius * 1.1;
+    const MAX_DISTANCE = planetRadius * 5;
+    const orbit: CameraOrbit = { pitch: Math.PI / 2, yaw: 0, distance: planetRadius * 2 };
 
     let animation: AnimationState | null = null;
 
@@ -83,18 +83,22 @@ export function createGameCamera(): GameCamera {
 
         updateManual(change) {
             breakAnimation(performance.now());
+            const { deltaPitch, deltaYaw, distanceFactor } = change;
 
-            if (change.deltaYaw) {
-                orbit.yaw += change.deltaYaw;
+            if (change.distanceFactor) {
+                orbit.distance *= change.distanceFactor;
+                orbit.distance = Math.max(MIN_DISTANCE, Math.min(orbit.distance, MAX_DISTANCE));
             }
 
-            if (change.deltaPitch) {
-                orbit.pitch += change.deltaPitch;
+            const pitchYawMovementSpeedFromDistance = orbit.distance / planetRadius;
+
+            if (deltaYaw) {
+                orbit.yaw += deltaYaw * pitchYawMovementSpeedFromDistance;
+            }
+
+            if (deltaPitch) {
+                orbit.pitch += deltaPitch * pitchYawMovementSpeedFromDistance;
                 orbit.pitch = Math.max(PITCH_MIN, Math.min(orbit.pitch, PITCH_MAX));
-            }
-
-            if (change.deltaDistance) {
-                orbit.distance += change.deltaDistance;
             }
         },
 

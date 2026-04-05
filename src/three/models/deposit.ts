@@ -19,4 +19,4 @@ export const materialsByResource: Record<string, Material> = {
     }),
 };
 
-export const depositModel = new ConeGeometry(0.03, 0.01);
+export const depositModel = new ConeGeometry(0.5, 0.05);

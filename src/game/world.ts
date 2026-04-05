@@ -9,6 +9,7 @@ type ResourceUpdateEvent = Event<(at: NodeId, dep: ResourceDeposit) => void>;
 export type GameWorld = {
     readonly seed: string;
 
+    readonly radius: number;
     readonly surface: SurfaceNode[];
     readonly nav: NavMesh;
 
@@ -17,17 +18,11 @@ export type GameWorld = {
     readonly resourceUpdate: ResourceUpdateEvent;
 };
 
-type ResourceSignal = {
-    get: () => ResourceDeposit | null;
-    set: (val: ResourceDeposit | null) => void;
-    uses: number;
-};
-
 export async function createGameWorld(
     opts: WorldgenOptions,
     onProgress: CreateGameProgressListener | undefined,
 ): Promise<GameWorld> {
-    const { nav, nodes: surface, resources } = await generatePlanet(opts, onProgress);
+    const { nav, nodes: surface, resources, radius } = await generatePlanet(opts, onProgress);
     onProgress?.({ progress: 1, stage: 'Done' });
 
     const resourceUpdate: ResourceUpdateEvent = createEvent();
@@ -35,6 +30,7 @@ export async function createGameWorld(
     return {
         seed: opts.seed,
 
+        radius,
         surface,
         nav,
 

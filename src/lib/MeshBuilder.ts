@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { calcCenter, fullAngle, normz, project, type RawVertex } from './3d';
+import { avgSize, calcCenter, fullAngle, normz, project, scale, type RawVertex } from './3d';
 
 export type MeshBuilderSize = {
     verticies: number;
@@ -274,7 +274,8 @@ export function getInvertedMesh(source: MeshBuilder): MeshBuilder {
 
     for (let fi = 0; fi < size.faces; fi++) {
         const face = source.face(fi);
-        const faceCenter = normz(calcCenter(face.map((vi) => source.coords(vi))));
+        const faceVertexCoords = face.map((vi) => source.coords(vi));
+        const faceCenter = scale(avgSize(faceVertexCoords))(normz(calcCenter(faceVertexCoords)));
         inverted.add(...faceCenter);
     }
 

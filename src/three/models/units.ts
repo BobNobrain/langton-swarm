@@ -15,7 +15,7 @@ export type UnitModel = {
 };
 
 const rover: UnitModel = {
-    geom: new BoxGeometry(0.02, 0.01, 0.03),
+    geom: new BoxGeometry(0.2, 0.1, 0.3),
     mat: new MeshStandardMaterial({
         color: '#bbddff',
         roughness: 0.1,
@@ -26,7 +26,7 @@ const rover: UnitModel = {
 };
 
 const mother: UnitModel = {
-    geom: new BoxGeometry(0.04, 0.02, 0.04),
+    geom: new BoxGeometry(0.7, 0.3, 0.7),
     mat: new MeshStandardMaterial({
         color: '#26496f',
         roughness: 0.1,
@@ -37,17 +37,20 @@ const mother: UnitModel = {
 };
 
 const pile: UnitModel = {
-    geom: new SphereGeometry(0.01, 8, 4),
+    geom: new SphereGeometry(0.3, 4, 4),
     mat: new MeshStandardMaterial({
-        color: '#8e867f',
+        color: '#76be7f',
         roughness: 1,
-        emissive: '#ffffff',
-        emissiveIntensity: 0.1,
+        emissive: '#76be7f',
+        emissiveIntensity: 0.4,
+        transparent: true,
+        opacity: 0.7,
+        wireframe: true,
     }),
 };
 
 const unknown: UnitModel = {
-    geom: new BoxGeometry(0.03, 0.03, 0.03),
+    geom: new BoxGeometry(0.3, 0.3, 0.3),
     mat: new MeshStandardMaterial({
         color: '#ff00ff',
         roughness: 1,
@@ -74,7 +77,7 @@ export function getUnitModel(type: UnitModelType): UnitModel {
 }
 
 export const selection: UnitModel = {
-    geom: new CylinderGeometry(0.04, 0.04, 0.05, 16, 1, true),
+    geom: new CylinderGeometry(0.6, 0.6, 0.5, 16, 1, true),
     mat: new MeshStandardMaterial({
         color: '#ffffff',
         emissive: '#ffffff',

@@ -8,6 +8,8 @@ import { onSceneEmptyClick } from '../hooks/handlers';
 // import { PathTrace } from '../PathTrace/PathTrace';
 import { PlanetMesh } from '../PlanetMesh/PlanetMesh';
 import { PlanetResources } from '../PlanetResources/PlanetResources';
+import { useInScene } from '../hooks/useInScene';
+import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 
 export const GameScene: Component = () => {
     const game = useGame();
@@ -41,6 +43,8 @@ export const GameScene: Component = () => {
     //     return nav.findPath(START, END);
     // });
 
+    useInScene(() => new Mesh(new SphereGeometry(0.1), new MeshStandardMaterial({ color: '#ff00ff' })));
+
     return (
         <>
             <PlanetMesh
@@ -56,7 +60,7 @@ export const GameScene: Component = () => {
             <PlanetResources />
             <GameSwarms />
             <GameGlobalLight />
-            <GameCamera fov={75} far={10} near={0.01} />
+            <GameCamera fov={75} far={100_000} near={0.01} />
             {/* <PathTrace nodes={game.world.planet()?.nodes ?? []} path={testPath()} /> */}
         </>
     );

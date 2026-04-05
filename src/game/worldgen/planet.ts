@@ -1,9 +1,10 @@
 import { Vector3 } from 'three';
-import { diff, mul, normz, size, sizeSquared, sum, ZERO, type RawVertex } from '@/lib/3d';
+import { diff, mul, normz, scale, size, sizeSquared, sum, ZERO, type RawVertex } from '@/lib/3d';
 import { icosahedron } from '@/lib/icosa';
 import type { MeshBuilder } from '@/lib/MeshBuilder';
 import { NavMesh } from '@/lib/NavMesh';
 import { drawInteger, RandomNumberGenerator, type RandomSequence } from '@/lib/random';
+import { sleep } from '@/lib/timeouts';
 import {
     SurfaceNode,
     type CreateGameProgressListener,
@@ -13,7 +14,6 @@ import {
     type WorldgenOptions,
 } from '../types';
 import { generateResourceDeposits } from './resources';
-import { sleep } from '@/lib/timeouts';
 
 export async function generatePlanet(
     opts: WorldgenOptions,
@@ -25,7 +25,11 @@ export async function generatePlanet(
     await sleep(0);
 
     const nodes = new Array<SurfaceNode>(mb.size().verticies);
+    const planetRadius = Math.sqrt(mb.size().faces / (4 * Math.PI));
     const connections = mb.calculateConnectionMap();
+
+    mb.mapVerticies(scale(planetRadius));
+
     for (let v = 0 as NodeId; v < nodes.length; v++) {
         nodes[v] = {
             index: v,
@@ -35,7 +39,7 @@ export async function generatePlanet(
     }
 
     const planet: Planet = {
-        radius: 1, // TODO: determine the size of the planet so that the size of a single tile is ~1
+        radius: planetRadius,
         nodes,
         nav: new NavMesh(mb.getAllCoords().slice(), connections),
         resources: new Map(),

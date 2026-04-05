@@ -19,6 +19,14 @@ export function calcCenter(vs: RawVertex[]): RawVertex {
     return [x / vs.length, y / vs.length, z / vs.length];
 }
 
+export function avgSize(vs: RawVertex[]): number {
+    let total = 0;
+    for (const v of vs) {
+        total += size(v);
+    }
+    return total / vs.length;
+}
+
 export function normz(v: RawVertex): RawVertex {
     const [x, y, z] = v;
     const d = Math.sqrt(x * x + y * y + z * z);

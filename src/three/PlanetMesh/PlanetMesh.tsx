@@ -11,7 +11,7 @@ import {
 } from 'three';
 import type { HighlightedTile, NodeId, SurfaceNode } from '@/game';
 import { renderTileId } from '@/game/utils';
-import { calcCenter, normz, scale } from '@/lib/3d';
+import { avgSize, calcCenter, normz, scale, size } from '@/lib/3d';
 import { MouseButton } from '@/lib/input';
 import { getInvertedMesh, MeshBuilder, type MaterialData, type RawFace } from '@/lib/MeshBuilder';
 import { MeshPainter } from '@/lib/MeshPainter';
@@ -250,7 +250,8 @@ export const PlanetMesh: Component<{
 
 // Adds a center point on each tile
 function planetTriangulator(vs: number[], builder: MeshBuilder): RawFace[] {
-    const middleCoords = normz(calcCenter(vs.map((vi) => builder.coords(vi))));
+    const vcs = vs.map((vi) => builder.coords(vi));
+    const middleCoords = scale(avgSize(vcs))(normz(calcCenter(vcs)));
     const result: RawFace[] = [];
     const middle = builder.add(...middleCoords);
 

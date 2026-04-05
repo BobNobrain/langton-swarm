@@ -2,6 +2,7 @@ import { createMemo, type Component } from 'solid-js';
 import {
     DynamicDrawUsage,
     InstancedMesh,
+    Matrix4,
     Object3D,
     Quaternion,
     Vector3,
@@ -27,6 +28,15 @@ const DEFAULT_MAX_COUNT = 1000;
 
 export type GridObjectData = {
     location: NodeId;
+    positioning?: GridObjectPositioning;
+};
+
+export type GridObjectPositioning = {
+    isDirty?: boolean;
+    /** 0 equals ground level, <0 is below ground, >0 is above */
+    elevation?: number;
+    rotation?: 'auto' | number;
+    // TODO: offsets for when multiple units occupy the same node
 };
 
 export const GridObjects: Component<{
@@ -34,6 +44,7 @@ export const GridObjects: Component<{
     material: Material;
     grid: SurfaceNode[];
     objects: Record<string, GridObjectData>;
+    positioning?: GridObjectPositioning;
     isStatic?: boolean;
     maxCount?: number;
     onClick?: (index: number) => void;
@@ -125,6 +136,7 @@ export const GridObjects: Component<{
 
     const updateInstanced = (time: number) => {
         const instanced = mesh();
+        const objects = props.objects;
         const N = Math.min(states.length, props.maxCount ?? DEFAULT_MAX_COUNT);
         const dummy = new Object3D();
         const up = new Vector3(0, 1, 0);
@@ -136,9 +148,15 @@ export const GridObjects: Component<{
             instanced.count = N;
         }
 
+        const defaultPositioning = props.positioning ?? { isDirty: false };
         for (let i = 0; i < N; i++) {
             const state = states[i];
-            if (!state.isDirty) {
+            const object = objects[state.objectId];
+            const positioning = object.positioning
+                ? { ...defaultPositioning, ...object.positioning }
+                : defaultPositioning;
+
+            if (!state.isDirty && !positioning.isDirty) {
                 continue;
             }
 
@@ -155,9 +173,44 @@ export const GridObjects: Component<{
 
             const currentPos = state.sourcePos.clone().lerp(state.targetPos, interpolationCoeff);
             dummy.position.set(currentPos.x, currentPos.y, currentPos.z);
-            dummy.setRotationFromQuaternion(new Quaternion().setFromUnitVectors(up, currentPos));
+            if (positioning.elevation !== undefined) {
+                dummy.position.setLength(dummy.position.length() + positioning.elevation);
+            }
+
+            const groundOrientation = new Quaternion().setFromUnitVectors(up, currentPos.clone().normalize());
+            const rotation = new Quaternion();
+
+            if (positioning.rotation === 'auto') {
+                const targetForward = state.targetPos.clone().sub(state.sourcePos).normalize();
+
+                if (targetForward.lengthSq() > 0.999) {
+                    const targetUp = currentPos.clone().normalize();
+                    const targetRight = new Vector3().crossVectors(targetUp, targetForward).normalize();
+                    targetForward.crossVectors(targetRight, targetUp).normalize();
+                    // targetForward.negate();
+
+                    const m = new Matrix4();
+                    m.makeBasis(targetRight, targetUp, targetForward);
+                    rotation.setFromRotationMatrix(m);
+                } else {
+                    rotation.copy(groundOrientation);
+                }
+            } else if (typeof positioning.rotation === 'number') {
+                // TODO
+            } else {
+                rotation.copy(groundOrientation);
+            }
+
+            dummy.setRotationFromQuaternion(rotation);
+
             dummy.updateMatrix();
             instanced.setMatrixAt(i, dummy.matrix);
+
+            if (object.positioning) {
+                object.positioning.isDirty = false;
+            } else if (defaultPositioning) {
+                defaultPositioning.isDirty = false;
+            }
         }
 
         instanced.instanceMatrix.needsUpdate = needsUpdate;

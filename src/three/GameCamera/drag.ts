@@ -5,7 +5,7 @@ import { MouseButton } from '@/lib/input';
 import { useSceneRenderer } from '../context';
 
 const YAW_SPEED = Math.PI / 5000;
-const PITCH_SPEED = Math.PI / 4000;
+const PITCH_SPEED = Math.PI / 5000;
 
 export function createCameraDragControls(camera: GameCamera) {
     const { canvas } = useSceneRenderer();
