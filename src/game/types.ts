@@ -13,6 +13,7 @@ export type SurfaceNode = {
 };
 
 export type Planet = {
+    radius: number;
     nodes: SurfaceNode[];
     nav: NavMesh;
     resources: Map<NodeId, ResourceDeposit>;

@@ -11,10 +11,18 @@ export type HotkeyDescriptor = {
 };
 
 export type HotkeyHandler = (ev: KeyboardEvent, isRepeated: boolean) => void;
+export type HotkeyReleaseHandler = (ev: KeyboardEvent) => void;
+
+type RegisteredHotkey = {
+    descriptor: HotkeyDescriptor;
+    handler: HotkeyHandler;
+    release: HotkeyReleaseHandler | undefined;
+    active: boolean;
+};
 
 class HotkeyManager {
-    private hotkeysByCode: Record<string, { descriptor: HotkeyDescriptor; handler: HotkeyHandler }[]> = {};
-    private keysDown: Record<string, boolean> = {};
+    private hotkeysByCode: Record<string, RegisteredHotkey[]> = {};
+    keysDown: Record<string, boolean> = {};
 
     constructor() {
         document.addEventListener('keydown', (ev) => {
@@ -25,10 +33,10 @@ class HotkeyManager {
             const isRepeated = this.keysDown[ev.code] ?? false;
             this.keysDown[ev.code] = true;
 
-            const hotkeys = this.hotkeysByCode[ev.code];
+            const hotkeys = this.hotkeysByCode[ev.code] ?? [];
             let handled = false;
 
-            for (const hk of hotkeys ?? []) {
+            for (const hk of hotkeys) {
                 const { alt = false, shift = false, ctrl = false, isEnabled } = hk.descriptor;
                 if (isEnabled && !isEnabled()) {
                     continue;
@@ -43,6 +51,7 @@ class HotkeyManager {
                 }
 
                 hk.handler(ev, isRepeated);
+                hk.active = true;
                 handled = true;
             }
 
@@ -53,14 +62,41 @@ class HotkeyManager {
 
         document.addEventListener('keyup', (ev) => {
             this.keysDown[ev.code] = false;
+
+            const hotkeys = this.hotkeysByCode[ev.code] ?? [];
+            let handled = false;
+
+            for (const hk of hotkeys) {
+                if (!hk.release || !hk.active) {
+                    continue;
+                }
+
+                const { alt = false, shift = false, ctrl = false, isEnabled } = hk.descriptor;
+                if (isEnabled && !isEnabled()) {
+                    continue;
+                }
+
+                if (ev.ctrlKey !== ctrl || ev.altKey !== alt || ev.shiftKey !== shift) {
+                    continue;
+                }
+
+                hk.release(ev);
+                handled = true;
+            }
+
+            if (handled) {
+                ev.preventDefault();
+            }
         });
     }
 
-    register(descriptor: HotkeyDescriptor, handler: HotkeyHandler) {
+    register(descriptor: HotkeyDescriptor, handler: HotkeyHandler, releaseHandler?: HotkeyReleaseHandler) {
         this.hotkeysByCode[descriptor.key] ??= [];
         this.hotkeysByCode[descriptor.key].push({
             descriptor,
             handler,
+            active: false,
+            release: releaseHandler,
         });
     }
 
@@ -81,12 +117,20 @@ class HotkeyManager {
 
 const hotkeyManager = new HotkeyManager();
 
-export function createHotkey(descriptor: HotkeyDescriptor, handler: HotkeyHandler) {
+export function createHotkey(
+    descriptor: HotkeyDescriptor,
+    handler: HotkeyHandler,
+    releaseHandler?: HotkeyReleaseHandler,
+) {
     onMount(() => {
-        hotkeyManager.register(descriptor, handler);
+        hotkeyManager.register(descriptor, handler, releaseHandler);
 
         onCleanup(() => hotkeyManager.unregister(descriptor, handler));
     });
+}
+
+export function isKeyDown(code: KeyCode): boolean {
+    return hotkeyManager.keysDown[code] ?? false;
 }
 
 export function renderHotkey(hotkey: HotkeyDescriptor): string {

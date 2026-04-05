@@ -27,7 +27,6 @@ export async function createGameWorld(
     opts: WorldgenOptions,
     onProgress: CreateGameProgressListener | undefined,
 ): Promise<GameWorld> {
-    const resourceSignals = new Map<NodeId, ResourceSignal>();
     const { nav, nodes: surface, resources } = await generatePlanet(opts, onProgress);
     onProgress?.({ progress: 1, stage: 'Done' });
 

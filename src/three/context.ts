@@ -9,7 +9,7 @@ export type SceneRendererContext = {
 
     getBounds: () => DOMRect;
     getMainCamera: () => Camera | null;
-    setMainCamera: (c: Camera) => void;
+    setMainCamera: (c: Camera | null) => void;
 
     scene: () => Scene;
 

@@ -35,6 +35,7 @@ export async function generatePlanet(
     }
 
     const planet: Planet = {
+        radius: 1, // TODO: determine the size of the planet so that the size of a single tile is ~1
         nodes,
         nav: new NavMesh(mb.getAllCoords().slice(), connections),
         resources: new Map(),

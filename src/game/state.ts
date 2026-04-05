@@ -1,3 +1,4 @@
+import { createGameCamera, type GameCamera } from './camera';
 import { createBlueprintDeck, type BlueprintDeck } from './deck';
 import type { GameLoop } from './loop';
 import { createGameSystems, GameUnitSystems } from './systems';
@@ -12,6 +13,7 @@ export type GameState = {
     readonly ui: GameUIState;
     readonly time: GameTimeState;
     readonly units: GameUnitSystems;
+    readonly camera: GameCamera;
 };
 
 type Options = {
@@ -26,6 +28,7 @@ export async function createGameState({ gameTick, onProgress, worldgen }: Option
     const deck = createBlueprintDeck();
     const units = createGameSystems(world, deck, gameTick);
     const ui = createGameUIState(units);
+    const camera = createGameCamera();
 
     const state: GameState = {
         world,
@@ -33,6 +36,7 @@ export async function createGameState({ gameTick, onProgress, worldgen }: Option
         deck,
         ui,
         time,
+        camera,
     };
 
     return state;
