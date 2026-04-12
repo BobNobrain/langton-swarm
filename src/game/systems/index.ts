@@ -22,6 +22,7 @@ import { createSignalsSystem } from './signals';
 import { createStationariesSystem } from './stationaries';
 import type { UnitSystem, UnitSystemPublic } from './systems';
 import type { CreateUnitSystemCommonOptions, DespawnFn, SendMessage, SpawnFn, UnitSystemMessage } from './types';
+import { createDiscoverySystem } from './discovery';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
@@ -114,6 +115,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     const drill = createDrillSystem(opts, world, inventoryController);
     const scanner = createScannerSystem(opts, world, inventoryController);
     const navigator = createNavigatorSystem(opts, world);
+    const discovery = createDiscoverySystem(opts, world);
 
     systems[cpu.name] = cpu;
     systems[engine.name] = engine;
@@ -124,6 +126,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     systems[drill.name] = drill;
     systems[scanner.name] = scanner;
     systems[navigator.name] = navigator;
+    systems[discovery.name] = discovery;
 
     logicTick.addGameTask((tick) => {
         // main unit update loop
@@ -135,6 +138,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         mother.tick();
         inventorySystem.tick();
         stationariesSystem.tick();
+        discovery.tick();
 
         // process all the messages to activate the components
         const pending: typeof messageQueue = [];

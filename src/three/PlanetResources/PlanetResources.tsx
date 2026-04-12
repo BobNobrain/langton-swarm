@@ -38,6 +38,7 @@ export const PlanetResources: Component = () => {
                         geom={depositModel}
                         material={materialsByResource[resource] ?? defaultMat}
                         grid={world.surface}
+                        hiddenNodes={world.terraIncognita}
                         objects={objects}
                         maxCount={Object.keys(objects).length}
                     />

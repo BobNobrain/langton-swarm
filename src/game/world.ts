@@ -40,18 +40,19 @@ export async function createGameWorld(
     const surface = new Array<SurfaceNode>(graph.size());
     const coords = graph.coords();
     const connections = graph.getConnections();
-    const fogOfWar = new Set<NodeId>();
+    const terraIncognita = new Set<NodeId>();
     for (let vi = 0 as NodeId; vi < graph.size(); vi++) {
-        fogOfWar.add(vi);
+        terraIncognita.add(vi);
         surface[vi] = {
             index: vi,
             position: new Vector3(...coords[vi]),
             connections: connections[vi] as Set<NodeId>,
             elevation: elevations[vi],
         };
+        surface[vi].position.normalize().multiplyScalar(radius + elevations[vi]);
     }
 
-    const fogOfWarUpdate: FogOfWarUpdateEvent = createEvent();
+    const terraIncognitaUpdate: FogOfWarUpdateEvent = createEvent();
 
     return {
         seed: opts.seed,
@@ -62,19 +63,29 @@ export async function createGameWorld(
         nav: new NavMesh(coords, connections),
         graph,
 
-        terraIncognita: fogOfWar,
-        terraIncognitaUpdate: fogOfWarUpdate,
+        terraIncognita,
+        terraIncognitaUpdate: terraIncognitaUpdate,
         forgetNodes(nodes) {
+            const oldSize = terraIncognita.size;
+
             for (const n of nodes) {
-                fogOfWar.add(n);
+                terraIncognita.add(n);
             }
-            fogOfWarUpdate.trigger(nodes, 'forgotten');
+
+            if (terraIncognita.size !== oldSize) {
+                terraIncognitaUpdate.trigger(nodes, 'forgotten');
+            }
         },
         discoverNodes(nodes) {
+            const oldSize = terraIncognita.size;
+
             for (const n of nodes) {
-                fogOfWar.delete(n);
+                terraIncognita.delete(n);
             }
-            fogOfWarUpdate.trigger(nodes, 'discovered');
+
+            if (terraIncognita.size !== oldSize) {
+                terraIncognitaUpdate.trigger(nodes, 'discovered');
+            }
         },
 
         resources,

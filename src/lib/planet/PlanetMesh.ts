@@ -1,5 +1,6 @@
 import { avgSize, calcCenter, fullAngle, normz, project, scale, size, type RawVertex, type RawColor } from '../3d';
 import type { ID } from '../ids';
+import type { PlanetGraph } from './PlanetGraph';
 import { RawMesh } from './RawMesh';
 
 type ProjectionId = ID<number, 'ProjectionId'>;
@@ -41,27 +42,28 @@ export class PlanetSurface<NId extends number> {
     private projectionInstances: VertexId[][] = [];
 
     static fromGraph<NId extends number>(
-        graph: {
-            coords: { x: number; y: number; z: number };
-            connections: Set<number>;
+        graph: PlanetGraph,
+        graphData: {
             elevation: number | undefined;
             materialIndex: number;
         }[],
         faces?: number[][],
     ): PlanetSurface<NId> {
         const result = new PlanetSurface<NId>();
-        result.graph = graph.map(({ connections, coords: { x, y, z } }) => ({
-            coords: [x, y, z],
-            connections: new Set<NId>(connections as Set<NId>),
+        const coords = graph.coords();
+        const connections = graph.getConnections();
+        result.graph = coords.map((coords, i) => ({
+            coords,
+            connections: connections[i] as Set<NId>,
         }));
 
         result.buildFlatTiles(faces as never);
 
-        for (let ni = 0 as NId; ni < graph.length; ni++) {
-            const node = graph[ni];
-            result.paintTile(ni, node.materialIndex);
-            if (node.elevation !== undefined && node.elevation !== 0) {
-                result.elevateTile(ni, node.elevation);
+        for (let ni = 0 as NId; ni < graphData.length; ni++) {
+            const data = graphData[ni];
+            result.paintTile(ni, data.materialIndex);
+            if (data.elevation !== undefined && data.elevation !== 0) {
+                result.elevateTile(ni, data.elevation);
             }
         }
 

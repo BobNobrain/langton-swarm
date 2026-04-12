@@ -19,6 +19,7 @@ export class RawMesh<NId extends number> {
 
     resetTriangles() {
         this.triangles.length = 0;
+        this.nodes.length = 0;
     }
 
     addTriangle(triangle: RawFace, source: NId) {

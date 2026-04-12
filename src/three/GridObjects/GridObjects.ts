@@ -43,6 +43,7 @@ export const GridObjects: Component<{
     geom: BufferGeometry;
     material: Material;
     grid: SurfaceNode[];
+    hiddenNodes?: Set<NodeId>;
     objects: Record<string, GridObjectData>;
     positioning?: GridObjectPositioning;
     isStatic?: boolean;
@@ -78,12 +79,17 @@ export const GridObjects: Component<{
     const syncStates = (time: number) => {
         const grid = props.grid;
         const objects = props.objects;
+        const hiddenNodes = props.hiddenNodes;
         const objectIds = Object.keys(objects);
 
         const obsoleteObjectIds = new Set(Object.keys(stateIndexByObjectId));
 
         for (const objectId of objectIds) {
             const { location } = objects[objectId];
+            if (hiddenNodes && hiddenNodes.has(location)) {
+                continue;
+            }
+
             const stateIndex: number | undefined = stateIndexByObjectId[objectId];
 
             if (stateIndex === undefined) {

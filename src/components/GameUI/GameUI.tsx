@@ -23,16 +23,16 @@ export const GameUI: ParentComponent = (props) => {
             const coreId = spawnFromDeck(g.deck, g.units, spawnLocation, coreBp.id)!;
             g.units.inventory.add({ to: coreId, amounts: { titanium: 100, copper: 100 }, tick: 0 });
 
-            const visibleNodes = new Set<NodeId>();
-            g.world.graph.bfs(spawnLocation, (tileId, depth) => {
-                if (depth >= 5) {
-                    return true;
-                }
+            // const visibleNodes = new Set<NodeId>();
+            // g.world.graph.bfs(spawnLocation, (tileId, depth) => {
+            //     if (depth >= 5) {
+            //         return true;
+            //     }
 
-                visibleNodes.add(tileId as NodeId);
-            });
+            //     visibleNodes.add(tileId as NodeId);
+            // });
 
-            g.world.discoverNodes(visibleNodes);
+            // g.world.discoverNodes(visibleNodes);
 
             const { yaw, pitch } = getCameraOrbitForCoords(g.world.surface[spawnLocation].position);
             g.camera.setInstant({ yaw, pitch });

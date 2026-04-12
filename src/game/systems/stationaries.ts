@@ -32,7 +32,6 @@ export function createStationariesSystem(
         },
         messages: {},
         tick(ctx, _) {
-            console.log('[DEBUG] stationary:', ctx.systemData);
             const isValid = ctx.systemData;
 
             if (!isValid) {
