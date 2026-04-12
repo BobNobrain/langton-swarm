@@ -1,15 +1,15 @@
 import { type Component } from 'solid-js';
+import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import { useGame } from '@/gameContext';
 import { MouseButton } from '@/lib/input';
 import { GameCamera } from '../GameCamera/GameCamera';
 import { GameGlobalLight } from '../GameGlobalLight/GameGlobalLight';
+import { GamePlanet } from '../GamePlanet/GamePlanet';
 import { GameSwarms } from '../GameSwarms/GameSwarms';
 import { onSceneEmptyClick } from '../hooks/handlers';
 // import { PathTrace } from '../PathTrace/PathTrace';
-import { PlanetMesh } from '../PlanetMesh/PlanetMesh';
 import { PlanetResources } from '../PlanetResources/PlanetResources';
 import { useInScene } from '../hooks/useInScene';
-import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 
 export const GameScene: Component = () => {
     const game = useGame();
@@ -47,8 +47,7 @@ export const GameScene: Component = () => {
 
     return (
         <>
-            <PlanetMesh
-                planetNodes={game.world.surface}
+            <GamePlanet
                 selectedTileId={game.ui.rSelectedTile()}
                 hilightedTiles={game.ui.rHighlightedTiles()}
                 onTileClick={(tileId) => {

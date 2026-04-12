@@ -1,4 +1,4 @@
-import { For, type Component } from 'solid-js';
+import { For, onMount, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
 import { GridObjects, GridObjectData } from '../GridObjects/GridObjects';
 import { depositModel, materialsByResource, defaultMat } from '../models/deposit';
@@ -19,14 +19,16 @@ export const PlanetResources: Component = () => {
         objects,
     }));
 
-    createEventListener(world.resourceUpdate, (tileId, deposit) => {
-        if (deposit.amount > 0) {
-            return;
-        }
+    onMount(() =>
+        createEventListener(world.resourceUpdate, (tileId, deposit) => {
+            if (deposit.amount > 0) {
+                return;
+            }
 
-        const objects = byResource[deposit.resource];
-        delete objects[tileId];
-    });
+            const objects = byResource[deposit.resource];
+            delete objects[tileId];
+        }),
+    );
 
     return (
         <For each={resourceDeposits}>

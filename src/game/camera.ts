@@ -16,6 +16,7 @@ export type GameCamera = {
     getOrbit(t: number): Readonly<CameraOrbit>;
     updateManual(change: CameraOrbitChange): void;
     animateTo(pos: Partial<CameraOrbit>, timeMs?: number): void;
+    setInstant(pos: Partial<CameraOrbit>): void;
 };
 
 const PITCH_MIN = 0.087; // ~5deg
@@ -100,6 +101,16 @@ export function createGameCamera(planetRadius: number): GameCamera {
                 orbit.pitch += deltaPitch * pitchYawMovementSpeedFromDistance;
                 orbit.pitch = Math.max(PITCH_MIN, Math.min(orbit.pitch, PITCH_MAX));
             }
+        },
+
+        setInstant(pos) {
+            breakAnimation(performance.now());
+
+            if (pos.pitch !== undefined) {
+                pos.pitch = Math.max(PITCH_MIN, Math.min(pos.pitch, PITCH_MAX));
+            }
+
+            Object.assign(orbit, pos);
         },
 
         animateTo(pos, timeMs = 200) {

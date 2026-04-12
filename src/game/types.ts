@@ -10,13 +10,7 @@ export type SurfaceNode = {
     index: NodeId;
     position: Vector3;
     connections: Set<NodeId>;
-};
-
-export type Planet = {
-    radius: number;
-    nodes: SurfaceNode[];
-    nav: NavMesh;
-    resources: Map<NodeId, ResourceDeposit>;
+    elevation: number;
 };
 
 export type ResourceDeposit = {
@@ -83,5 +77,8 @@ export type CreateGameProgressListener = (p: CreateGameProgress) => void;
 
 export type WorldgenOptions = {
     seed: string;
+    minSplats: number;
+    maxSplats: number;
+    maxElevation: number;
 };
 export type WorldgenOptionsInput = Partial<WorldgenOptions>;

@@ -11,10 +11,10 @@ type VisitCandidate = {
 };
 
 export class NavMesh {
-    private coords: RawVertex[];
+    private coords: readonly RawVertex[];
     private connections: number[][];
 
-    constructor(coords: RawVertex[], connections: Set<number>[]) {
+    constructor(coords: readonly RawVertex[], connections: Set<number>[]) {
         this.coords = coords;
         this.connections = connections.map((cs) => Array.from(cs).sort((a, b) => a - b));
     }

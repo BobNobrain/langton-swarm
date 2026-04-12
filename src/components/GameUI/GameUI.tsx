@@ -8,6 +8,7 @@ import { GameTopBar } from '../GameTopBar/GameTopBar';
 import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
 import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
 import styles from './GameUI.module.css';
+import { getCameraOrbitForCoords } from '@/game/camera';
 
 export const GameUI: ParentComponent = (props) => {
     const [game, setGame] = createSignal<Game | null>(null);
@@ -18,8 +19,23 @@ export const GameUI: ParentComponent = (props) => {
             onProgress: ({ progress, stage }) => setLoadingProgress(`${(progress * 100).toFixed(0)}% ${stage}...`),
         }).then((g) => {
             const coreBp = g.deck.create('core', MOTHER_PRESET);
-            const coreId = spawnFromDeck(g.deck, g.units, 15 as NodeId, coreBp.id)!;
+            const spawnLocation = g.world.spawnLocation;
+            const coreId = spawnFromDeck(g.deck, g.units, spawnLocation, coreBp.id)!;
             g.units.inventory.add({ to: coreId, amounts: { titanium: 100, copper: 100 }, tick: 0 });
+
+            const visibleNodes = new Set<NodeId>();
+            g.world.graph.bfs(spawnLocation, (tileId, depth) => {
+                if (depth >= 5) {
+                    return true;
+                }
+
+                visibleNodes.add(tileId as NodeId);
+            });
+
+            g.world.discoverNodes(visibleNodes);
+
+            const { yaw, pitch } = getCameraOrbitForCoords(g.world.surface[spawnLocation].position);
+            g.camera.setInstant({ yaw, pitch });
 
             const testBp = g.deck.create('test', TEST_PRESET);
 

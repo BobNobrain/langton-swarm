@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
+import { createEffect, createMemo, createSignal, onMount, Show, type Component } from 'solid-js';
 import { ResourceDeposit } from '@/game';
 import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
@@ -15,13 +15,16 @@ export const SelectedTilePanel: Component = () => {
         const selectedTile = ui.rSelectedTile();
         setDeposit((selectedTile && world.resources.get(selectedTile)) || null);
     });
-    createEventListener(world.resourceUpdate, (at, deposit) => {
-        if (at !== ui.rSelectedTile()) {
-            return;
-        }
 
-        setDeposit({ ...deposit });
-    });
+    onMount(() =>
+        createEventListener(world.resourceUpdate, (at, deposit) => {
+            if (at !== ui.rSelectedTile()) {
+                return;
+            }
+
+            setDeposit({ ...deposit });
+        }),
+    );
 
     const tileInfo = createMemo(() => {
         const selectedTile = ui.rSelectedTile();

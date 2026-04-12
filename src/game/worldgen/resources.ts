@@ -1,5 +1,6 @@
-import { pick, RandomNumberGenerator } from '@/lib/random';
-import { type NodeId, type Planet } from '../types';
+import { drawInteger, pick, RandomNumberGenerator } from '@/lib/random';
+import { type NodeId } from '../types';
+import type { GeneratedPlanet } from './types';
 
 export type KnownResourceName = 'copper' | 'titanium';
 
@@ -31,20 +32,21 @@ const RESOURCES: ResourceData[] = [
     },
 ];
 
-export function generateResourceDeposits(seed: string, planet: Planet) {
+export function generateResourceDeposits(seed: string, planet: GeneratedPlanet) {
     const rng = new RandomNumberGenerator(seed);
     const seq = rng.detached();
 
-    const nDeposits = Math.floor(planet.nodes.length * (0.01 + 0.02 * seq()));
+    const nDeposits = Math.floor(planet.elevations.length * (0.01 + 0.02 * seq()));
+    const connections = planet.graph.getConnections() as Set<NodeId>[];
 
     for (let i = 0; i < nDeposits; i++) {
         const resourceData = pick(seq, RESOURCES);
         const centers = new Set<NodeId>();
         const edges = new Set<NodeId>();
 
-        const randomCenterNode = pick(seq, planet.nodes);
+        const randomCenterNodeIndex = drawInteger(seq, { min: 0, max: connections.length }) as NodeId;
 
-        for (const connected of randomCenterNode.connections) {
+        for (const connected of connections[randomCenterNodeIndex]) {
             if (seq() < resourceData.secondaryCenterProb) {
                 centers.add(connected);
                 continue;
@@ -54,7 +56,7 @@ export function generateResourceDeposits(seed: string, planet: Planet) {
         }
 
         for (const secondaryCenter of centers) {
-            for (const connected of planet.nodes[secondaryCenter].connections) {
+            for (const connected of connections[secondaryCenter]) {
                 if (centers.has(connected)) {
                     continue;
                 }
@@ -63,7 +65,7 @@ export function generateResourceDeposits(seed: string, planet: Planet) {
             }
         }
 
-        centers.add(randomCenterNode.index);
+        centers.add(randomCenterNodeIndex);
 
         for (const centerId of centers) {
             planet.resources.set(centerId, {

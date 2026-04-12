@@ -1,4 +1,4 @@
-import { createMemo, For, Show, type Component } from 'solid-js';
+import { createMemo, For, onMount, Show, type Component } from 'solid-js';
 import { Button } from '@/components/Button/Button';
 import type { UnitId, UnitCommandArg, UnitCommand, BsmlValue } from '@/game';
 import { useGame } from '@/gameContext';
@@ -82,19 +82,21 @@ export const CommandPanel: Component<{
         return cmdList;
     });
 
-    createEventListener(ui.tileRightClick, (tileId, ev) => {
-        const positionalCommand = availableCommands().find((cmd) => cmd.isPositional);
-        if (!positionalCommand) {
-            return;
-        }
+    onMount(() =>
+        createEventListener(ui.tileRightClick, (tileId, ev) => {
+            const positionalCommand = availableCommands().find((cmd) => cmd.isPositional);
+            if (!positionalCommand) {
+                return;
+            }
 
-        ev.preventDefault();
+            ev.preventDefault();
 
-        props.onExecute({ name: positionalCommand.name, args: [] }, positionalCommand.appliesTo, [
-            { type: 'position', value: tileId },
-        ]);
-        ui.selectTile(tileId, { selectUnits: false });
-    });
+            props.onExecute({ name: positionalCommand.name, args: [] }, positionalCommand.appliesTo, [
+                { type: 'position', value: tileId },
+            ]);
+            ui.selectTile(tileId, { selectUnits: false });
+        }),
+    );
 
     return (
         <div class={styles.commandPanel}>

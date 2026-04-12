@@ -1,4 +1,6 @@
 export type RawVertex = Readonly<[x: number, y: number, z: number]>;
+export type RawFace = [number, number, number];
+export type RawColor = [number, number, number];
 
 export function distSquared(v1: RawVertex, v2: RawVertex): number {
     const dx = v1[0] - v2[0];
