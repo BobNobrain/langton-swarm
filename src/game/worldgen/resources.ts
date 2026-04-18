@@ -36,7 +36,7 @@ export function generateResourceDeposits(seed: string, planet: GeneratedPlanet) 
     const rng = new RandomNumberGenerator(seed);
     const seq = rng.detached();
 
-    const nDeposits = Math.floor(planet.elevations.length * (0.01 + 0.02 * seq()));
+    const nDeposits = Math.floor(planet.graph.size() * (0.01 + 0.02 * seq()));
     const connections = planet.graph.getConnections() as Set<NodeId>[];
 
     for (let i = 0; i < nDeposits; i++) {

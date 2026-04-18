@@ -2,7 +2,7 @@ import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, type 
 import type { NodeId } from '@/game';
 import type { RawMesh } from '@/lib/planet/RawMesh';
 
-const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.15, linewidth: 2, transparent: true });
+const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.2, linewidth: 2, transparent: true });
 const SCALE_UP = 1.001;
 
 export class TileBorders {

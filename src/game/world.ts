@@ -5,6 +5,7 @@ import { createEvent, type Event } from '@/lib/sparse';
 import type { CreateGameProgressListener, NodeId, ResourceDeposit, SurfaceNode, WorldgenOptions } from './types';
 import { generatePlanet } from './worldgen/planet';
 import { Vector3 } from 'three';
+import type { Landscape } from '@/lib/planet/Landscape';
 
 type ResourceUpdateEvent = Event<(at: NodeId, dep: ResourceDeposit) => void>;
 type FogOfWarUpdateEvent = Event<(nodes: Set<NodeId>, status: 'forgotten' | 'discovered') => void>;
@@ -16,6 +17,7 @@ export type GameWorld = {
     readonly radius: number;
     readonly surface: SurfaceNode[];
     readonly graph: PlanetGraph;
+    readonly landscape: Landscape;
     readonly nav: NavMesh;
 
     readonly terraIncognita: Set<NodeId>;
@@ -32,7 +34,7 @@ export async function createGameWorld(
     opts: WorldgenOptions,
     onProgress: CreateGameProgressListener | undefined,
 ): Promise<GameWorld> {
-    const { resources, radius, spawnLocation, graph, elevations } = await generatePlanet(opts, onProgress);
+    const { resources, radius, spawnLocation, graph, landscape } = await generatePlanet(opts, onProgress);
     onProgress?.({ progress: 1, stage: 'Done' });
 
     const resourceUpdate: ResourceUpdateEvent = createEvent();
@@ -41,8 +43,10 @@ export async function createGameWorld(
     const coords = graph.coords();
     const connections = graph.getConnections();
     const terraIncognita = new Set<NodeId>();
+    const elevations = landscape.getBaseElevations();
+
     for (let vi = 0 as NodeId; vi < graph.size(); vi++) {
-        terraIncognita.add(vi);
+        // terraIncognita.add(vi);
         surface[vi] = {
             index: vi,
             position: new Vector3(...coords[vi]),
@@ -60,8 +64,9 @@ export async function createGameWorld(
 
         radius,
         surface,
-        nav: new NavMesh(coords, connections),
+        nav: new NavMesh(coords, landscape.buildNavigationConnections()),
         graph,
+        landscape,
 
         terraIncognita,
         terraIncognitaUpdate: terraIncognitaUpdate,

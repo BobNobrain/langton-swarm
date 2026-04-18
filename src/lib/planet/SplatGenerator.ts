@@ -4,10 +4,15 @@ import type { PlanetGraph } from './PlanetGraph';
 export class SplatGenerator {
     constructor(private graph: PlanetGraph) {}
 
-    generate(seq: RandomSequence, size: number): Set<number> {
+    generate(
+        seq: RandomSequence,
+        size: number,
+    ): { splat: Map<number, number>; maxD: number; outline: Map<number, number> } {
         const connections = this.graph.getConnections();
         const start = drawInteger(seq, { min: 0, max: this.graph.size() });
-        const splat = new Set([start]);
+        const splat = new Map<number, number>();
+        splat.set(start, 0);
+        let maxD = 0;
 
         const candidates = new Map<number, number>();
         for (const nbor of connections[start]) {
@@ -28,7 +33,8 @@ export class SplatGenerator {
                     continue;
                 }
 
-                splat.add(vi);
+                splat.set(vi, d);
+                maxD = Math.max(maxD, d);
                 candidates.delete(vi);
                 probSum -= prob;
 
@@ -50,6 +56,6 @@ export class SplatGenerator {
             }
         }
 
-        return splat;
+        return { splat, maxD, outline: candidates };
     }
 }

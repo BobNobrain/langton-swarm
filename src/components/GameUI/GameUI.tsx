@@ -16,6 +16,11 @@ export const GameUI: ParentComponent = (props) => {
 
     onMount(() => {
         createGame({
+            worldgen: {
+                seed: 'test1',
+                minSplats: 2,
+                maxSplats: 3,
+            },
             onProgress: ({ progress, stage }) => setLoadingProgress(`${(progress * 100).toFixed(0)}% ${stage}...`),
         }).then((g) => {
             const coreBp = g.deck.create('core', MOTHER_PRESET);

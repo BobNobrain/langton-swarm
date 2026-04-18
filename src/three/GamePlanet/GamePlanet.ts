@@ -22,7 +22,7 @@ import { RawMesh } from '@/lib/planet/RawMesh';
 import { useSceneRenderer } from '../context';
 import { useClickableMesh } from '../hooks/handlers';
 import { useAllInScene } from '../hooks/useInScene';
-import { palette } from './colors';
+import { PALETTE } from './colors';
 import { HoverPoly } from './HoverPoly';
 import { TileBorders } from './TileBorders';
 
@@ -124,19 +124,11 @@ export const GamePlanet: Component<{
 };
 
 function setup(world: GameWorld) {
-    const surface = PlanetSurface.fromGraph<NodeId>(
-        world.graph,
-        world.surface.map((tile) => {
-            return {
-                elevation: tile.elevation,
-                materialIndex: tile.elevation % palette.length,
-            };
-        }),
-        world.graph.getFaces(),
-    );
+    const surface = PlanetSurface.fromGraph<NodeId>(world.graph, world.radius);
+    surface.applyLandscape(world.landscape);
 
     const meshData = new RawMesh<NodeId>();
-    surface.renderVerticies(meshData, palette);
+    surface.renderVerticies(meshData, PALETTE);
     surface.renderTiles(meshData, world.terraIncognita);
 
     return { surface, meshData };

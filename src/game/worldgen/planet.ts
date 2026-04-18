@@ -6,6 +6,7 @@ import { type CreateGameProgressListener, type WorldgenOptions } from '../types'
 import { generateResourceDeposits } from './resources';
 import { generateSpawnPoint } from './spawn';
 import type { GeneratedPlanet } from './types';
+import { Landscape } from '@/lib/planet/Landscape';
 
 export async function generatePlanet(
     opts: WorldgenOptions,
@@ -51,28 +52,19 @@ export async function generatePlanet(
 
     graph.scale(planetRadius);
     const coords = graph.coords();
-    const elevations = coords.map(() => 0);
 
-    const nSplats = drawInteger(seq, { min: opts.minSplats, max: opts.maxSplats });
-    const maxSplatSize = elevations.length / nSplats;
-    const splatGenerator = new SplatGenerator(graph);
-
-    for (let i = 0; i < nSplats; i++) {
-        const splatSize = drawInteger(seq, { min: 0.1 * maxSplatSize, max: 0.8 * maxSplatSize });
-        const splat = splatGenerator.generate(seq, splatSize);
-
-        for (const vi of splat) {
-            elevations[vi] += 1;
-        }
-    }
-    for (let vi = 0; vi < elevations.length; vi++) {
-        elevations[vi] = Math.min(elevations[vi], opts.maxElevation);
-    }
+    const landscape = new Landscape(graph);
+    landscape.generateLandscape({
+        seq,
+        minSplats: opts.minSplats,
+        maxSplats: opts.maxSplats,
+        maxElevation: opts.maxElevation,
+    });
 
     const planet: GeneratedPlanet = {
         radius: planetRadius,
         graph,
-        elevations,
+        landscape,
         resources: new Map(),
         spawnLocation: generateSpawnPoint(seq, graph),
     };

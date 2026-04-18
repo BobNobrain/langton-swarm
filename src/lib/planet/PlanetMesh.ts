@@ -1,5 +1,6 @@
 import { avgSize, calcCenter, fullAngle, normz, project, scale, size, type RawVertex, type RawColor } from '../3d';
 import type { ID } from '../ids';
+import type { Landscape } from './Landscape';
 import type { PlanetGraph } from './PlanetGraph';
 import { RawMesh } from './RawMesh';
 
@@ -40,16 +41,11 @@ export class PlanetSurface<NId extends number> {
     private verticies: Vertex<NId>[] = [];
     /** ProjectionId -> VertexId[] */
     private projectionInstances: VertexId[][] = [];
+    private radius = 0;
 
-    static fromGraph<NId extends number>(
-        graph: PlanetGraph,
-        graphData: {
-            elevation: number | undefined;
-            materialIndex: number;
-        }[],
-        faces?: number[][],
-    ): PlanetSurface<NId> {
+    static fromGraph<NId extends number>(graph: PlanetGraph, radius: number): PlanetSurface<NId> {
         const result = new PlanetSurface<NId>();
+        result.radius = radius;
         const coords = graph.coords();
         const connections = graph.getConnections();
         result.graph = coords.map((coords, i) => ({
@@ -57,17 +53,7 @@ export class PlanetSurface<NId extends number> {
             connections: connections[i] as Set<NId>,
         }));
 
-        result.buildFlatTiles(faces as never);
-
-        for (let ni = 0 as NId; ni < graphData.length; ni++) {
-            const data = graphData[ni];
-            result.paintTile(ni, data.materialIndex);
-            if (data.elevation !== undefined && data.elevation !== 0) {
-                result.elevateTile(ni, data.elevation);
-            }
-        }
-
-        result.cleanUnusedVerticies();
+        result.buildFlatTiles(graph.getFaces() as never);
 
         return result;
     }
@@ -97,7 +83,40 @@ export class PlanetSurface<NId extends number> {
         return [x * scale, y * scale, z * scale];
     }
 
-    buildRamp(from: NId, to: NId) {}
+    buildRamp(from: NId, to: NId) {
+        const fromVs = new Map<ProjectionId, VertexId>();
+        const commonVs = new Map<ProjectionId, VertexId>();
+
+        for (const vi of this.tiles[from].vs) {
+            fromVs.set(this.verticies[vi].projection, vi);
+        }
+
+        for (const vi of this.tiles[to].vs) {
+            const pi = this.verticies[vi].projection;
+            if (!fromVs.has(pi)) {
+                continue;
+            }
+
+            commonVs.set(pi, vi);
+        }
+
+        if (commonVs.size !== 2) {
+            console.warn('[WARN] bad ramp:', { from, to, fromVs, commonVs });
+            return;
+        }
+
+        const tileFrom = this.tiles[from];
+        const tileTo = this.tiles[to];
+        const midElevation = (tileFrom.elevation + tileTo.elevation) / 2;
+
+        for (const pi of commonVs.keys()) {
+            const fromVi = fromVs.get(pi)!;
+            const toVi = commonVs.get(pi)!;
+
+            this.verticies[fromVi].elevation = midElevation;
+            this.verticies[toVi].elevation = midElevation;
+        }
+    }
 
     renderVerticies(result: RawMesh<NId>, palette: RawColor[]) {
         for (let vi = 0 as VertexId; vi < this.verticies.length; vi++) {
@@ -142,6 +161,27 @@ export class PlanetSurface<NId extends number> {
                 mesh.addTriangle([top[1], bottom[1], bottom[0]], tileId);
             }
         }
+    }
+
+    applyLandscape(ls: Landscape) {
+        const elevations = ls.getBaseElevations();
+        const materials = ls.getMaterialIndicies();
+        const bridges = ls.getBridges();
+
+        for (let ni = 0 as NId; ni < this.tiles.length; ni++) {
+            this.paintTile(ni, materials[ni]);
+
+            const elevation = elevations[ni];
+            if (elevation !== 0) {
+                this.elevateTile(ni, elevation);
+            }
+        }
+
+        for (const bridge of bridges) {
+            this.buildRamp(bridge[0] as NId, bridge[1] as NId);
+        }
+
+        this.cleanUnusedVerticies();
     }
 
     private buildFlatTiles(originalFaces: [NId, NId, NId][] = []) {
@@ -337,7 +377,7 @@ export class PlanetSurface<NId extends number> {
         }
 
         const [nx, ny, nz] = normz([rx, ry, rz]);
-        const factor = size / vs.length;
+        const factor = tile.elevation + this.radius;
         return [nx * factor, ny * factor, nz * factor];
     }
 
