@@ -87,6 +87,10 @@ export class NavMesh {
         path.reverse();
         return path;
     }
+
+    getNeighbours(node: number): number[] {
+        return this.connections[node];
+    }
 }
 
 function candidateSorter(c1: VisitCandidate, c2: VisitCandidate): number {
