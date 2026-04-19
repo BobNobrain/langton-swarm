@@ -1,4 +1,5 @@
 import type { GameWorld } from '../world';
+import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
@@ -14,7 +15,11 @@ import {
 
 type DrillData = {};
 
-type DrillDeps = { world: Pick<GameWorld, 'resources' | 'mineResource'>; inventory: InventoryController };
+type DrillDeps = {
+    world: Pick<GameWorld, 'resources' | 'mineResource'>;
+    inventory: InventoryController;
+    battery: EnergySystemController;
+};
 
 const MINING_TIME_TICKS = 5;
 export const DRILL_SYSTEM_NAME = 'drill';
@@ -27,7 +32,7 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_args, ctx, _env, { world, inventory }) {
+        init(_args, ctx, _env, { world, inventory, battery }) {
             schedule(
                 ctx,
                 (ctx, env) => {
@@ -35,17 +40,18 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
                     let success = false;
                     const amountToMine = 1;
 
-                    if (
-                        resource &&
-                        resource.amount > 0 &&
-                        inventory.add({
-                            to: ctx.unitId,
-                            amounts: { [resource.resource]: amountToMine },
-                            tick: env.currentTick,
-                        })
-                    ) {
-                        world.mineResource(ctx.state.location, resource.resource, amountToMine);
-                        success = true;
+                    if (resource && resource.amount > 0) {
+                        if (
+                            battery.withdraw(ctx.unitId, 15) &&
+                            inventory.add({
+                                to: ctx.unitId,
+                                amounts: { [resource.resource]: amountToMine },
+                                tick: env.currentTick,
+                            })
+                        ) {
+                            world.mineResource(ctx.state.location, resource.resource, amountToMine);
+                            success = true;
+                        }
                     }
 
                     returnToCpu(ctx, { type: 'flag', value: success });
@@ -60,9 +66,15 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_args, ctx, _env, { world }) {
+        init(_args, ctx, _env, { world, battery }) {
             const deposit = world.resources.get(ctx.state.location);
-            returnToCpu(ctx, { type: 'flag', value: deposit !== undefined && deposit.amount > 0 }, 1);
+            let result = deposit !== undefined && deposit.amount > 0;
+
+            if (!battery.withdraw(ctx.unitId, 1)) {
+                result = false;
+            }
+
+            returnToCpu(ctx, { type: 'flag', value: result }, 1);
             return false;
         },
     },
@@ -72,6 +84,7 @@ export function createDrillSystem(
     opts: CreateUnitSystemCommonOptions,
     world: DrillDeps['world'],
     inventory: InventoryController,
+    battery: EnergySystemController,
 ) {
     return createUnitSystem<DrillData, CallableUnitSystemMessages & UnitSystemScheduleMessages<DrillData>>(opts, {
         name: DRILL_SYSTEM_NAME,
@@ -84,7 +97,7 @@ export function createDrillSystem(
         },
 
         messages: {
-            ...callableUnitSystemHandlers({ world, inventory }, DRILL_FNS),
+            ...callableUnitSystemHandlers({ world, inventory, battery }, DRILL_FNS),
             ...schedulerMessageHandlers(),
         },
     });

@@ -7,10 +7,42 @@
 }
 
 .toggles {
-    padding: 8px 16px;
-    display: flex;
-    flex-flow: column wrap;
+    padding: 8px 0;
     min-height: 0;
+
+    overflow: auto;
+}
+
+.field {
+    display: flex;
+
+    &:nth-child(2n) {
+        background-color: rgba(from var(--c-white) r g b / 10%);
+    }
+
+    .fieldName {
+        flex: 0 0 auto;
+        width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        padding: 4px 8px 4px 16px;
+    }
+
+    .fieldInput {
+        flex: 1 1 auto;
+    }
+
+    .fieldCosts {
+        flex: 0 0 auto;
+        width: 250px;
+        display: flex;
+
+        padding-left: 8px;
+        padding-right: 16px;
+        gap: 8px;
+    }
 }
 
 .costs {

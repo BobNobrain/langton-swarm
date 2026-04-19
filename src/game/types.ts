@@ -49,7 +49,7 @@ export type UnitConfiguration = {
     mother?: boolean;
     /** Unit's movement characteristics */
     engine?: {
-        power: 1 | 2 | 3;
+        readonly power: 1 | 2 | 3;
     };
     /** If unit has navigation & movement capabilities */
     navigator?: boolean;
@@ -67,6 +67,9 @@ export type UnitConfiguration = {
     };
     /** Construction target (for stationaries) */
     construction?: UnitConfiguration;
+    solar?: {
+        readonly maxOutput: number;
+    };
 };
 
 export type CreateGameProgress = {

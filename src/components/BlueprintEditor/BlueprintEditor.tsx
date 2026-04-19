@@ -5,6 +5,7 @@ import { createControllerRef, provideController, type ControllerRef } from '@/li
 import { Configurator } from '../Configurator/Configurator';
 import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
 import styles from './BlueprintEditor.module.css';
+import { SplitView } from '../SplitView/SplitView';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
@@ -109,25 +110,32 @@ export const BlueprintEditor: Component<{
 
     return (
         <div class={styles.editor}>
-            <Configurator
-                value={configuratorValue()}
-                readonly={isReadonly()}
-                onUpdate={(patch) => {
-                    setConfiguratorValue((old) => ({ ...old, ...patch }));
-                    setConfigChanged(true);
-                }}
+            <SplitView
+                initialTopHeight={0.3}
+                top={
+                    <Configurator
+                        value={configuratorValue()}
+                        readonly={isReadonly()}
+                        onUpdate={(patch) => {
+                            setConfiguratorValue((old) => ({ ...old, ...patch }));
+                            setConfigChanged(true);
+                        }}
+                    />
+                }
+                bottom={
+                    <Show
+                        when={typeof configuratorValue().cpu === 'string'}
+                        fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
+                    >
+                        <ProgramEditor
+                            config={configuratorValue()}
+                            readonly={isReadonly()}
+                            controllerRef={programEditor.ref}
+                            onChanged={setProgramChanged}
+                        />
+                    </Show>
+                }
             />
-            <Show
-                when={typeof configuratorValue().cpu === 'string'}
-                fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
-            >
-                <ProgramEditor
-                    config={configuratorValue()}
-                    readonly={isReadonly()}
-                    controllerRef={programEditor.ref}
-                    onChanged={setProgramChanged}
-                />
-            </Show>
         </div>
     );
 };

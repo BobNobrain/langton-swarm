@@ -1,6 +1,7 @@
 import { extractTyped } from '../program/utils';
 import type { NodeId, ResourceDeposit, SurfaceNode } from '../types';
 import type { GameWorld } from '../world';
+import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
@@ -14,6 +15,7 @@ import {
 type ScannerDeps = {
     world: Pick<GameWorld, 'resources' | 'mineResource' | 'surface'>;
     inventory: InventoryController;
+    battery: EnergySystemController;
 };
 
 export type ScannerData = {
@@ -34,7 +36,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: ['distance'],
         argTypes: ['number'],
         returnType: 'flag',
-        init(args, ctx, _, { world }) {
+        init(args, ctx, _, { world, battery }) {
             const scanner = ctx.systemData;
             const radius = extractTyped(args, 'distance', 'number')!;
 
@@ -44,6 +46,10 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 world.surface,
                 world.resources,
                 (dep, loc, d) => {
+                    if (!battery.withdraw(ctx.unitId, 2)) {
+                        return false;
+                    }
+
                     if (!scanner.found || scanner.found.amount < dep.amount) {
                         scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
                     }
@@ -66,10 +72,14 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_args, ctx, _env, { world }) {
+        init(_args, ctx, _env, { world, battery }) {
             const scanner = ctx.systemData;
 
             scan(ctx.state.location, scanner.maxRadius, world.surface, world.resources, (dep, loc, d) => {
+                if (!battery.withdraw(ctx.unitId, 2)) {
+                    return false;
+                }
+
                 scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
                 return false;
             });
@@ -100,6 +110,7 @@ export function createScannerSystem(
     opts: CreateUnitSystemCommonOptions,
     world: ScannerDeps['world'],
     inventory: InventoryController,
+    battery: EnergySystemController,
 ) {
     return createUnitSystem<ScannerData, CallableUnitSystemMessages>(opts, {
         name: SCANNER_SYSTEM_NAME,
@@ -112,7 +123,7 @@ export function createScannerSystem(
         },
 
         messages: {
-            ...callableUnitSystemHandlers<ScannerData, ScannerDeps>({ world, inventory }, SCANNER_FNS),
+            ...callableUnitSystemHandlers<ScannerData, ScannerDeps>({ world, inventory, battery }, SCANNER_FNS),
         },
     });
 }

@@ -1,4 +1,4 @@
-import type { ParentComponent } from 'solid-js';
+import { createEffect, type ParentComponent } from 'solid-js';
 import styles from './FloatingPanel.module.css';
 
 export const FloatingPanel: ParentComponent<{
@@ -8,7 +8,13 @@ export const FloatingPanel: ParentComponent<{
     pinBottom?: boolean;
     withMargin?: boolean;
     expandedWidth?: boolean;
+    padded?: boolean;
 }> = (props) => {
+    createEffect(() => {
+        props.expandedWidth;
+        window.dispatchEvent(new Event('resize'));
+    });
+
     return (
         <aside
             classList={{
@@ -20,6 +26,7 @@ export const FloatingPanel: ParentComponent<{
                 [styles.pinTop]: props.pinTop,
                 [styles.withMargin]: props.withMargin,
                 [styles.withMaxHeight]: !props.pinBottom || !props.pinTop,
+                [styles.padded]: props.padded,
             }}
         >
             {props.children}

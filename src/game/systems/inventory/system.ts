@@ -121,5 +121,5 @@ export function createInventorySystem(
         },
     });
 
-    return [system, controller] as const;
+    return { system, controller };
 }

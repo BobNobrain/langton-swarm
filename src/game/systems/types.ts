@@ -1,5 +1,6 @@
 import type { BsmlValueType } from '../program/value';
 import type { NodeId, UnitConfiguration, UnitEnvironment, UnitId, UnitState } from '../types';
+import type { UnitEventController } from './events';
 
 export type SendMessage = (to: string, message: UnitSystemMessage, delay?: number) => void;
 
@@ -30,6 +31,7 @@ export type CreateUnitSystemCommonOptions = {
     states: Record<UnitId, UnitState>;
     sendMessage: SendMessage;
     updateUnitState(unitId: UnitId, patch: Partial<UnitState>): void;
+    events: UnitEventController[];
 };
 
 export type SpawnOptions = {

@@ -1,6 +1,7 @@
 .toggle {
     cursor: pointer;
     padding: 4px 8px;
+    display: flex;
 
     &:hover .icon {
         color: var(--c-primary);

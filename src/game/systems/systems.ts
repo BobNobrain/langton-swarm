@@ -17,6 +17,7 @@ export type UnitSystem<Data> = UnitSystemPublic<Data> & {
     tick(): void;
     create(unitId: UnitId, config: UnitConfiguration, state: UnitState): void;
     activate(unitId: UnitId): void;
+    deactivate(unitId: UnitId): void;
     remove(unitId: UnitId): void;
 
     has(unitId: UnitId): boolean;
@@ -131,6 +132,15 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
 
             delete inactiveData[unitId];
             data[unitId] = entry;
+        },
+        deactivate(unitId) {
+            const entry = data[unitId];
+            if (!entry) {
+                return;
+            }
+
+            delete data[unitId];
+            inactiveData[unitId] = entry;
         },
 
         remove(unitId) {

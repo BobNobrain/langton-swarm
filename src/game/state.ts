@@ -24,7 +24,7 @@ type Options = {
 
 export async function createGameState({ gameTick, onProgress, worldgen }: Options): Promise<GameState> {
     const time = createGameTime(gameTick);
-    const world = await createGameWorld(worldgen, onProgress);
+    const world = await createGameWorld(gameTick, worldgen, onProgress);
     const deck = createBlueprintDeck();
     const units = createGameSystems(world, deck, gameTick);
     const ui = createGameUIState(units);

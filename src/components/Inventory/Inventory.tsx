@@ -6,7 +6,8 @@ import type { KnownResourceName } from '@/game/worldgen/resources';
 
 const RESOURCE_COLORS: Record<KnownResourceName, string> = {
     copper: '#ef943f',
-    titanium: '#aab5c0',
+    titanium: '#94b9df',
+    lithium: '#bcc0aa',
 };
 
 const DEFAULT_COLOR = '#bfbfbf';
@@ -46,7 +47,8 @@ export const InventoryContent: Component<{
             .map(([resource, amount]) => {
                 return { resource, amount, cost: costs ? costs[resource] : undefined };
             })
-            .filter((entry) => entry.amount > 0);
+            .filter((entry) => entry.amount > 0)
+            .sort((a, b) => a.resource.localeCompare(b.resource));
     });
 
     return (

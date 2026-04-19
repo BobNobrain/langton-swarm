@@ -1,0 +1,26 @@
+.wrapper {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+.section {
+    overflow: auto;
+    min-height: 100px;
+    max-height: calc(100% - 100px);
+
+    & > * {
+        height: 100%;
+    }
+}
+
+.handle {
+    height: 16px;
+    cursor: ns-resize;
+    user-select: none;
+    background-color: var(--c-gray-m);
+    color: var(--c-white);
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+}

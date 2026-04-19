@@ -1,3 +1,4 @@
+import type { KnownResourceName } from '@/game/worldgen/resources';
 import { ConeGeometry, MeshStandardMaterial, type Material } from 'three';
 
 export const defaultMat = new MeshStandardMaterial({
@@ -6,7 +7,7 @@ export const defaultMat = new MeshStandardMaterial({
     metalness: 0,
 });
 
-export const materialsByResource: Record<string, Material> = {
+export const materialsByResource: Record<KnownResourceName, Material> = {
     copper: new MeshStandardMaterial({
         color: '#d27015',
         roughness: 0.6,
@@ -17,6 +18,11 @@ export const materialsByResource: Record<string, Material> = {
         roughness: 0.6,
         metalness: 0.7,
     }),
+    lithium: new MeshStandardMaterial({
+        color: '#8f907f',
+        roughness: 0.6,
+        metalness: 0.7,
+    }),
 };
 
-export const depositModel = new ConeGeometry(0.5, 0.05);
+export const depositModel = new ConeGeometry(0.3, 0.05);

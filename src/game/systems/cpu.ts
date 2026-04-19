@@ -6,6 +6,7 @@ import { parseProgram } from '../program/parser';
 import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderValue } from '../program/utils';
 import type { BsmlValue, BsmlValueType } from '../program/value';
 import type { UnitCommand } from '../types';
+import type { EnergySystemController } from './energy';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions, UnitSystemFunction } from './types';
 import { fcall } from './utils';
@@ -23,8 +24,8 @@ export type CPUData = {
     lastUpdated: number;
 };
 
-export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
-    return createUnitSystem<
+export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: EnergySystemController) {
+    const system = createUnitSystem<
         CPUData,
         {
             return: { value: BsmlValue | null };
@@ -95,6 +96,11 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
             }
 
             ctx.sleep(cpu.tickRate);
+            if (!battery.withdraw(ctx.unitId, 1)) {
+                ctx.sleep();
+                setState(cpu, cpu.program.defaultState);
+                return;
+            }
 
             const instruction = instructions[cpu.ptr];
             ++cpu.ptr;
@@ -222,6 +228,27 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions) {
             return true;
         },
     });
+
+    // battery.drained.subToAll(({ unitId }) => {
+    //     const cpu = system.getData(unitId);
+    //     if (!cpu) {
+    //         return;
+    //     }
+
+    //     setState(cpu, cpu.program.defaultState);
+    //     system.deactivate(unitId);
+    // });
+
+    battery.recharged.subToAll(({ unitId }) => {
+        const cpu = system.getData(unitId);
+        if (!cpu) {
+            return;
+        }
+
+        system.activate(unitId);
+    });
+
+    return system;
 }
 
 export const CPU_FNS: Record<

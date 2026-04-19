@@ -61,5 +61,5 @@ export function createStationariesSystem(
         },
     };
 
-    return [system, controller] as const;
+    return { system, controller };
 }

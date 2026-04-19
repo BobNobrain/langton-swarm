@@ -1,5 +1,4 @@
 import { PlanetGraph } from '@/lib/planet/PlanetGraph';
-import { SplatGenerator } from '@/lib/planet/SplatGenerator';
 import { drawInteger, RandomNumberGenerator } from '@/lib/random';
 import { sleep } from '@/lib/timeouts';
 import { type CreateGameProgressListener, type WorldgenOptions } from '../types';
@@ -48,10 +47,7 @@ export async function generatePlanet(
     await sleep(0);
 
     const planetRadius = Math.sqrt(graph.nFaces() / (4 * Math.PI));
-    const connections = graph.getConnections();
-
     graph.scale(planetRadius);
-    const coords = graph.coords();
 
     const landscape = new Landscape(graph);
     landscape.generateLandscape({
@@ -66,7 +62,7 @@ export async function generatePlanet(
         graph,
         landscape,
         resources: new Map(),
-        spawnLocation: generateSpawnPoint(seq, graph),
+        spawnLocation: generateSpawnPoint(seq, graph, landscape),
     };
 
     onProgress?.({ progress: 0.95, stage: 'Generating resources' });

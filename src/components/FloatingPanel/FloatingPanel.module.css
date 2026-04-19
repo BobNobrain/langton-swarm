@@ -10,12 +10,15 @@
     transition: width ease-in-out 0.2s;
     overflow: auto;
 
-    padding: 8px;
     --panel-margin: 0px;
-    --container-padding-l: 8px;
-    --container-padding-r: 8px;
-    --container-padding-t: 8px;
-    --container-padding-b: 8px;
+
+    &.padded {
+        padding: 8px;
+        --container-padding-l: 8px;
+        --container-padding-r: 8px;
+        --container-padding-t: 8px;
+        --container-padding-b: 8px;
+    }
 
     &.expanded {
         width: 600px;

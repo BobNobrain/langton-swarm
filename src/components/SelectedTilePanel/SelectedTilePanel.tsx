@@ -39,7 +39,7 @@ export const SelectedTilePanel: Component = () => {
     });
 
     return (
-        <FloatingPanel pinLeft pinTop withMargin>
+        <FloatingPanel pinLeft pinTop withMargin padded>
             <FloatingPanelHeader>
                 <Header size="sm">
                     <Show when={tileInfo()} fallback="World">

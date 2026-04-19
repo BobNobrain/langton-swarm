@@ -1,11 +1,12 @@
-import { createSignal, onCleanup } from 'solid-js';
+import { Vector3 } from 'three';
 import { NavMesh } from '@/lib/NavMesh';
+import type { Landscape } from '@/lib/planet/Landscape';
 import type { PlanetGraph } from '@/lib/planet/PlanetGraph';
 import { createEvent, type Event } from '@/lib/sparse';
 import type { CreateGameProgressListener, NodeId, ResourceDeposit, SurfaceNode, WorldgenOptions } from './types';
 import { generatePlanet } from './worldgen/planet';
-import { Vector3 } from 'three';
-import type { Landscape } from '@/lib/planet/Landscape';
+import type { RawVertex } from '@/lib/3d';
+import type { GameLoop } from './loop';
 
 type ResourceUpdateEvent = Event<(at: NodeId, dep: ResourceDeposit) => void>;
 type FogOfWarUpdateEvent = Event<(nodes: Set<NodeId>, status: 'forgotten' | 'discovered') => void>;
@@ -28,9 +29,12 @@ export type GameWorld = {
     readonly resources: Map<NodeId, ResourceDeposit>;
     mineResource(at: NodeId, resource: string, amount: number): boolean;
     readonly resourceUpdate: ResourceUpdateEvent;
+
+    readonly sunPosition: RawVertex;
 };
 
 export async function createGameWorld(
+    loop: GameLoop,
     opts: WorldgenOptions,
     onProgress: CreateGameProgressListener | undefined,
 ): Promise<GameWorld> {
@@ -58,6 +62,9 @@ export async function createGameWorld(
 
     const terraIncognitaUpdate: FogOfWarUpdateEvent = createEvent();
 
+    let sunPosition: [number, number, number] = [0, 0, 0];
+    initSun(loop, sunPosition, { height: 0.2, period: 1_000 });
+
     return {
         seed: opts.seed,
         spawnLocation: spawnLocation,
@@ -67,6 +74,8 @@ export async function createGameWorld(
         nav: new NavMesh(coords, landscape.buildNavigationConnections()),
         graph,
         landscape,
+
+        sunPosition,
 
         terraIncognita,
         terraIncognitaUpdate: terraIncognitaUpdate,
@@ -106,4 +115,22 @@ export async function createGameWorld(
             return true;
         },
     };
+}
+
+function initSun(
+    loop: GameLoop,
+    pos: [number, number, number],
+    opts: {
+        height: number;
+        period: number;
+    },
+) {
+    const SUN_SPEED = Math.PI / opts.period; // 1 rpm
+
+    pos[1] = opts.height;
+
+    loop.addGameTask((t) => {
+        pos[0] = Math.cos(t * SUN_SPEED);
+        pos[2] = Math.sin(t * SUN_SPEED);
+    });
 }

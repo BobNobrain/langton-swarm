@@ -2,7 +2,7 @@ import { drawInteger, pick, RandomNumberGenerator } from '@/lib/random';
 import { type NodeId } from '../types';
 import type { GeneratedPlanet } from './types';
 
-export type KnownResourceName = 'copper' | 'titanium';
+export type KnownResourceName = 'copper' | 'titanium' | 'lithium';
 
 type ResourceData = {
     resource: KnownResourceName;
@@ -20,7 +20,7 @@ const RESOURCES: ResourceData[] = [
         centerMax: 50,
         edgeMin: 5,
         edgeMax: 20,
-        secondaryCenterProb: 0.1,
+        secondaryCenterProb: 0.3,
     },
     {
         resource: 'titanium',
@@ -28,6 +28,14 @@ const RESOURCES: ResourceData[] = [
         centerMax: 120,
         edgeMin: 15,
         edgeMax: 50,
+        secondaryCenterProb: 0.1,
+    },
+    {
+        resource: 'lithium',
+        centerMin: 20,
+        centerMax: 40,
+        edgeMin: 3,
+        edgeMax: 10,
         secondaryCenterProb: 0.1,
     },
 ];
@@ -68,17 +76,33 @@ export function generateResourceDeposits(seed: string, planet: GeneratedPlanet) 
         centers.add(randomCenterNodeIndex);
 
         for (const centerId of centers) {
+            const coeff = planet.landscape.getResourceScaling(centerId);
+            if (coeff <= 0) {
+                continue;
+            }
+
             planet.resources.set(centerId, {
                 resource: resourceData.resource,
-                amount: resourceData.centerMin + Math.floor((resourceData.centerMax - resourceData.centerMin) * seq()),
+                amount: Math.floor(
+                    coeff *
+                        (resourceData.centerMin +
+                            Math.floor((resourceData.centerMax - resourceData.centerMin) * seq())),
+                ),
                 isDiscovered: false,
             });
         }
 
         for (const edgeId of edges) {
+            const coeff = planet.landscape.getResourceScaling(edgeId);
+            if (coeff <= 0) {
+                continue;
+            }
+
             planet.resources.set(edgeId, {
                 resource: resourceData.resource,
-                amount: resourceData.edgeMin + Math.floor((resourceData.edgeMax - resourceData.edgeMin) * seq()),
+                amount: Math.floor(
+                    coeff * (resourceData.edgeMin + Math.floor((resourceData.edgeMax - resourceData.edgeMin) * seq())),
+                ),
                 isDiscovered: false,
             });
         }

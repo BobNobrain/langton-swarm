@@ -5,6 +5,7 @@ import { List, ListEmptyContent, ListItem } from '../List/List';
 import { createTextInputController, TextInput } from '../TextInput/TextInput';
 import styles from './Select.module.css';
 import { Symbols } from '@/lib/ascii';
+import { createBoundsTracker } from '@/lib/BoundsTracker';
 
 export type SelectOption<T> = {
     text: string;
@@ -70,6 +71,28 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
         });
     };
 
+    const selectAdjacentOption = (change: -1 | 1) => {
+        if (!props.onUpdate) {
+            return;
+        }
+
+        const currentValue = props.value;
+        const options = props.options;
+        const currentIndex = currentValue ? options.findIndex((option) => option.value === currentValue.value) : -1;
+        if (currentIndex === -1) {
+            return;
+        }
+
+        const newIndex = Math.max(0, Math.min(currentIndex + change, options.length - 1));
+
+        if (newIndex === currentIndex) {
+            return;
+        }
+
+        const newOption = options[currentIndex + change];
+        props.onUpdate(newOption);
+    };
+
     const searchInput = createTextInputController();
     provideController(
         {
@@ -101,8 +124,20 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
         }
     };
 
+    const wrapper = createBoundsTracker<HTMLDivElement>();
+    const optionsStyles = createMemo(() => {
+        const bounds = wrapper.getBounds();
+
+        return {
+            '--select-anchor-left': bounds.left + 'px',
+            '--select-anchor-top': bounds.bottom + 'px',
+            '--select-anchor-bottom': document.body.getBoundingClientRect().height - bounds.top + 'px',
+            '--select-width': bounds.width + 'px',
+        };
+    });
+
     return (
-        <div class={styles.select}>
+        <div class={styles.select} ref={wrapper.ref}>
             <TextInput
                 value={textInputValue()}
                 onUpdate={(val) => {
@@ -138,13 +173,14 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                         }
 
                         case KeyCode.ArrowUp:
-                            updateIndex(-1);
-                            ev.preventDefault();
-                            break;
-
                         case KeyCode.ArrowDown:
-                            updateIndex(+1);
-                            ev.preventDefault();
+                            if (optionsVisible()) {
+                                updateIndex(ev.code === KeyCode.ArrowUp ? -1 : +1);
+                                ev.preventDefault();
+                            } else if (props.onUpdate) {
+                                selectAdjacentOption(ev.code === KeyCode.ArrowUp ? -1 : +1);
+                                ev.preventDefault();
+                            }
                             break;
                     }
                 }}
@@ -162,6 +198,7 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                     [styles.open]: optionsVisible(),
                     [styles.directionUp]: props.direction === 'up',
                 }}
+                style={optionsStyles()}
                 onMouseDown={() => {
                     isBlurBecauseOptionsClick = true;
                 }}

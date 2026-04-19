@@ -14,6 +14,7 @@ const constructionTimes: ConfigSpecific<number> = {
     mother: 100,
     navigator: 1,
     scanner: 1,
+    solar: (solar) => 1 + Math.floor(solar.maxOutput / 3),
     storage: (storage) => Math.floor(storage.size / 100) + 1,
 };
 
@@ -34,7 +35,12 @@ export function getConstructionTime(config: UnitConfiguration): number {
 }
 
 const constructionCosts: ConfigSpecific<{ [key in KnownResourceName]?: number }> = {
-    battery: { copper: 1 },
+    battery: (battery) => {
+        return {
+            copper: 1,
+            lithium: Math.floor(battery.capacity / 1000),
+        };
+    },
     construction: {},
     cpu: { copper: 3, titanium: 1 },
     drill: { titanium: 3 },
@@ -42,6 +48,9 @@ const constructionCosts: ConfigSpecific<{ [key in KnownResourceName]?: number }>
     mother: { titanium: 100, copper: 200 },
     navigator: { titanium: 1, copper: 3 },
     scanner: { titanium: 1, copper: 1 },
+    solar: (solar) => {
+        return { lithium: Math.floor(solar.maxOutput / 2), copper: Math.ceil(solar.maxOutput / 5) };
+    },
     storage: (storage) => {
         const n = Math.floor(storage.size / 10) + 1;
         return { titanium: n };

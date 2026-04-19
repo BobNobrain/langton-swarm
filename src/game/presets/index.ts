@@ -1,10 +1,50 @@
 import type { UnitConfiguration } from '../types';
+import { BATTERY_MEDIUM_PRESET, BATTERY_SMALL_PRESET } from './battery';
+import { ENGINE_SIMPLE_PRESET } from './engine';
+import { SOLAR_MEDIUM_PRESET, SOLAR_SMALL_PRESET } from './solar';
+import { STORAGE_LARGE_PRESET, STORAGE_SMALL_PRESET, STORAGE_WAREHOUSE_PRESET } from './storage';
 
 export const MOTHER_PRESET: UnitConfiguration = {
     battery: { capacity: 10_000 },
-    storage: { size: 1_000 },
+    storage: STORAGE_WAREHOUSE_PRESET,
     navigator: false,
     mother: true,
+};
+
+export const DEFAULT_SCOUT_PRESET: UnitConfiguration = {
+    battery: BATTERY_SMALL_PRESET,
+    engine: ENGINE_SIMPLE_PRESET,
+    solar: SOLAR_SMALL_PRESET,
+    navigator: true,
+    scanner: true,
+    cpu: `# this is a simple program for a scouting drone
+command move(position to) {
+    navigator.find_route(to)
+    state :navigating
+}
+
+command scout {
+    state :scouting
+}
+
+command return {
+    navigator.find_route(navigator.home)
+    state :navigating
+}
+
+command idle {}
+
+state scouting default {
+    engine.move(random)
+}
+
+state navigating {
+    when not navigator.has_next {
+        state :idle
+    }
+    engine.move(navigator.next_step)
+}
+`,
 };
 
 export const TEST_PRESET: UnitConfiguration = {
@@ -61,14 +101,15 @@ state mining {
 }
 `,
 
-    battery: { capacity: 100 },
+    battery: BATTERY_MEDIUM_PRESET,
     drill: true,
     engine: {
         power: 1,
     },
     navigator: true,
     scanner: true,
-    storage: { size: 100 },
+    storage: STORAGE_LARGE_PRESET,
+    solar: SOLAR_MEDIUM_PRESET,
 };
 
 export const PILE_PRESET: UnitConfiguration = {
@@ -133,14 +174,11 @@ state returning {
     engine.move(navigator.next_step)
 }
 `,
-        battery: { capacity: 100 },
+        battery: BATTERY_SMALL_PRESET,
         drill: true,
-        engine: {
-            power: 1,
-        },
+        engine: ENGINE_SIMPLE_PRESET,
         navigator: true,
-        storage: { size: 100 },
-        scanner: false,
+        storage: STORAGE_SMALL_PRESET,
     };
 }
 
@@ -198,12 +236,13 @@ state returning {
     engine.move(navigator.next_step)
 }
 `,
-    battery: { capacity: 100 },
+    battery: BATTERY_MEDIUM_PRESET,
     drill: true,
     engine: {
         power: 1,
     },
     navigator: true,
-    storage: { size: 100 },
+    storage: STORAGE_LARGE_PRESET,
+    solar: SOLAR_MEDIUM_PRESET,
     scanner: true,
 };

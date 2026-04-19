@@ -12,7 +12,9 @@ import type {
 } from '../types';
 import type { GameWorld } from '../world';
 import { createCPUSystem, type CPUData } from './cpu';
+import { createDiscoverySystem } from './discovery';
 import { createDrillSystem } from './drill';
+import { createEnergySystem, type EnergySystemController } from './energy';
 import { createEngineSystem } from './engine';
 import { createInventorySystem, type InventoryController } from './inventory';
 import { createMotherSystem, type MotherData } from './mother';
@@ -22,12 +24,14 @@ import { createSignalsSystem } from './signals';
 import { createStationariesSystem } from './stationaries';
 import type { UnitSystem, UnitSystemPublic } from './systems';
 import type { CreateUnitSystemCommonOptions, DespawnFn, SendMessage, SpawnFn, UnitSystemMessage } from './types';
-import { createDiscoverySystem } from './discovery';
+import { createUnitEvent, type UnitEventController } from './events';
+import { createSolarSystem } from './solar';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
     readonly unitStates: Readonly<Record<UnitId, UnitState>>;
 
+    readonly energy: EnergySystemController;
     readonly inventory: InventoryController;
     readonly mother: UnitSystemPublic<MotherData>;
     readonly cpu: UnitSystemPublic<CPUData>;
@@ -51,6 +55,10 @@ export type GameUnitSystems = {
 export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTick: GameLoop): GameUnitSystems {
     const systems: Record<string, UnitSystem<unknown>> = {};
     const messageQueue: { to: string; message: UnitSystemMessage; notUntil?: number }[] = [];
+    const events: UnitEventController[] = [];
+
+    const spawnedEvent = createUnitEvent<UnitState>();
+    events.push(spawnedEvent);
 
     const unitId = sequentialId<UnitId>();
     const unitStates: Record<UnitId, UnitState> = {};
@@ -80,6 +88,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
             system.create(id, config, state);
         }
 
+        spawnedEvent.pub({ unitId: id, payload: state });
+
         return id;
     };
     const despawn: DespawnFn = (unitId) => {
@@ -97,6 +107,10 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         delete unitUpdateTimes[unitId];
         delete unitConfigs[unitId];
         delete unitSpawnTimes[unitId];
+
+        for (const ev of events) {
+            ev.clear(unitId);
+        }
     };
 
     const updateUnitState = (id: UnitId, patch: Partial<UnitState>) => {
@@ -104,29 +118,37 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         unitUpdateTimes[id] = env.currentTick;
     };
 
-    const opts: CreateUnitSystemCommonOptions = { env, states: unitStates, sendMessage, updateUnitState };
+    const opts: CreateUnitSystemCommonOptions = { env, states: unitStates, sendMessage, updateUnitState, events };
 
-    const cpu = createCPUSystem(opts);
-    const engine = createEngineSystem(opts, world);
-    const [stationariesSystem, stationaries] = createStationariesSystem(opts, { despawn });
-    const [inventorySystem, inventoryController] = createInventorySystem(opts, stationaries, spawn, despawn);
-    const mother = createMotherSystem(opts, { deck, spawn, inventory: inventoryController });
+    const energy = createEnergySystem(opts);
+    const cpu = createCPUSystem(opts, energy.controller);
+    const engine = createEngineSystem(opts, { world, battery: energy.controller });
+    const stationaries = createStationariesSystem(opts, { despawn });
+    const inventory = createInventorySystem(opts, stationaries.controller, spawn, despawn);
+    const mother = createMotherSystem(opts, { deck, spawn, inventory: inventory.controller });
     const signals = createSignalsSystem(opts);
-    const drill = createDrillSystem(opts, world, inventoryController);
-    const scanner = createScannerSystem(opts, world, inventoryController);
+    const drill = createDrillSystem(opts, world, inventory.controller, energy.controller);
+    const scanner = createScannerSystem(opts, world, inventory.controller, energy.controller);
     const navigator = createNavigatorSystem(opts, world);
     const discovery = createDiscoverySystem(opts, world);
+    const solar = createSolarSystem(opts, world, energy.controller);
 
-    systems[cpu.name] = cpu;
-    systems[engine.name] = engine;
-    systems[mother.name] = mother;
-    systems[signals.name] = signals;
-    systems[stationariesSystem.name] = stationariesSystem;
-    systems[inventorySystem.name] = inventorySystem;
-    systems[drill.name] = drill;
-    systems[scanner.name] = scanner;
-    systems[navigator.name] = navigator;
-    systems[discovery.name] = discovery;
+    for (const system of [
+        energy.system,
+        cpu,
+        engine,
+        mother,
+        signals,
+        stationaries.system,
+        inventory.system,
+        drill,
+        scanner,
+        navigator,
+        discovery,
+        solar,
+    ]) {
+        systems[system.name] = system;
+    }
 
     logicTick.addGameTask((tick) => {
         // main unit update loop
@@ -134,10 +156,11 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         env.currentTick = tick;
 
         // tick all the components, in order
+        solar.tick();
         cpu.tick();
         mother.tick();
-        inventorySystem.tick();
-        stationariesSystem.tick();
+        inventory.system.tick();
+        stationaries.system.tick();
         discovery.tick();
 
         // process all the messages to activate the components
@@ -154,6 +177,10 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         messageQueue.length = 0;
         messageQueue.push(...pending);
+
+        for (const ev of events) {
+            ev.tick();
+        }
     });
 
     return {
@@ -164,7 +191,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         spawn,
         despawn,
 
-        inventory: inventoryController,
+        energy: energy.controller,
+        inventory: inventory.controller,
         mother,
         cpu,
         navigator,

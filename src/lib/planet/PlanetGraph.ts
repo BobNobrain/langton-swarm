@@ -71,6 +71,9 @@ export class PlanetGraph {
     getFaces() {
         return this.faces;
     }
+    getCoordsOf(tile: number): RawVertex {
+        return this.vs[tile];
+    }
 
     subdivide(subdivisions: number) {
         const existingVerticies = new OctoTree<number>();

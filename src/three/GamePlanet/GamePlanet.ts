@@ -144,7 +144,7 @@ function tileMesh(meshData: RawMesh<NodeId>) {
 }
 
 function terraIncognita(world: GameWorld) {
-    const terraIncognita = new Mesh(new SphereGeometry(world.radius * 0.99, 64, 64), terraIncognitaMat);
+    const terraIncognita = new Mesh(new SphereGeometry(world.radius * 0.97, 64, 64), terraIncognitaMat);
     terraIncognita.name = 'terraIncognita';
     return terraIncognita;
 }

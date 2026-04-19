@@ -1,8 +1,9 @@
 import { pick } from '@/lib/random';
-import { getTicksPerMove } from '../config';
+import { getEnergyPerMove, getTicksPerMove } from '../config';
 import { extractTyped } from '../program/utils';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
+import type { EnergySystemController } from './energy';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 import {
@@ -17,12 +18,13 @@ import {
 
 type EngineData = {
     ticksPerMove: number;
+    powerPerMove: number;
 };
 
-type EngineDeps = Pick<GameWorld, 'nav'>;
+type EngineDeps = { world: Pick<GameWorld, 'nav'>; battery: EnergySystemController };
 
 export const ENGINE_SYSTEM_NAME = 'engine';
-const schedule = createScheduler(ENGINE_SYSTEM_NAME);
+const schedule = createScheduler<EngineData>(ENGINE_SYSTEM_NAME);
 
 export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
     move: {
@@ -30,7 +32,7 @@ export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
         argNames: ['to'],
         argTypes: ['position'],
         returnType: 'flag',
-        init(args, ctx, _, { nav }) {
+        init(args, ctx, _, { world: { nav }, battery }) {
             const currentPosition = ctx.state.location;
             const to = extractTyped(args, 'to', 'position', {
                 zero: { type: 'position', value: currentPosition },
@@ -47,13 +49,14 @@ export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
                 ctx,
                 (ctx, env) => {
                     const isNbor = nav.getNeighbours(ctx.state.location).includes(destination);
-                    returnToCpu(ctx, { type: 'flag', value: isNbor }, 1);
+                    const enoughEnergy = isNbor ? battery.withdraw(ctx.unitId, ctx.systemData.powerPerMove) : true;
 
-                    if (!isNbor) {
-                        return;
+                    const success = enoughEnergy && isNbor;
+                    returnToCpu(ctx, { type: 'flag', value: success });
+
+                    if (success) {
+                        ctx.update({ location: destination });
                     }
-
-                    ctx.update({ location: destination });
                 },
                 engine.ticksPerMove,
             );
@@ -77,6 +80,7 @@ export function createEngineSystem(options: CreateUnitSystemCommonOptions, deps:
 
             return {
                 ticksPerMove: getTicksPerMove(config),
+                powerPerMove: getEnergyPerMove(config),
             };
         },
     });

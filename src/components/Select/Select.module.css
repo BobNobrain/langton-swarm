@@ -24,11 +24,13 @@
 }
 
 .optionsWrapper {
-    position: absolute;
+    position: fixed;
     z-index: 1;
-    left: 0;
-    right: 0;
-    top: 100%;
+    left: var(--select-anchor-left, 0px);
+    top: var(--select-anchor-top, 0px);
+
+    min-width: var(--select-width, 50px);
+    width: fit-content;
     max-height: 50vh;
     display: flex;
     flex-flow: column;
@@ -46,7 +48,7 @@
 
     &.directionUp {
         top: unset;
-        bottom: 100%;
+        bottom: var(--select-anchor-bottom, 0px);
         flex-flow: column-reverse;
     }
 }

@@ -2,12 +2,6 @@
     margin-top: calc(-1 * var(--container-padding-t, 0));
     margin-left: calc(-1 * var(--container-padding-l, 0));
     margin-right: calc(-1 * var(--container-padding-r, 0));
-
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 150px 1fr;
-
-    overflow: auto;
 }
 
 .noProgramMessage {

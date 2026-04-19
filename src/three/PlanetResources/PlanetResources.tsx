@@ -1,8 +1,8 @@
 import { For, onMount, type Component } from 'solid-js';
 import { useGame } from '@/gameContext';
+import { createEventListener } from '@/hooks/events';
 import { GridObjects, GridObjectData } from '../GridObjects/GridObjects';
 import { depositModel, materialsByResource, defaultMat } from '../models/deposit';
-import { createEventListener } from '@/hooks/events';
 
 export const PlanetResources: Component = () => {
     const { world } = useGame();
@@ -36,11 +36,12 @@ export const PlanetResources: Component = () => {
                 return (
                     <GridObjects
                         geom={depositModel}
-                        material={materialsByResource[resource] ?? defaultMat}
+                        material={materialsByResource[resource as never] ?? defaultMat}
                         grid={world.surface}
                         hiddenNodes={world.terraIncognita}
                         objects={objects}
                         maxCount={Object.keys(objects).length}
+                        positioning={{ elevation: 0.1 }}
                     />
                 );
             }}

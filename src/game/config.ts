@@ -43,3 +43,11 @@ export function getTicksPerMove(config: UnitConfiguration): number {
 
     return 6 / config.engine.power;
 }
+
+export function getEnergyPerMove(config: UnitConfiguration): number {
+    if (!config.engine) {
+        return 0;
+    }
+
+    return 2 + config.engine.power * 3;
+}

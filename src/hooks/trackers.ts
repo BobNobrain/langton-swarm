@@ -12,11 +12,17 @@ export type UnitStatusTracker = {
     rLocation: () => NodeId | null;
 };
 
+const ENERGY_PRECISION = 0.01;
+const ENERGY_PRECISION_INV = 100;
+
 export function createUnitTracker(unitId: () => UnitId | null): UnitStatusTracker {
     const { units } = useGame();
     const [rStateName, rSetStateName] = createSignal(renderStateName(null));
     const [rHealth, rSetHealth] = createSignal(1);
+
     const [rEnergy, rSetEnergy] = createSignal(1);
+    let energyLastChecked = -1;
+
     const [rLocation, rSetLocation] = createSignal<NodeId | null>(null);
 
     onTickConditional(unitId, (uid) => () => {
@@ -24,6 +30,12 @@ export function createUnitTracker(unitId: () => UnitId | null): UnitStatusTracke
 
         const cpu = units.cpu.getData(uid);
         rSetStateName(renderStateName(cpu?.state));
+
+        const energy = units.energy.getData(uid);
+        if (energy && energy.lastUpdated > energyLastChecked) {
+            energyLastChecked = energy.lastUpdated;
+            rSetEnergy(Math.round((energy.charge / energy.capacity) * ENERGY_PRECISION_INV) * ENERGY_PRECISION);
+        }
     });
 
     return {
