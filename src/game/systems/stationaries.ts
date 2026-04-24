@@ -30,7 +30,6 @@ export function createStationariesSystem(
             stationaries.set(state.location, unitId);
             return true;
         },
-        messages: {},
         tick(ctx, _) {
             const isValid = ctx.systemData;
 

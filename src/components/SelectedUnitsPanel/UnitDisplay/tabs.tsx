@@ -6,8 +6,9 @@ import { Inventory } from '@/components/Inventory/Inventory';
 import type { UnitId } from '@/game';
 import { renderStateName } from '@/game/program/utils';
 import { useGame } from '@/gameContext';
-import { createCPUStateTracker, createInventoryTracker, createMotherTracker } from '@/hooks/trackers';
+import { createCPUStateTracker, createInventoryTracker } from '@/hooks/trackers';
 import styles from './UnitDisplay.module.css';
+import { KeyCode } from '@/lib/input';
 
 export const InventoryTabContent: Component<{ unitId: UnitId | null }> = (props) => {
     const inventory = createInventoryTracker(() => props.unitId);
@@ -43,6 +44,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
                 <Button
                     inline
                     style="secondary"
+                    hotkey={{ key: KeyCode.KeyE }}
                     onClick={() => {
                         const unitId = ui.rSelectedUnits()[0];
                         const found = deck.findByUnitId(unitId);

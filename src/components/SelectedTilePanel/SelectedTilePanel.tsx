@@ -4,7 +4,7 @@ import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
 import { DefList, DefListItem } from '../DefList/DefList';
 import { FloatingPanel, FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
-import { Header } from '../Header/Header';
+import { Heading } from '../Header/Header';
 import { WorldInfo } from '../WorldInfo/WorldInfo';
 
 export const SelectedTilePanel: Component = () => {
@@ -41,11 +41,11 @@ export const SelectedTilePanel: Component = () => {
     return (
         <FloatingPanel pinLeft pinTop withMargin padded>
             <FloatingPanelHeader>
-                <Header size="sm">
+                <Heading size="sm">
                     <Show when={tileInfo()} fallback="World">
                         Tile
                     </Show>
-                </Header>
+                </Heading>
             </FloatingPanelHeader>
             <Show when={tileInfo()} fallback={<WorldInfo />}>
                 <DefList>

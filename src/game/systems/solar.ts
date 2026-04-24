@@ -1,4 +1,5 @@
 import { dot, normz } from '@/lib/3d';
+import { getMaxSolarPower } from '../config';
 import type { GameWorld } from '../world';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
@@ -17,14 +18,13 @@ export function createSolarSystem(
 ) {
     const system = createUnitSystem<SolarData, {}>(opts, {
         name: 'solar',
-        messages: {},
 
         initialData(config, state, unitId) {
             if (!config.solar) {
                 return null;
             }
 
-            return { maxOutput: config.solar.maxOutput };
+            return { maxOutput: getMaxSolarPower(config) * SLEEP_TIME_TICKS };
         },
 
         tick(ctx, env) {

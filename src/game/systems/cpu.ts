@@ -1,5 +1,5 @@
 import { absurd } from '@/lib/errors';
-import { getProcessorTickRate } from '../config';
+import { getProcessorTickRate, getProcessorEnergyConsumption } from '../config';
 import { parser } from '../program/bsml';
 import { compile, type CompiledProgram } from '../program/compile';
 import { parseProgram } from '../program/parser';
@@ -14,12 +14,14 @@ import { fcall } from './utils';
 export type CPUData = {
     program: CompiledProgram;
     commands: UnitCommand[];
+    energyConsumption: number;
+    tickRate: number;
+
     state: string;
     ptr: number;
     stack: BsmlValue[];
     variables: Record<string, BsmlValue>;
     isWaitingForReturn: boolean;
-    tickRate: number;
 
     lastUpdated: number;
 };
@@ -57,6 +59,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 return null;
             }
 
+            // TODO: compilation cache
             const parsed = parseProgram(source, parser.parse(source));
             const compiled = compile(parsed.program);
             if (!compiled) {
@@ -68,12 +71,15 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
             return {
                 program: compiled,
                 commands: extractCommands(parsed.program),
+                energyConsumption: getProcessorEnergyConsumption(config),
+                tickRate: getProcessorTickRate(config),
+
                 state: compiled.defaultState,
                 ptr: 0,
                 stack: [],
                 variables: {},
                 isWaitingForReturn: false,
-                tickRate: getProcessorTickRate(config),
+
                 lastUpdated: 0,
             };
         },

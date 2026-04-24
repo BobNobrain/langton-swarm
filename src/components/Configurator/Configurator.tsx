@@ -1,38 +1,17 @@
 import { type Component, type ParentComponent } from 'solid-js';
 import type { UnitConfiguration } from '@/game';
-import { getConstructionCosts, getConstructionTime } from '@/game/construction';
-import { ENGINE_ADVANCED_PRESET, ENGINE_EXTREME_PRESET, ENGINE_SIMPLE_PRESET } from '@/game/presets/engine';
-import {
-    STORAGE_LARGE_PRESET,
-    STORAGE_MEDIUM_PRESET,
-    STORAGE_SMALL_PRESET,
-    STORAGE_TINY_PRESET,
-    STORAGE_WAREHOUSE_PRESET,
-} from '@/game/presets/storage';
+import { getConstructionCosts, getConstructionTime } from '@/game/config';
 import { InventoryContent } from '../Inventory/Inventory';
 import { Select, type SelectOption } from '../Select/Select';
 import { TimeLabel } from '../TimeLabel/TimeLabel';
 import { Toggle } from '../Toggle/Toggle';
+import { ASSEMBLER_OPTIONS, CustomAssemblerOption } from './assembler';
+import { BATTERY_OPTIONS, CustomBatteryOption } from './battery';
+import { CustomDrillOption, DRILL_OPTIONS } from './drill';
+import { ENGINE_OPTIONS, CustomEngineOption } from './engine';
+import { CustomSolarOption, SOLAR_OPTIONS } from './solar';
+import { CustomStorageOption, STORAGE_OPTIONS } from './storage';
 import styles from './Configurator.module.css';
-
-type EngineConfig = NonNullable<UnitConfiguration['engine']>;
-
-const ENGINE_OPTIONS: SelectOption<EngineConfig | null>[] = [
-    { text: 'None', value: null },
-    { text: 'Simple', value: ENGINE_SIMPLE_PRESET },
-    { text: 'Advanced', value: ENGINE_ADVANCED_PRESET },
-    { text: 'Extreme', value: ENGINE_EXTREME_PRESET },
-];
-
-type StorageConfig = NonNullable<UnitConfiguration['storage']>;
-const STORAGE_OPTIONS: SelectOption<StorageConfig | null>[] = [
-    { text: 'None', value: null },
-    { text: 'Tiny', value: STORAGE_TINY_PRESET },
-    { text: 'Small', value: STORAGE_SMALL_PRESET },
-    { text: 'Medium', value: STORAGE_MEDIUM_PRESET },
-    { text: 'Large', value: STORAGE_LARGE_PRESET },
-    { text: 'Warehouse', value: STORAGE_WAREHOUSE_PRESET },
-];
 
 const ConfiguratorField: ParentComponent<{ name: string; config: UnitConfiguration }> = (props) => {
     return (
@@ -40,10 +19,10 @@ const ConfiguratorField: ParentComponent<{ name: string; config: UnitConfigurati
             <div class={styles.fieldName}>{props.name}</div>
             <div class={styles.fieldInput}>{props.children}</div>
             <div class={styles.fieldCosts}>
-                <InventoryContent contents={getConstructionCosts(props.config)} concise empty="--" />
                 <div class={styles.timeCost}>
                     <TimeLabel ticks={getConstructionTime(props.config) || null} />
                 </div>
+                <InventoryContent contents={getConstructionCosts(props.config)} concise empty="--" />
             </div>
         </div>
     );
@@ -65,21 +44,14 @@ export const Configurator: Component<{
                 >
                     <Select
                         options={ENGINE_OPTIONS}
-                        value={
-                            ENGINE_OPTIONS.find((opt) => {
-                                const value = props.value?.engine ?? null;
-                                if (opt.value === null || value === null) {
-                                    return opt.value === value;
-                                }
-
-                                return opt.value.power === value.power;
-                            }) ?? ENGINE_OPTIONS[0]
-                        }
+                        value={findValue(ENGINE_OPTIONS, props.value?.engine)}
                         onUpdate={(option) => {
                             props.onUpdate({ engine: option.value ?? undefined });
                         }}
                         popupOpening="manual"
                         dark
+                        sidewaySwitchable
+                        customOption={CustomEngineOption}
                     />
                 </ConfiguratorField>
                 <ConfiguratorField name="Navigator" config={{ navigator: Boolean(props.value?.navigator) }}>
@@ -89,11 +61,17 @@ export const Configurator: Component<{
                         label={props.value?.navigator ? 'Enabled' : 'Disabled'}
                     />
                 </ConfiguratorField>
-                <ConfiguratorField name="Drill" config={{ drill: Boolean(props.value?.drill) }}>
-                    <Toggle
-                        value={Boolean(props.value?.drill)}
-                        onUpdate={(value) => props.onUpdate({ drill: value })}
-                        label={props.value?.drill ? 'Enabled' : 'Disabled'}
+                <ConfiguratorField name="Drill" config={{ drill: props.value?.drill }}>
+                    <Select
+                        options={DRILL_OPTIONS}
+                        value={findValue(DRILL_OPTIONS, props.value?.drill)}
+                        onUpdate={(option) => {
+                            props.onUpdate({ drill: option.value ?? undefined });
+                        }}
+                        popupOpening="manual"
+                        dark
+                        sidewaySwitchable
+                        customOption={CustomDrillOption}
                     />
                 </ConfiguratorField>
                 <ConfiguratorField name="Scanner" config={{ scanner: Boolean(props.value?.scanner) }}>
@@ -106,31 +84,75 @@ export const Configurator: Component<{
                 <ConfiguratorField name="Storage" config={{ storage: props.value?.storage ?? undefined }}>
                     <Select
                         options={STORAGE_OPTIONS}
-                        value={
-                            STORAGE_OPTIONS.find((opt) => {
-                                const value = props.value?.storage ?? null;
-                                if (opt.value === null || value === null) {
-                                    return opt.value === value;
-                                }
-
-                                return opt.value.size === value.size;
-                            }) ?? STORAGE_OPTIONS[0]
-                        }
+                        value={findValue(STORAGE_OPTIONS, props.value?.storage)}
                         onUpdate={(option) => {
                             props.onUpdate({ storage: option.value ?? undefined });
                         }}
                         popupOpening="manual"
                         dark
+                        sidewaySwitchable
+                        customOption={CustomStorageOption}
+                    />
+                </ConfiguratorField>
+                <ConfiguratorField name="Solar Panels" config={{ solar: props.value?.solar ?? undefined }}>
+                    <Select
+                        options={SOLAR_OPTIONS}
+                        value={findValue(SOLAR_OPTIONS, props.value?.solar)}
+                        onUpdate={(option) => {
+                            props.onUpdate({ solar: option.value ?? undefined });
+                        }}
+                        popupOpening="manual"
+                        dark
+                        sidewaySwitchable
+                        customOption={CustomSolarOption}
+                    />
+                </ConfiguratorField>
+                <ConfiguratorField name="Batteries" config={{ battery: props.value?.battery ?? undefined }}>
+                    <Select
+                        options={BATTERY_OPTIONS}
+                        value={findValue(BATTERY_OPTIONS, props.value?.battery)}
+                        onUpdate={(option) => {
+                            props.onUpdate({ battery: option.value ?? undefined });
+                        }}
+                        popupOpening="manual"
+                        dark
+                        sidewaySwitchable
+                        customOption={CustomBatteryOption}
+                    />
+                </ConfiguratorField>
+                <ConfiguratorField name="Assembler" config={{ battery: props.value?.battery ?? undefined }}>
+                    <Select
+                        options={ASSEMBLER_OPTIONS}
+                        value={findValue(ASSEMBLER_OPTIONS, props.value?.assembler)}
+                        onUpdate={(option) => {
+                            props.onUpdate({ assembler: option.value ?? undefined });
+                        }}
+                        popupOpening="manual"
+                        dark
+                        sidewaySwitchable
+                        customOption={CustomAssemblerOption}
                     />
                 </ConfiguratorField>
             </div>
             <div class={styles.costs}>
                 <div class={styles.costLabel}>Total:</div>
-                <InventoryContent contents={props.value ? getConstructionCosts(props.value) : {}} concise />
                 <div class={styles.timeCost}>
                     <TimeLabel ticks={props.value ? getConstructionTime(props.value) : null} />
                 </div>
+                <InventoryContent contents={props.value ? getConstructionCosts(props.value) : {}} concise />
             </div>
         </div>
     );
 };
+
+function findValue<T>(opts: SelectOption<T | null>[], value: T | null | undefined): SelectOption<T | null> {
+    return (
+        opts.find((opt) => {
+            if (opt.value === null || value === null) {
+                return opt.value === value;
+            }
+
+            return opt.value === value;
+        }) ?? opts[0]
+    );
+}

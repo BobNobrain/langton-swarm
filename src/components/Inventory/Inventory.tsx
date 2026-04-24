@@ -5,9 +5,19 @@ import styles from './Inventory.module.css';
 import type { KnownResourceName } from '@/game/worldgen/resources';
 
 const RESOURCE_COLORS: Record<KnownResourceName, string> = {
-    copper: '#ef943f',
-    titanium: '#94b9df',
-    lithium: '#bcc0aa',
+    electrical: '#ef943f',
+    structural: '#94b9df',
+    energetical: '#bcc0aa',
+    combat: '#d16969',
+    special: '#7dd0da',
+};
+
+const RESOURCE_NAMES: Record<KnownResourceName, string> = {
+    electrical: 'Copper',
+    structural: 'Titanium',
+    energetical: 'Lithium',
+    combat: 'Crystals',
+    special: 'Diamonds',
 };
 
 const DEFAULT_COLOR = '#bfbfbf';
@@ -16,12 +26,12 @@ const InventoryItem: Component<{ resource: string; amount: number; cost: number 
     return (
         <div
             class={styles.item}
-            title={props.resource}
+            title={RESOURCE_NAMES[props.resource as KnownResourceName] ?? props.resource}
             classList={{
                 [styles.notEnough]: props.cost !== undefined && props.cost > props.amount,
             }}
             style={{
-                '--inventory-item-color': RESOURCE_COLORS[props.resource as never] ?? DEFAULT_COLOR,
+                '--inventory-item-color': RESOURCE_COLORS[props.resource as KnownResourceName] ?? DEFAULT_COLOR,
             }}
         >
             <div class={styles.amount}>
@@ -30,7 +40,7 @@ const InventoryItem: Component<{ resource: string; amount: number; cost: number 
                 </Show>
             </div>
             <div class={styles.icon}>{Symbols.ParallelogramOutline}</div>
-            <div class={styles.label}>{props.resource}</div>
+            <div class={styles.label}>{RESOURCE_NAMES[props.resource as KnownResourceName] ?? props.resource}</div>
         </div>
     );
 };

@@ -52,7 +52,7 @@ export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onPro
 export type { GameState };
 export type { GameLoop as Engine, Ticker };
 
-export { getProcessorTickRate } from './config';
+export { getProcessorTickRate, type UnitConfiguration } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
 export {
     type GameUnitSystems,
@@ -60,7 +60,7 @@ export {
     type InventoryController,
     type InventoryData,
     type CPUData,
-    type MotherData,
+    type AssemblerData,
     type NavigatorSystemData,
     type ScannerData,
 } from './systems';

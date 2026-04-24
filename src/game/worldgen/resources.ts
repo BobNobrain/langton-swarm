@@ -2,7 +2,7 @@ import { drawInteger, pick, RandomNumberGenerator } from '@/lib/random';
 import { type NodeId } from '../types';
 import type { GeneratedPlanet } from './types';
 
-export type KnownResourceName = 'copper' | 'titanium' | 'lithium';
+export type KnownResourceName = 'electrical' | 'structural' | 'energetical' | 'special' | 'combat';
 
 type ResourceData = {
     resource: KnownResourceName;
@@ -15,7 +15,7 @@ type ResourceData = {
 
 const RESOURCES: ResourceData[] = [
     {
-        resource: 'copper',
+        resource: 'electrical',
         centerMin: 40,
         centerMax: 50,
         edgeMin: 5,
@@ -23,7 +23,7 @@ const RESOURCES: ResourceData[] = [
         secondaryCenterProb: 0.3,
     },
     {
-        resource: 'titanium',
+        resource: 'structural',
         centerMin: 80,
         centerMax: 120,
         edgeMin: 15,
@@ -31,7 +31,7 @@ const RESOURCES: ResourceData[] = [
         secondaryCenterProb: 0.1,
     },
     {
-        resource: 'lithium',
+        resource: 'energetical',
         centerMin: 20,
         centerMax: 40,
         edgeMin: 3,

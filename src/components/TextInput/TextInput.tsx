@@ -24,6 +24,7 @@ export type TextInputProps = {
     controllerRef?: ControllerRef<TextInputController>;
 
     dark?: boolean;
+    allowsReturnHotkey?: boolean;
 };
 
 export const TextInput: Component<TextInputProps> = (props) => {
@@ -54,6 +55,7 @@ export const TextInput: Component<TextInputProps> = (props) => {
             onKeyDown={props.onKeyDown}
             onKeyUp={props.onKeyUp}
             onClick={props.onClick}
+            data-allowsreturnhotkey={props.allowsReturnHotkey ? '1' : undefined}
         />
     );
 };

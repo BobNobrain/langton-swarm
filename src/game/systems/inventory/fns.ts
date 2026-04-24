@@ -1,4 +1,4 @@
-import { PILE_PRESET } from '@/game/presets';
+import { PILE_PRESET } from '@/game/config';
 import { returnToCpu, type CallableUnitSystemFunctions } from '../utils';
 import type { InventoryData, InventoryDeps } from './types';
 import { measure } from './utils';

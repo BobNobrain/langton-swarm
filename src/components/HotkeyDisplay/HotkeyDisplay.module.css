@@ -1,0 +1,28 @@
+.hotkey {
+    font-size: 12px;
+    line-height: 16px;
+    padding: 0 2px;
+    border: 1px solid var(--hotkey-text, var(--c-primary));
+    background-color: var(--hotkey-bg, var(--c-gray-d));
+    color: var(--hotkey-text, var(--c-primary));
+    min-width: 18px;
+    text-align: center;
+    opacity: 1;
+
+    &.mouseButton {
+        padding: 0;
+        border-radius: 5px 5px 0 0;
+        height: 18px;
+        overflow: hidden;
+        position: relative;
+
+        .mouseButtonFill {
+            background-color: var(--hotkey-text, var(--c-primary));
+            width: 8px;
+            height: 9px;
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+    }
+}

@@ -14,12 +14,38 @@
         transition: opacity ease-in-out 0.2s;
     }
 
+    .sideswitch {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        padding: 0 8px;
+        text-align: center;
+        align-content: center;
+        cursor: pointer;
+        user-select: none;
+
+        &:first-child {
+            left: 0;
+        }
+        &:last-child {
+            right: 0;
+        }
+
+        &:hover {
+            color: var(--c-primary);
+            background-color: var(--c-gray-l);
+        }
+    }
+
     &:focus-within .icon {
         opacity: 0.5;
     }
 
-    & > :first-child {
-        padding-right: 24px;
+    &.padLeft > :first-child {
+        padding-left: 28px;
+    }
+    &.padRight > :first-child {
+        padding-right: 28px;
     }
 }
 
@@ -38,7 +64,7 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.1s ease-in-out;
-    background-color: var(--c-gray-d);
+    background-color: var(--c-black);
     color: var(--c-gray-l);
 
     &.open {

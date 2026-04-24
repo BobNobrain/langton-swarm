@@ -1,20 +1,22 @@
-import type { UnitConfiguration } from '../types';
-import { BATTERY_MEDIUM_PRESET, BATTERY_SMALL_PRESET } from './battery';
-import { ENGINE_SIMPLE_PRESET } from './engine';
-import { SOLAR_MEDIUM_PRESET, SOLAR_SMALL_PRESET } from './solar';
-import { STORAGE_LARGE_PRESET, STORAGE_SMALL_PRESET, STORAGE_WAREHOUSE_PRESET } from './storage';
+import type { UnitConfiguration } from './types';
+import { BatteryConfiguration } from './battery';
+import { EngineConfiguration } from './engine';
+import { SolarConfiguration } from './solar';
+import { StorageConfiguration } from './storage';
+import { AssemblerConfiguration } from './assembler';
+import { DrillConfiguration } from './drill';
 
 export const MOTHER_PRESET: UnitConfiguration = {
-    battery: { capacity: 10_000 },
-    storage: STORAGE_WAREHOUSE_PRESET,
-    navigator: false,
-    mother: true,
+    assembler: AssemblerConfiguration.Tier2,
+    battery: BatteryConfiguration.Tier2,
+    solar: SolarConfiguration.Tier2Mobile,
+    storage: StorageConfiguration.Tier2Big,
 };
 
 export const DEFAULT_SCOUT_PRESET: UnitConfiguration = {
-    battery: BATTERY_SMALL_PRESET,
-    engine: ENGINE_SIMPLE_PRESET,
-    solar: SOLAR_SMALL_PRESET,
+    battery: BatteryConfiguration.Tier1Small,
+    engine: EngineConfiguration.Tier1Cheap,
+    solar: SolarConfiguration.Tier1Cheap,
     navigator: true,
     scanner: true,
     cpu: `# this is a simple program for a scouting drone
@@ -101,19 +103,17 @@ state mining {
 }
 `,
 
-    battery: BATTERY_MEDIUM_PRESET,
-    drill: true,
-    engine: {
-        power: 1,
-    },
+    battery: BatteryConfiguration.Tier1Regular,
+    drill: DrillConfiguration.Tier1,
+    engine: EngineConfiguration.Tier1Cheap,
     navigator: true,
     scanner: true,
-    storage: STORAGE_LARGE_PRESET,
-    solar: SOLAR_MEDIUM_PRESET,
+    storage: StorageConfiguration.Tier1Big,
+    solar: SolarConfiguration.Tier1Regular,
 };
 
 export const PILE_PRESET: UnitConfiguration = {
-    storage: { size: Infinity },
+    storage: StorageConfiguration.Infinite,
 };
 
 export function createDefaultUnitConfig(): UnitConfiguration {
@@ -174,11 +174,12 @@ state returning {
     engine.move(navigator.next_step)
 }
 `,
-        battery: BATTERY_SMALL_PRESET,
-        drill: true,
-        engine: ENGINE_SIMPLE_PRESET,
+        battery: BatteryConfiguration.Tier1Small,
+        drill: DrillConfiguration.Tier1,
+        engine: EngineConfiguration.Tier1Cheap,
         navigator: true,
-        storage: STORAGE_SMALL_PRESET,
+        storage: StorageConfiguration.Tier1Regular,
+        solar: SolarConfiguration.Tier1Regular,
     };
 }
 
@@ -236,13 +237,11 @@ state returning {
     engine.move(navigator.next_step)
 }
 `,
-    battery: BATTERY_MEDIUM_PRESET,
-    drill: true,
-    engine: {
-        power: 1,
-    },
+    battery: BatteryConfiguration.Tier1Big,
+    drill: DrillConfiguration.Tier1,
+    engine: EngineConfiguration.Tier1Cheap,
     navigator: true,
-    storage: STORAGE_LARGE_PRESET,
-    solar: SOLAR_MEDIUM_PRESET,
+    storage: StorageConfiguration.Tier1Big,
+    solar: SolarConfiguration.Tier1Regular,
     scanner: true,
 };

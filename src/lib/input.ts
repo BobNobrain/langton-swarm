@@ -11,6 +11,14 @@ export enum KeyCode {
     KeyS = 'KeyS',
     KeyD = 'KeyD',
 
+    KeyQ = 'KeyQ',
+    KeyE = 'KeyE',
+    KeyR = 'KeyR',
+    KeyF = 'KeyF',
+
+    KeyU = 'KeyU',
+    KeyI = 'KeyI',
+
     Digit1 = 'Digit1',
     Digit2 = 'Digit2',
     Digit3 = 'Digit3',

@@ -1,8 +1,7 @@
+import { getUnitMass } from './characteristics';
+import { ENGINE_CHARACTERISTICS } from './engine';
+import { getStorageCapacity } from './storage';
 import type { UnitConfiguration } from './types';
-
-export function getProcessorTickRate(config: UnitConfiguration): number {
-    return 4; // every 4 ticks, so 5 times per second
-}
 
 export function isStationary(config: UnitConfiguration): boolean {
     return !config.engine;
@@ -14,7 +13,7 @@ export function isPile({ storage, ...rest }: UnitConfiguration): boolean {
     }
 
     return (
-        !Number.isFinite(storage.size) &&
+        !Number.isFinite(getStorageCapacity({ storage })) &&
         Object.values(rest).every((value) => value === undefined || value === null || value === false)
     );
 }
@@ -29,10 +28,6 @@ export function getDiscoveryRange(config: UnitConfiguration): number {
         result += 1;
     }
 
-    if (config.mother && result < 5) {
-        result = 5;
-    }
-
     return result;
 }
 
@@ -41,13 +36,9 @@ export function getTicksPerMove(config: UnitConfiguration): number {
         return 0;
     }
 
-    return 6 / config.engine.power;
-}
+    const chars = ENGINE_CHARACTERISTICS[config.engine];
+    const mass = getUnitMass(config);
+    const power = chars.power;
 
-export function getEnergyPerMove(config: UnitConfiguration): number {
-    if (!config.engine) {
-        return 0;
-    }
-
-    return 2 + config.engine.power * 3;
+    return Math.ceil((mass / power) * 0.1) * 3;
 }

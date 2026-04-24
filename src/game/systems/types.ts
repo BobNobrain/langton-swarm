@@ -1,5 +1,6 @@
+import type { UnitConfiguration } from '../config';
 import type { BsmlValueType } from '../program/value';
-import type { NodeId, UnitConfiguration, UnitEnvironment, UnitId, UnitState } from '../types';
+import type { NodeId, UnitEnvironment, UnitId, UnitState } from '../types';
 import type { UnitEventController } from './events';
 
 export type SendMessage = (to: string, message: UnitSystemMessage, delay?: number) => void;

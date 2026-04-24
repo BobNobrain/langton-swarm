@@ -109,7 +109,7 @@ class HotkeyManager {
         for (let i = 0; i < hotkeys.length; i++) {
             if (hotkeys[i].handler === handler && hotkeys[i].descriptor === desc) {
                 hotkeys.splice(i, 1);
-                return;
+                --i;
             }
         }
     }
@@ -174,9 +174,21 @@ export function renderHotkey(hotkey: HotkeyDescriptor): string {
 }
 
 function shouldSkipKeydown(ev: KeyboardEvent): boolean {
+    if (ev.defaultPrevented) {
+        return true;
+    }
+
     switch ((ev.target as HTMLElement).tagName) {
         case 'INPUT':
-            return ev.code !== KeyCode.Esc;
+            if (ev.code === KeyCode.Esc) {
+                return false;
+            }
+
+            if (ev.code === KeyCode.Enter && (ev.target as HTMLInputElement).dataset['allowsreturnhotkey']) {
+                return false;
+            }
+
+            return true;
 
         case 'BUTTON':
             return ev.code === KeyCode.Space;

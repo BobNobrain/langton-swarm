@@ -96,4 +96,13 @@
         border: solid var(--c-white);
         border-width: 2px 0;
     }
+
+    &.dark {
+        background-color: rgba(from var(--c-black) r g b / 50%);
+
+        & .overlayContent {
+            background-color: var(--c-gray-d);
+            border-color: var(--c-gray-l);
+        }
+    }
 }

@@ -32,7 +32,7 @@
     color: var(--c-primary);
 }
 
-.queueItem {
+.queueItemTop, .queueItemBottom {
     display: flex;
     gap: 8px;
     align-items: center;
@@ -42,4 +42,10 @@
     margin-right: 4px;
     color: var(--c-gray-l);
     font-weight: 300;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
 }

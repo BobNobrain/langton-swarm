@@ -1,0 +1,15 @@
+.floater {
+    position: fixed;
+    z-index: 1;
+
+    width: fit-content;
+    height: fit-content;
+    overflow: visible;
+
+    display: flex;
+
+    /* .useTargetWidth {
+    }
+    .useTargetHeight {
+    } */
+}

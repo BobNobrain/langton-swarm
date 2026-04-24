@@ -1,3 +1,4 @@
+import { getBatteryCapacity } from '../config';
 import type { UnitId } from '../types';
 import { createUnitEvent, type UnitEvent } from './events';
 import { createUnitSystem } from './systems';
@@ -33,10 +34,10 @@ export function createEnergySystem(opts: CreateUnitSystemCommonOptions) {
                 return null;
             }
 
-            return { charge: config.battery.capacity, capacity: config.battery.capacity, lastUpdated: 0 };
-        },
+            const capacity = getBatteryCapacity(config);
 
-        messages: {},
+            return { charge: capacity, capacity, lastUpdated: 0 };
+        },
     });
 
     const controller: EnergySystemController = {

@@ -66,3 +66,21 @@
         display: block;
     }
 }
+
+.optionName {
+    font-weight: 600;
+}
+.optionDescription {
+    color: var(--c-gray-l);
+    font-style: italic;
+    max-width: 300px;
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+.badgeTier1 {
+    --badge-color: #d8b466;
+}
+.badgeTier2 {
+    --badge-color: #8e80eb;
+}

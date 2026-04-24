@@ -51,12 +51,14 @@ export const FloatingPanelHeader: ParentComponent<{
 
 export const FloatingPanelOverlay: ParentComponent<{
     visible: boolean;
+    dark?: boolean;
 }> = (props) => {
     return (
         <div
             class={styles.overlay}
             classList={{
                 [styles.overlayVisible]: props.visible,
+                [styles.dark]: props.dark,
             }}
         >
             <div class={styles.overlayContent}>{props.children}</div>

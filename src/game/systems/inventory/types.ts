@@ -11,7 +11,7 @@ export type InventoryData = {
 };
 
 export type InventoryController = {
-    add(opts: { to: UnitId; amounts: Record<string, number>; tick: number }): boolean;
+    add(opts: { to: UnitId; amounts: Record<string, number>; tick: number }): Record<string, number>;
     withdraw(opts: { from: UnitId; amounts: Record<string, number>; tick: number }): boolean;
     transfer(trinfo: {
         from: UnitId;

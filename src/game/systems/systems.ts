@@ -1,5 +1,5 @@
-import type { BsmlValue } from '../program/value';
-import type { UnitCommand, UnitCommandCall, UnitConfiguration, UnitEnvironment, UnitId, UnitState } from '../types';
+import type { UnitConfiguration } from '../config';
+import type { UnitCommand, UnitCommandCall, UnitEnvironment, UnitId, UnitState } from '../types';
 import type {
     CreateUnitSystemCommonOptions,
     UnitSystemFunction,
@@ -44,7 +44,7 @@ export type MessageHandlers<Data, MessagePayloads extends Record<string, unknown
 
 type CreateOptions<Data, MessagePayloads extends Record<string, unknown>> = {
     name: string;
-    messages: MessageHandlers<Data, MessagePayloads>;
+    messages?: MessageHandlers<Data, MessagePayloads>;
 
     queryCommands?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => UnitCommand[];
     executeCommand?: (call: UnitCommandCall, ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
@@ -166,7 +166,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
         },
 
         handleMessage(msg) {
-            const handler = messages[msg.event];
+            const handler = messages?.[msg.event];
             if (!handler) {
                 return;
             }

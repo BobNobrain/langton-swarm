@@ -12,7 +12,6 @@ type DiscoverySystemData = {
 export function createDiscoverySystem(opts: CreateUnitSystemCommonOptions, world: GameWorld) {
     return createUnitSystem<DiscoverySystemData, {}>(opts, {
         name: 'discovery',
-        messages: {},
 
         initialData(config, state, unitId) {
             // TODO: check "faction"

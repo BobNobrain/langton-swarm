@@ -1,0 +1,24 @@
+.badge {
+    border-radius: 2px;
+    padding: 2px 4px;
+    font-size: 0.9em;
+    line-height: 1em;
+
+    &.outline {
+        border: 1px solid var(--badge-color, var(--c-gray-l));
+        color: var(--badge-color, var(--c-gray-l));
+    }
+
+    &.solid {
+        background-color: var(--badge-color, var(--c-gray-l));
+        color: var(--badge-text-color, var(--c-black));
+    }
+
+    &.block {
+        display: block;
+    }
+
+    .icon {
+        margin-right: 4px;
+    }
+}

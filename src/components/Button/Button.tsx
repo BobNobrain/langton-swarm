@@ -1,15 +1,24 @@
-import { Show, type ParentComponent } from 'solid-js';
+import { createMemo, Show, type ParentComponent } from 'solid-js';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { createHotkey, renderHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
 import styles from './Button.module.css';
-import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
-import { Symbols } from '@/lib/ascii';
+import { HotkeyDisplay } from '../HotkeyDisplay/HotkeyDisplay';
+import { Floater, type FloaterProps } from '../Floater/Floater';
+import { createBoundsTracker } from '@/lib/BoundsTracker';
 
 type ButtonStyle = 'primary' | 'secondary' | 'text';
+type HotkeyPosition = 'none' | 'top-right' | 'middle-left';
 
 const cls: Record<ButtonStyle, string> = {
     primary: styles.btnPrimary,
     secondary: styles.btnSecondary,
     text: styles.btnText,
+};
+
+const hotkeyCls: Record<HotkeyPosition, string> = {
+    none: styles.hposNone,
+    'top-right': styles.hposTR,
+    'middle-left': styles.hposML,
 };
 
 export type ButtonController = {
@@ -23,6 +32,7 @@ export const Button: ParentComponent<{
     inline?: boolean;
     vibrantFocus?: boolean;
     hotkey?: HotkeyDescriptor;
+    hotkeyPosition?: 'none' | 'top-right' | 'middle-left';
     rmbHotkey?: boolean;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
     onMouseEnter?: (ev: MouseEvent) => void;
@@ -39,20 +49,53 @@ export const Button: ParentComponent<{
         );
     }
 
-    let button!: HTMLButtonElement;
+    const boundsTracker = createBoundsTracker<HTMLButtonElement>();
 
     provideController(
         {
             focus() {
-                button.focus();
+                boundsTracker.getElement()?.focus();
             },
         },
         () => props.controllerRef,
     );
 
+    const hotkeyPosition = createMemo(
+        (): Pick<
+            FloaterProps<any>,
+            'horizontalAnchor' | 'horizontalDirection' | 'verticalAnchor' | 'verticalDirection' | 'offsetX' | 'offsetY'
+        > => {
+            switch (props.hotkeyPosition) {
+                case 'none':
+                    return {};
+
+                case 'middle-left':
+                    return {
+                        horizontalAnchor: 'left',
+                        horizontalDirection: 'left',
+                        verticalAnchor: 'top',
+                        verticalDirection: 'down',
+                        offsetX: -8,
+                        offsetY: 3,
+                    };
+
+                case 'top-right':
+                case undefined:
+                    return {
+                        horizontalAnchor: 'right',
+                        horizontalDirection: 'left',
+                        verticalAnchor: 'top',
+                        verticalDirection: 'up',
+                        offsetX: 4,
+                        offsetY: -4,
+                    };
+            }
+        },
+    );
+
     return (
         <button
-            ref={button}
+            ref={boundsTracker.ref}
             type={props.type ?? 'button'}
             classList={{
                 [styles.button]: true,
@@ -68,15 +111,19 @@ export const Button: ParentComponent<{
             onMouseLeave={props.onMouseLeave}
         >
             <span class={styles.label}>{props.children}</span>
-            <Show when={props.hotkey || props.rmbHotkey}>
-                <span
+            <Show when={(props.hotkey || props.rmbHotkey) && props.hotkeyPosition !== 'none'}>
+                {/* <span
                     class={styles.hotkey}
                     classList={{
                         [styles.mouseButton]: props.rmbHotkey && !props.hotkey,
+                        [hotkeyCls[props.hotkeyPosition ?? 'top-right']]: true,
                     }}
                 >
                     {props.hotkey ? renderHotkey(props.hotkey) : <span class={styles.mouseButtonFill}></span>}
-                </span>
+                </span> */}
+                <Floater target={boundsTracker} {...hotkeyPosition()}>
+                    <HotkeyDisplay hotkey={props.rmbHotkey ? 'rmb' : props.hotkey!} class={styles.hotkey} />
+                </Floater>
             </Show>
         </button>
     );

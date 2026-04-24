@@ -2,25 +2,35 @@ import { createEffect, createMemo, createSignal, For, Show, type Component } fro
 import { Button } from '@/components/Button/Button';
 import type { UnitId } from '@/game';
 import { useGame } from '@/gameContext';
-import { MotherTabContent } from './MotherTabContent/MotherTabContent';
+import type { HotkeyDescriptor } from '@/lib/hotkey';
+import { KeyCode } from '@/lib/input';
+import { AssemblerTabContent } from './AssemblerTabContent/AssemblerTabContent';
 import { CpuTabContent, InventoryTabContent, NavigatorTabContent, ScannerTabContent } from './tabs';
 import styles from './UnitDisplay.module.css';
 
-type UnitDisplayTab = 'mother' | 'cpu' | 'inventory' | 'navigator' | 'scanner';
+type UnitDisplayTab = 'assembler' | 'cpu' | 'inventory' | 'navigator' | 'scanner';
 
 const TAB_NAMES: Record<UnitDisplayTab, string> = {
-    mother: 'Core',
+    assembler: 'Assembler',
     cpu: 'CPU',
     inventory: 'Storage',
     navigator: 'Navigator',
     scanner: 'Scanner',
 };
 
+const TAB_HOTKEYS: Record<UnitDisplayTab, HotkeyDescriptor | undefined> = {
+    assembler: { key: KeyCode.KeyU },
+    cpu: undefined,
+    inventory: { key: KeyCode.KeyI },
+    navigator: undefined,
+    scanner: undefined,
+};
+
 export const UnitDisplay: Component<{
     unitId: UnitId | null;
 }> = (props) => {
     const { units } = useGame();
-    const [selectedTab, setSelectedTab] = createSignal<UnitDisplayTab>('mother');
+    const [selectedTab, setSelectedTab] = createSignal<UnitDisplayTab>('assembler');
 
     const availableTabs = createMemo(() => {
         const result: UnitDisplayTab[] = [];
@@ -29,8 +39,8 @@ export const UnitDisplay: Component<{
             return result;
         }
 
-        if (units.mother.getData(unitId)) {
-            result.push('mother');
+        if (units.assembler.getData(unitId)) {
+            result.push('assembler');
         }
 
         if (units.inventory.getInfo(unitId)) {
@@ -59,8 +69,8 @@ export const UnitDisplay: Component<{
         }
 
         setSelectedTab((current) => {
-            if (tabs.includes('mother')) {
-                return 'mother';
+            if (tabs.includes('assembler')) {
+                return 'assembler';
             }
 
             if (!tabs.includes(current)) {
@@ -81,6 +91,12 @@ export const UnitDisplay: Component<{
                                 <li class={styles.tab} title={TAB_NAMES[tab]}>
                                     <Button
                                         style={tab === selectedTab() ? 'primary' : 'secondary'}
+                                        hotkey={
+                                            TAB_HOTKEYS[tab]
+                                                ? { ...TAB_HOTKEYS[tab], isEnabled: () => tab !== selectedTab() }
+                                                : undefined
+                                        }
+                                        hotkeyPosition="middle-left"
                                         onClick={() => setSelectedTab(tab)}
                                     >
                                         {TAB_NAMES[tab]}
@@ -91,8 +107,8 @@ export const UnitDisplay: Component<{
                     </For>
                 </ul>
                 <div class={styles.content}>
-                    <Show when={selectedTab() === 'mother'}>
-                        <MotherTabContent unitId={props.unitId} />
+                    <Show when={selectedTab() === 'assembler'}>
+                        <AssemblerTabContent unitId={props.unitId} />
                     </Show>
                     <Show when={selectedTab() === 'inventory'}>
                         <InventoryTabContent unitId={props.unitId} />

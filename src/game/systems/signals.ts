@@ -1,9 +1,9 @@
 import { createSignal, type Signal } from 'solid-js';
 import type { BlueprintId } from '../deck';
-import type { UnitConfiguration, UnitId } from '../types';
+import type { UnitId } from '../types';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
-import { isPile } from '../config';
+import { isPile, type UnitConfiguration } from '../config';
 
 export enum UnitModelType {
     Unknown = 'unknown',
@@ -33,7 +33,6 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
 
     const system = createUnitSystem<SignalsSystemData, {}>(opts, {
         name: 'mesh',
-        messages: {},
 
         initialData: (config, state, unitId) => {
             const modelType = getUnitModel(config);
@@ -58,7 +57,7 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
 }
 
 function getUnitModel(config: UnitConfiguration): UnitModelType {
-    if (config.mother) {
+    if (config.assembler && !config.engine && config.storage) {
         return UnitModelType.Mother;
     }
 

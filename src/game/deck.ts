@@ -1,6 +1,7 @@
 import { createMemo, createSignal } from 'solid-js';
 import { sequentialId, type ID } from '@/lib/ids';
-import type { UnitConfiguration, UnitId } from './types';
+import type { UnitConfiguration } from './config';
+import type { UnitId } from './types';
 
 export type BlueprintId = ID<number, 'BlueprintId'>;
 

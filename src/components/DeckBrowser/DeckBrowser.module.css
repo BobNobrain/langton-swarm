@@ -2,7 +2,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 8px;
+    /* margin-bottom: 8px; */
 
     & > :first-child {
         margin-right: auto;

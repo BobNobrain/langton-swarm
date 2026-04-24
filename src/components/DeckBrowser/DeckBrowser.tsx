@@ -1,6 +1,6 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
 import { type BlueprintController, type BlueprintId, type UnitId } from '@/game';
-import { getConstructionCosts, getConstructionTime } from '@/game/construction';
+import { getConstructionCosts, getConstructionTime } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
@@ -54,14 +54,17 @@ const DeckListItem: Component<{
                     Select {unitCounts()}
                 </Button>
             }
-            onMainClick={() => props.onSelect(props.item.id)}
+            rightClickable
+            onClick={() => props.onSelect(props.item.id)}
+            bottom={
+                <div class={styles.deckItemProperties}>
+                    <TimeLabel ticks={getConstructionTime(props.item.rLastVersion().config)} />
+                    <InventoryContent contents={getConstructionCosts(props.item.rLastVersion().config)} concise />
+                </div>
+            }
         >
             <div>
                 <BlueprintLabel name={props.item.rName()} version={props.item.rLastVersion().version} />
-            </div>
-            <div class={styles.deckItemProperties}>
-                <InventoryContent contents={getConstructionCosts(props.item.rLastVersion().config)} concise />
-                <TimeLabel ticks={getConstructionTime(props.item.rLastVersion().config)} />
             </div>
         </ListItem>
     );

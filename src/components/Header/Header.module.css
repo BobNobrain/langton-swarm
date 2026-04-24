@@ -1,4 +1,4 @@
-.header {
+.heading {
     margin: 0;
     padding: 0;
 
@@ -6,10 +6,10 @@
     font-weight: 500;
 
     &.withMargin:not(:first-child) {
-        margin-top: calc(2 * var(--header-margin-size, 6px));
+        margin-top: calc(2 * var(--heading-margin-size, 6px));
     }
     &.withMargin:not(:last-child) {
-        margin-bottom: var(--header-margin-size, 6px);
+        margin-bottom: var(--heading-margin-size, 6px);
     }
 }
 
@@ -18,7 +18,7 @@
     line-height: 48px;
 
     &.withMargin {
-        --header-margin-size: 8px;
+        --heading-margin-size: 8px;
     }
 }
 
@@ -27,7 +27,7 @@
     line-height: 36px;
 
     &.withMargin {
-        --header-margin-size: 6px;
+        --heading-margin-size: 6px;
     }
 }
 
@@ -36,6 +36,21 @@
     line-height: 24px;
 
     &.withMargin {
-        --header-margin-size: 4px;
+        --heading-margin-size: 4px;
     }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+
+    &.padded {
+        padding: 0 4px;
+    }
+}
+
+.headerActions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
 }

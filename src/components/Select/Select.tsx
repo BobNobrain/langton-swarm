@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show, type JSX } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, Show, type Component, type JSX } from 'solid-js';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { KeyCode } from '@/lib/input';
 import { List, ListEmptyContent, ListItem } from '../List/List';
@@ -6,10 +6,18 @@ import { createTextInputController, TextInput } from '../TextInput/TextInput';
 import styles from './Select.module.css';
 import { Symbols } from '@/lib/ascii';
 import { createBoundsTracker } from '@/lib/BoundsTracker';
+import { Dynamic } from 'solid-js/web';
 
 export type SelectOption<T> = {
     text: string;
     value: T;
+};
+
+export type SelectCustomOptionProps<T> = {
+    value: T;
+    text: string;
+    selected: boolean;
+    onClick: (ev: MouseEvent) => void;
 };
 
 type SelectProps<T> = {
@@ -18,9 +26,19 @@ type SelectProps<T> = {
     direction?: 'up' | 'down';
     popupOpening?: 'auto' | 'manual';
     dark?: boolean;
+    sidewaySwitchable?: boolean;
     onUpdate?: (value: SelectOption<T>) => void;
     controllerRef?: ControllerRef<SelectController>;
+    customOption?: Component<SelectCustomOptionProps<T>>;
 };
+
+function DefaultOption<T>(props: SelectCustomOptionProps<T>): JSX.Element {
+    return (
+        <ListItem selected={props.selected} onClick={props.onClick}>
+            {props.text}
+        </ListItem>
+    );
+}
 
 export function Select<T>(props: SelectProps<T>): JSX.Element {
     const [search, setSearch] = createSignal('');
@@ -83,13 +101,18 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
             return;
         }
 
-        const newIndex = Math.max(0, Math.min(currentIndex + change, options.length - 1));
+        let newIndex = currentIndex + change;
+        if (newIndex < 0) {
+            newIndex = options.length - 1;
+        } else if (newIndex >= options.length) {
+            newIndex = 0;
+        }
 
         if (newIndex === currentIndex) {
             return;
         }
 
-        const newOption = options[currentIndex + change];
+        const newOption = options[newIndex];
         props.onUpdate(newOption);
     };
 
@@ -98,6 +121,9 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
         {
             focus() {
                 searchInput.rGet().input?.focus();
+            },
+            blur() {
+                searchInput.rGet().input?.blur();
             },
         },
         () => props.controllerRef,
@@ -137,7 +163,14 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
     });
 
     return (
-        <div class={styles.select} ref={wrapper.ref}>
+        <div
+            class={styles.select}
+            ref={wrapper.ref}
+            classList={{
+                [styles.padLeft]: Boolean(props.sidewaySwitchable && props.value && props.onUpdate),
+                [styles.padRight]: true,
+            }}
+        >
             <TextInput
                 value={textInputValue()}
                 onUpdate={(val) => {
@@ -146,10 +179,7 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                 readonly={!optionsVisible()}
                 placeholder="Search options..."
                 onFocus={() => {
-                    if (props.popupOpening !== 'manual') {
-                        setOptionsVisible(true);
-                    }
-
+                    setOptionsVisible(true);
                     setSearch('');
                 }}
                 onBlur={() => {
@@ -182,6 +212,13 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                                 ev.preventDefault();
                             }
                             break;
+
+                        case KeyCode.ArrowLeft:
+                        case KeyCode.ArrowRight:
+                            if (props.sidewaySwitchable && props.onUpdate && props.value) {
+                                selectAdjacentOption(ev.code === KeyCode.ArrowLeft ? -1 : 1);
+                                ev.preventDefault();
+                            }
                     }
                 }}
                 onClick={() => {
@@ -210,32 +247,59 @@ export function Select<T>(props: SelectProps<T>): JSX.Element {
                     >
                         {(option, index) => {
                             return (
-                                <ListItem
+                                <Dynamic
+                                    component={props.customOption ?? DefaultOption}
                                     selected={index() === selectedIndex()}
                                     onClick={(ev) => {
                                         ev.preventDefault();
                                         searchInput.rGet().input?.focus();
                                         selectOption(option);
                                     }}
-                                >
-                                    {option.text}
-                                </ListItem>
+                                    text={option.text}
+                                    value={option.value}
+                                />
                             );
                         }}
                     </For>
                 </List>
             </div>
-            <div class={styles.icon}>{Symbols.TriangleDownSmall}</div>
+            <Show
+                when={props.sidewaySwitchable && props.value && props.onUpdate}
+                fallback={<div class={styles.icon}>{Symbols.TriangleDownSmall}</div>}
+            >
+                <div
+                    class={styles.sideswitch}
+                    onClick={(ev) => {
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        selectAdjacentOption(-1);
+                    }}
+                >
+                    {Symbols.TriangleLeftSmall}
+                </div>
+                <div
+                    class={styles.sideswitch}
+                    onClick={(ev) => {
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        selectAdjacentOption(+1);
+                    }}
+                >
+                    {Symbols.TriangleRightSmall}
+                </div>
+            </Show>
         </div>
     );
 }
 
 export type SelectController = {
     focus(): void;
+    blur(): void;
 };
 
 export function createSelectController() {
     return createControllerRef<SelectController>({
         focus() {},
+        blur() {},
     });
 }

@@ -1,10 +1,10 @@
 import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
 import type { BlueprintController } from '@/game';
-import { createDefaultUnitConfig } from '@/game/presets';
+import { createDefaultUnitConfig } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanelHeader } from '../FloatingPanel/FloatingPanel';
-import { Header } from '../Header/Header';
+import { Heading } from '../Header/Header';
 import { Select, type SelectOption } from '../Select/Select';
 import styles from './DeckBrowser.module.css';
 import { TextInput } from '../TextInput/TextInput';
@@ -60,11 +60,11 @@ export const DeckHeader: Component<{
     return (
         <FloatingPanelHeader>
             <div class={styles.header}>
-                <Header size="sm">
+                <Heading size="sm" withMargin>
                     <Show when={ui.rDeckSelectedBlueprint() !== null} fallback="Blueprints">
                         {title()}
                     </Show>
-                </Header>
+                </Heading>
                 <Show when={props.bp !== null}>
                     <Button style="text">Archive</Button>
                     <Button onClick={props.onReset}>Reset</Button>

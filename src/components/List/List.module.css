@@ -20,18 +20,24 @@
     display: flex;
     gap: 8px;
 
+    &.twoLined {
+        flex-flow: column;
+        gap: 0;
+        padding: 4px 0;
+    }
+
     &:first-child {
         border-top: 1px solid var(--c-gray-d);
     }
 
-    > :first-child {
+    &:not(.twoLined) > :first-child {
         padding-left: 8px;
 
         .inset & {
             padding-left: calc(8px + var(--container-padding-l, 0));
         }
     }
-    > :last-child {
+    &:not(.twoLined) > :last-child {
         padding-right: 8px;
 
         .inset & {
@@ -60,10 +66,36 @@
     border-top: 0 none;
 }
 
+.top {
+    display: flex;
+    align-items: center;
+
+    & > :first-child {
+        padding-left: 8px;
+
+        .inset & {
+            padding-left: calc(8px + var(--container-padding-l, 0));
+        }
+    }
+    & > :last-child {
+        padding-right: 8px;
+
+        .inset & {
+            padding-right: calc(8px + var(--container-padding-r, 0));
+        }
+    }
+}
+.bottom {
+    padding: 0 8px;
+}
+
 .main {
     flex: 1 1 auto;
-    padding: 4px 0;
     align-content: center;
+
+    .item > & {
+        padding: 4px 0;
+    }
 
     .item.clickable:hover & {
         color: var(--c-white);
@@ -72,7 +104,7 @@
 
 .right {
     flex: 0 0 auto;
-    padding: 4px 0;
+    /* padding: 4px 0; */
     min-width: 32px;
     text-align: right;
 }

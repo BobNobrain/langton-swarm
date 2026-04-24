@@ -8,18 +8,28 @@ export const defaultMat = new MeshStandardMaterial({
 });
 
 export const materialsByResource: Record<KnownResourceName, Material> = {
-    copper: new MeshStandardMaterial({
+    electrical: new MeshStandardMaterial({
         color: '#d27015',
         roughness: 0.6,
         metalness: 0.7,
     }),
-    titanium: new MeshStandardMaterial({
+    structural: new MeshStandardMaterial({
         color: '#656e8c',
         roughness: 0.6,
         metalness: 0.7,
     }),
-    lithium: new MeshStandardMaterial({
+    energetical: new MeshStandardMaterial({
         color: '#8f907f',
+        roughness: 0.6,
+        metalness: 0.7,
+    }),
+    combat: new MeshStandardMaterial({
+        color: '#db9898',
+        roughness: 0.6,
+        metalness: 0.7,
+    }),
+    special: new MeshStandardMaterial({
+        color: '#78cad5',
         roughness: 0.6,
         metalness: 0.7,
     }),

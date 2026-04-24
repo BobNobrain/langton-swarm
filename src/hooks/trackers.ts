@@ -1,9 +1,12 @@
 import { createMemo, createSignal } from 'solid-js';
-import type { NodeId, UnitId, InventoryData, BsmlValue, MotherData } from '@/game';
+import type { NodeId, UnitId, InventoryData, BsmlValue } from '@/game';
+import type { CompiledProgram } from '@/game/program/compile';
 import { renderStateName } from '@/game/program/utils';
+import type { AssemblerData } from '@/game/systems';
 import { useGame } from '@/gameContext';
 import { onTickConditional } from '@/hooks/onTick';
-import type { CompiledProgram } from '@/game/program/compile';
+import { createUnitEventListener } from './events';
+import type { UnitEventData } from '@/game/systems/events';
 
 export type UnitStatusTracker = {
     rStateName: () => string;
@@ -133,40 +136,93 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
     };
 }
 
-export function createMotherTracker(unitId: () => UnitId | null) {
-    const { units } = useGame();
-    let lastUpdated = -1;
-    let lastUnitId: UnitId | null = null;
+// export function createMotherTracker(unitId: () => UnitId | null) {
+//     const { units } = useGame();
+//     let lastUpdated = -1;
+//     let lastUnitId: UnitId | null = null;
 
-    const [rCurrentSpawn, setCurrentSpawn] = createSignal<MotherData['currentSpawn'] | null>(null);
-    const [rSpawnQueue, setSpawnQueue] = createSignal<MotherData['spawnQueue']>([]);
+//     const [rCurrentSpawn, setCurrentSpawn] = createSignal<MotherData['currentSpawn'] | null>(null);
+//     const [rSpawnQueue, setSpawnQueue] = createSignal<MotherData['spawnQueue']>([]);
+//     const [rSpawnProgress, setSpawnProgress] = createSignal(0);
+
+//     onTickConditional(unitId, (unitId) => (tick) => {
+//         const mother = units.mother.getData(unitId);
+//         if (!mother) {
+//             if (lastUnitId !== null) {
+//                 lastUnitId = null;
+//                 lastUpdated = -1;
+//                 setCurrentSpawn(null);
+//                 setSpawnQueue([]);
+//                 setSpawnProgress(0);
+//             }
+//             return;
+//         }
+
+//         if (mother.lastUpdated > lastUpdated || unitId !== lastUnitId) {
+//             lastUnitId = unitId;
+//             lastUpdated = mother.lastUpdated;
+
+//             setCurrentSpawn(mother.currentSpawn ? { ...mother.currentSpawn } : null);
+//             setSpawnQueue(mother.spawnQueue.slice());
+//         }
+
+//         setSpawnProgress(
+//             mother.currentSpawn?.started ? (tick - mother.currentSpawn.started) / mother.currentSpawn.timeToBuild : 0,
+//         );
+//     });
+
+//     return { rCurrentSpawn, rSpawnQueue, rSpawnProgress };
+// }
+
+export function createAssemblerTracker(unitId: () => UnitId | null) {
+    const { units } = useGame();
+
+    const [rCurrentSpawn, setCurrentSpawn] = createSignal<AssemblerData['currentSpawn'] | null>(null);
+    const [rSpawnQueue, setSpawnQueue] = createSignal<AssemblerData['spawnQueue']>([]);
     const [rSpawnProgress, setSpawnProgress] = createSignal(0);
 
-    onTickConditional(unitId, (unitId) => (tick) => {
-        const mother = units.mother.getData(unitId);
-        if (!mother) {
-            if (lastUnitId !== null) {
-                lastUnitId = null;
-                lastUpdated = -1;
-                setCurrentSpawn(null);
-                setSpawnQueue([]);
-                setSpawnProgress(0);
-            }
-            return;
+    const applyUpdates = (ev: UnitEventData<unknown>) => {
+        const data = units.assembler.getData(ev.unitId)!;
+
+        setCurrentSpawn(data.currentSpawn ? { ...data.currentSpawn } : null);
+        setSpawnQueue(data.spawnQueue.slice());
+
+        if (!data.currentSpawn) {
+            setSpawnProgress(0);
         }
+    };
 
-        if (mother.lastUpdated > lastUpdated || unitId !== lastUnitId) {
-            lastUnitId = unitId;
-            lastUpdated = mother.lastUpdated;
-
-            setCurrentSpawn(mother.currentSpawn ? { ...mother.currentSpawn } : null);
-            setSpawnQueue(mother.spawnQueue.slice());
-        }
-
-        setSpawnProgress(
-            mother.currentSpawn?.started ? (tick - mother.currentSpawn.started) / mother.currentSpawn.timeToBuild : 0,
-        );
+    createUnitEventListener({
+        ev: units.assembler.queueUpdated,
+        unitId,
+        listener: applyUpdates,
     });
+
+    createUnitEventListener({
+        ev: units.assembler.spawned,
+        unitId,
+        listener: applyUpdates,
+    });
+
+    onTickConditional(
+        () => {
+            if (!rCurrentSpawn()) {
+                return null;
+            }
+
+            return unitId();
+        },
+        (unitId) => (tick) => {
+            const data = units.assembler.getData(unitId);
+            if (!data) {
+                return;
+            }
+
+            setSpawnProgress(
+                data.currentSpawn?.started ? (tick - data.currentSpawn.started) / data.currentSpawn.timeToBuild : 0,
+            );
+        },
+    );
 
     return { rCurrentSpawn, rSpawnQueue, rSpawnProgress };
 }

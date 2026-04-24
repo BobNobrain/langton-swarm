@@ -1,3 +1,4 @@
+import { getDrillProperties } from '../config';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
@@ -13,7 +14,12 @@ import {
     type UnitSystemScheduleMessages,
 } from './utils';
 
-type DrillData = {};
+type DrillData = {
+    drillTime: number;
+    drillAmount: number;
+    powerConsumption: number;
+    tier: number;
+};
 
 type DrillDeps = {
     world: Pick<GameWorld, 'resources' | 'mineResource'>;
@@ -21,10 +27,9 @@ type DrillDeps = {
     battery: EnergySystemController;
 };
 
-const MINING_TIME_TICKS = 5;
 export const DRILL_SYSTEM_NAME = 'drill';
 
-const schedule = createScheduler(DRILL_SYSTEM_NAME);
+const schedule = createScheduler<DrillData>(DRILL_SYSTEM_NAME);
 
 export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
     mine: {
@@ -33,30 +38,32 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
         argTypes: [],
         returnType: 'flag',
         init(_args, ctx, _env, { world, inventory, battery }) {
+            const drill = ctx.systemData;
+
             schedule(
                 ctx,
                 (ctx, env) => {
                     const resource = world.resources.get(ctx.state.location);
                     let success = false;
-                    const amountToMine = 1;
+                    const drill = ctx.systemData;
+                    const amountToMine = Math.min(drill.drillAmount, resource?.amount ?? 0);
 
                     if (resource && resource.amount > 0) {
-                        if (
-                            battery.withdraw(ctx.unitId, 15) &&
-                            inventory.add({
-                                to: ctx.unitId,
-                                amounts: { [resource.resource]: amountToMine },
-                                tick: env.currentTick,
-                            })
-                        ) {
-                            world.mineResource(ctx.state.location, resource.resource, amountToMine);
+                        if (battery.withdraw(ctx.unitId, drill.powerConsumption)) {
+                            const effectiveAmount =
+                                inventory.add({
+                                    to: ctx.unitId,
+                                    amounts: { [resource.resource]: amountToMine },
+                                    tick: env.currentTick,
+                                })[resource.resource] ?? 0;
+                            world.mineResource(ctx.state.location, resource.resource, effectiveAmount);
                             success = true;
                         }
                     }
 
                     returnToCpu(ctx, { type: 'flag', value: success });
                 },
-                MINING_TIME_TICKS,
+                drill.drillTime,
             );
             return false;
         },
@@ -93,7 +100,14 @@ export function createDrillSystem(
                 return null;
             }
 
-            return {};
+            const chars = getDrillProperties(config);
+
+            return {
+                drillAmount: chars.miningAmount,
+                drillTime: chars.miningTime,
+                powerConsumption: chars.energyConsumption,
+                tier: chars.maxDepositTier,
+            };
         },
 
         messages: {

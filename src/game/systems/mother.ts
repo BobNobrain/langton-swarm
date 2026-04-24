@@ -1,5 +1,4 @@
-import { isStationary } from '../config';
-import { getConstructionCosts, getConstructionTime } from '../construction';
+import { isStationary, getConstructionCosts, getConstructionTime } from '../config';
 import type { BlueprintController, BlueprintDeck, BlueprintVersion } from '../deck';
 import type { UnitCommand, UnitEnvironment } from '../types';
 import type { InventoryController } from './inventory';

@@ -8,6 +8,7 @@ export type UnitEventController = {
 export type UnitEvent<Payload> = {
     pub(ev: UnitEventData<Payload>): void;
     sub(unitId: UnitId, listener: (ev: UnitEventData<Payload>) => void): void;
+    unsub(unitId: UnitId, listener: (ev: UnitEventData<Payload>) => void): void;
     subToAll(listener: (ev: UnitEventData<Payload>) => void): void;
 };
 
@@ -46,6 +47,21 @@ export function createUnitEvent<Payload>(): UnitEvent<Payload> & UnitEventContro
             }
 
             subs.push({ units: new Set([unitId]), handler: listener });
+        },
+        unsub(unitId, listener) {
+            for (let i = 0; i < subs.length; i++) {
+                const sub = subs[i];
+
+                if (sub.handler !== listener || !sub.units.has(unitId)) {
+                    continue;
+                }
+
+                sub.units.delete(unitId);
+                if (!sub.units.size) {
+                    subs.splice(i, 1);
+                }
+                break;
+            }
         },
 
         subToAll(listener) {

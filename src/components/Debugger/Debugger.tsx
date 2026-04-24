@@ -4,7 +4,7 @@ import { renderStateName } from '@/game/program/utils';
 import { createCPUStateTracker } from '@/hooks/trackers';
 import { BsmlValueLabel } from '../BsmlValueLabel/BsmlValueLabel';
 import { DefList, DefListItem } from '../DefList/DefList';
-import { Header } from '../Header/Header';
+import { Heading } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import { DebuggerInstruction } from './DebuggerInstruction';
 import styles from './Debugger.module.css';
@@ -32,7 +32,7 @@ export const Debugger: Component<{
     return (
         <section class={styles.debugPanel}>
             <header class={styles.debuggerHeader}>
-                <Header size="sm">Debugger</Header>
+                <Heading size="sm">Debugger</Heading>
                 <DefList>
                     <DefListItem name="State">{renderStateName(rStateName())}</DefListItem>
                     <DefListItem name="Status">{rCpuIsWaiting() ? 'WAITING' : 'RUNNING'}</DefListItem>

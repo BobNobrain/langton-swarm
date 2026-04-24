@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, Show, type ParentComponent } from 'solid-js';
 import { createGame, type Game } from '@/game';
 import { getCameraOrbitForCoords } from '@/game/camera';
-import { DEFAULT_SCOUT_PRESET, MOTHER_PRESET, TEST_PRESET } from '@/game/presets';
+import { DEFAULT_SCOUT_PRESET, MOTHER_PRESET, TEST_PRESET } from '@/game/config/presets';
 import { spawnFromDeck } from '@/game/utils';
 import { GameProvider } from '@/gameContext';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
@@ -24,7 +24,11 @@ export const GameUI: ParentComponent = (props) => {
             const coreBp = g.deck.create('Core_Module', MOTHER_PRESET);
             const spawnLocation = g.world.spawnLocation;
             const coreId = spawnFromDeck(g.deck, g.units, spawnLocation, coreBp.id)!;
-            g.units.inventory.add({ to: coreId, amounts: { titanium: 100, copper: 100, lithium: 100 }, tick: 0 });
+            g.units.inventory.add({
+                to: coreId,
+                amounts: { structural: 150, electrical: 150, energetical: 100 },
+                tick: 0,
+            });
 
             const { yaw, pitch } = getCameraOrbitForCoords(g.world.surface[spawnLocation].position);
             g.camera.setInstant({ yaw, pitch });

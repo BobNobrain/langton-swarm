@@ -5,7 +5,8 @@ import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn } from '../types
 import { callableUnitSystemHandlers, type CallableUnitSystemMessages } from '../utils';
 import { INVENTORY_FNS } from './fns';
 import type { InventoryController, InventoryData, InventoryDeps } from './types';
-import { transferAsMuchAsPossible, transferEverything } from './utils';
+import { measure, transferAsMuchAsPossible, transferEverything } from './utils';
+import { getStorageCapacity } from '@/game/config/storage';
 
 export const INVENTORY_SYSTEM_NAME = 'storage';
 
@@ -21,14 +22,15 @@ export function createInventorySystem(
         add({ to, amounts, tick }) {
             const inv = system.getData(to);
             if (!inv) {
-                return false;
+                return {};
             }
 
-            const ok = transferEverything({ from: null, to: inv, amounts, tick });
-            if (ok) {
+            const effective = transferAsMuchAsPossible({ from: null, to: inv, amounts, tick });
+            if (measure(effective) !== 0) {
                 system.activate(to);
             }
-            return ok;
+
+            return effective;
         },
         withdraw({ from, amounts, tick }) {
             const inv = system.getData(from);
@@ -102,7 +104,7 @@ export function createInventorySystem(
             }
 
             return {
-                capacity: config.storage.size,
+                capacity: getStorageCapacity(config),
                 size: 0,
                 contents: {},
                 lastUpdated: -1,

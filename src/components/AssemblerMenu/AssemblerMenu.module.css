@@ -1,0 +1,20 @@
+.spawnPicker {
+    padding: 4px 0 8px;
+}
+
+.costs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.form {
+    margin-top: 8px;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 12px;
+}

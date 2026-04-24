@@ -3,7 +3,7 @@ import type { UnitCommand, UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
-import { Header } from '../Header/Header';
+import { Heading } from '../Header/Header';
 import { SelectedUnitsList } from '../SelectedUnitsList/SelectedUnitsList';
 import { CommandForm } from './CommandForm/CommandForm';
 import { CommandPanel } from './CommandPanel/CommandPanel';
@@ -38,7 +38,7 @@ export const SelectedUnitsPanel: Component = () => {
     return (
         <FloatingPanel pinBottom pinLeft withMargin expandedWidth={selectedUnitId() !== null}>
             <FloatingPanelHeader sticky>
-                <Header size="sm">Units ({ui.rSelectedUnits().length})</Header>
+                <Heading size="sm">Units ({ui.rSelectedUnits().length})</Heading>
                 <CommandPanel
                     setHoveredCommandTargets={setHoveredCommandTargets}
                     onExecute={(cmd, targets, argv) => {

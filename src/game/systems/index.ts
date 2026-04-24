@@ -1,31 +1,25 @@
 import { sequentialId } from '@/lib/ids';
+import type { UnitConfiguration } from '../config';
 import type { BlueprintDeck } from '../deck';
 import type { GameLoop } from '../loop';
-import type {
-    NodeId,
-    UnitCommand,
-    UnitCommandCall,
-    UnitConfiguration,
-    UnitEnvironment,
-    UnitId,
-    UnitState,
-} from '../types';
+import type { NodeId, UnitCommand, UnitCommandCall, UnitEnvironment, UnitId, UnitState } from '../types';
 import type { GameWorld } from '../world';
+import { createAssemblerSystem, type AssemblerSystemController } from './assembler';
 import { createCPUSystem, type CPUData } from './cpu';
 import { createDiscoverySystem } from './discovery';
 import { createDrillSystem } from './drill';
 import { createEnergySystem, type EnergySystemController } from './energy';
 import { createEngineSystem } from './engine';
+import { createUnitEvent, type UnitEventController } from './events';
 import { createInventorySystem, type InventoryController } from './inventory';
-import { createMotherSystem, type MotherData } from './mother';
+// import { createMotherSystem, type MotherData } from './mother';
 import { createNavigatorSystem, type NavigatorSystemData } from './navigator';
 import { createScannerSystem, type ScannerData } from './scanner';
 import { createSignalsSystem } from './signals';
+import { createSolarSystem } from './solar';
 import { createStationariesSystem } from './stationaries';
 import type { UnitSystem, UnitSystemPublic } from './systems';
 import type { CreateUnitSystemCommonOptions, DespawnFn, SendMessage, SpawnFn, UnitSystemMessage } from './types';
-import { createUnitEvent, type UnitEventController } from './events';
-import { createSolarSystem } from './solar';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
@@ -33,7 +27,8 @@ export type GameUnitSystems = {
 
     readonly energy: EnergySystemController;
     readonly inventory: InventoryController;
-    readonly mother: UnitSystemPublic<MotherData>;
+    // readonly mother: UnitSystemPublic<MotherData>;
+    readonly assembler: AssemblerSystemController;
     readonly cpu: UnitSystemPublic<CPUData>;
     readonly navigator: UnitSystemPublic<NavigatorSystemData>;
     readonly scanner: UnitSystemPublic<ScannerData>;
@@ -125,7 +120,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     const engine = createEngineSystem(opts, { world, battery: energy.controller });
     const stationaries = createStationariesSystem(opts, { despawn });
     const inventory = createInventorySystem(opts, stationaries.controller, spawn, despawn);
-    const mother = createMotherSystem(opts, { deck, spawn, inventory: inventory.controller });
+    // const mother = createMotherSystem(opts, { deck, spawn, inventory: inventory.controller });
+    const assembler = createAssemblerSystem(opts, spawn, inventory.controller, deck);
     const signals = createSignalsSystem(opts);
     const drill = createDrillSystem(opts, world, inventory.controller, energy.controller);
     const scanner = createScannerSystem(opts, world, inventory.controller, energy.controller);
@@ -137,7 +133,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         energy.system,
         cpu,
         engine,
-        mother,
+        // mother,
+        assembler.system,
         signals,
         stationaries.system,
         inventory.system,
@@ -158,8 +155,9 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         // tick all the components, in order
         solar.tick();
         cpu.tick();
-        mother.tick();
+        // mother.tick();
         inventory.system.tick();
+        assembler.system.tick();
         stationaries.system.tick();
         discovery.tick();
 
@@ -193,7 +191,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         energy: energy.controller,
         inventory: inventory.controller,
-        mother,
+        // mother,
+        assembler: assembler.controller,
         cpu,
         navigator,
         scanner,
@@ -201,29 +200,17 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
         queryCommands(unitId) {
             if (cpu.has(unitId)) {
                 return cpu.queryCommands(unitId);
-            } else if (mother.has(unitId)) {
-                return mother.queryCommands(unitId);
             }
 
             return [];
         },
 
         executeCommand(unitId, call) {
-            if (mother.has(unitId)) {
-                mother.handleCommand(unitId, call);
-                return;
-            }
-
             cpu.handleCommand(unitId, call);
         },
 
         executeCommandMany(unitIds, call) {
             for (const unitId of unitIds) {
-                if (mother.has(unitId)) {
-                    mother.handleCommand(unitId, call);
-                    continue;
-                }
-
                 cpu.handleCommand(unitId, call);
             }
         },
@@ -253,6 +240,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     };
 }
 
-export type { CPUData, NavigatorSystemData, MotherData, ScannerData };
+export type { CPUData, NavigatorSystemData, ScannerData };
 export { UnitModelType } from './signals';
 export { type InventoryController, type InventoryData } from './inventory';
+export type { AssemblerData } from './assembler';
