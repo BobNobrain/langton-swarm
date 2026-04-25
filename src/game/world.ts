@@ -31,6 +31,7 @@ export type GameWorld = {
     readonly resourceUpdate: ResourceUpdateEvent;
 
     readonly sunPosition: RawVertex;
+    readonly dayLengthTicks: number;
 };
 
 export async function createGameWorld(
@@ -62,8 +63,9 @@ export async function createGameWorld(
 
     const terraIncognitaUpdate: FogOfWarUpdateEvent = createEvent();
 
+    const dayLengthTicks = 1_000;
     let sunPosition: [number, number, number] = [0, 0, 0];
-    initSun(loop, sunPosition, { height: 0.2, period: 1_000 });
+    initSun(loop, sunPosition, { height: 0.2, period: dayLengthTicks });
 
     return {
         seed: opts.seed,
@@ -76,6 +78,7 @@ export async function createGameWorld(
         landscape,
 
         sunPosition,
+        dayLengthTicks,
 
         terraIncognita,
         terraIncognitaUpdate: terraIncognitaUpdate,

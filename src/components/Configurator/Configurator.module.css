@@ -1,15 +1,6 @@
 .configurator {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 29px;
-
+    padding-bottom: 32px;
     border-bottom: 1px solid var(--c-gray-m);
-}
-
-.toggles {
-    padding: 8px 0;
-    min-height: 0;
-
     overflow: auto;
 }
 
@@ -34,6 +25,14 @@
         flex: 1 1 auto;
     }
 
+    .fieldBadges {
+        flex: 1 1 auto;
+        display: flex;
+        flex-flow: row wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
     .fieldCosts {
         flex: 0 0 auto;
         width: 250px;
@@ -43,15 +42,6 @@
         padding-right: 16px;
         gap: 8px;
     }
-}
-
-.costs {
-    padding: 0 16px;
-    display: flex;
-    align-content: center;
-    gap: 8px;
-    min-height: 0;
-    background-color: var(--c-gray-d);
 }
 
 .costLabel {

@@ -3,10 +3,10 @@ import { useGame } from '@/gameContext';
 import { Symbols } from '@/lib/ascii';
 import styles from './TimeLabel.module.css';
 
-export const TimeLabel: Component<{ ticks: number | null }> = (props) => {
+export const TimeLabel: Component<{ ticks: number | null; title?: string }> = (props) => {
     const { gameTick } = useGame();
     return (
-        <span class={styles.label}>
+        <span class={styles.label} title={props.title}>
             {Symbols.CircleQuarterTopRight}{' '}
             {props.ticks === null
                 ? '--'

@@ -13,6 +13,7 @@ export const Badge: ParentComponent<{
     class?: string;
     block?: boolean;
     style?: BadgeStyle;
+    title?: string;
 }> = (props) => {
     return (
         <span
@@ -22,6 +23,7 @@ export const Badge: ParentComponent<{
                 [styles.block]: props.block,
                 [cls[props.style ?? 'outline']]: true,
             }}
+            title={props.title}
         >
             <Show when={props.icon}>
                 <span class={styles.icon}>{props.icon}</span>
