@@ -3,6 +3,7 @@ import type { BlueprintDeck, BlueprintId } from '../deck';
 import type { UnitEnvironment, UnitId } from '../types';
 import { createUnitEvent, type UnitEvent } from './events';
 import type { InventoryController } from './inventory';
+import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions, SpawnFn, UnitSystemTickContext } from './types';
 
@@ -38,12 +39,13 @@ export const ASSEMBLER_SYSTEM_NAME = 'assembler';
 export function createAssemblerSystem(
     opts: CreateUnitSystemCommonOptions,
     spawn: SpawnFn,
+    positions: PositionalSystemController,
     inventory: InventoryController,
     deck: BlueprintDeck,
 ) {
     const system = createUnitSystem<AssemblerData, {}>(opts, {
         name: ASSEMBLER_SYSTEM_NAME,
-        initialData(config, state, unitId) {
+        initialData({ config }) {
             if (!config.assembler) {
                 return null;
             }
@@ -115,7 +117,7 @@ export function createAssemblerSystem(
     ) {
         if (currentSpawn.started !== null) {
             if (currentSpawn.started + currentSpawn.timeToBuild <= env.currentTick) {
-                const unitId = spawn({ at: ctx.state.location, config: currentSpawn.config });
+                const unitId = spawn({ at: positions.getEffectivePosition(ctx.unitId), config: currentSpawn.config });
 
                 spawned.pub({ unitId: ctx.unitId, payload: { id: unitId } });
 

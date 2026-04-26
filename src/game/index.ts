@@ -1,6 +1,6 @@
 import { createGameLoop, GameLoop, Ticker } from './loop';
 import { createGameState, GameState } from './state';
-import type { CreateGameProgressListener, NodeId, WorldgenOptionsInput } from './types';
+import type { CreateGameProgressListener, WorldgenOptionsInput } from './types';
 import { fillDefaults } from './worldgen/options';
 
 export type Game = GameState & {
@@ -63,6 +63,8 @@ export {
     type AssemblerData,
     type NavigatorSystemData,
     type ScannerData,
+    type DynamicLocation,
+    type PositionalSystemController,
 } from './systems';
 export type * from './types';
 export type { HighlightedTile } from './ui';

@@ -11,31 +11,43 @@ const PILE_BOUNCE_PERIOD = 400;
 const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitModel; animation?: 'pile' | 'none' }> = (
     props,
 ) => {
-    const { units } = useGame();
+    const { units, gameTick } = useGame();
     const objects: Record<string, GridObjectData> = {};
 
-    onBeforeRepaint(({ t }) => {
+    gameTick.addGameTask((tick) => {
         const idsToDelete = new Set(Object.keys(objects));
+        // const tick = gameTick.getCurrentTick();
 
         for (const unitId of props.unitIds) {
-            const state = units.unitStates[unitId];
+            const state = units.positions.getFullPosition(unitId);
             if (!state) {
                 continue;
             }
 
             idsToDelete.delete(unitId.toString());
+            const location: Exclude<GridObjectData['location'], number> = {
+                from: state.sourcePosition,
+                to: state.targetPosition,
+                progress:
+                    state.targetTime === state.sourceTime
+                        ? 1
+                        : Math.min(1, (tick - state.sourceTime) / (state.targetTime - state.sourceTime)),
+            };
+
             if (!objects[unitId]) {
-                objects[unitId] = { location: state.location };
+                objects[unitId] = { location };
             } else {
-                objects[unitId].location = state.location;
+                objects[unitId].location = location;
             }
         }
 
         for (const id of idsToDelete) {
             delete objects[id];
         }
+    });
 
-        if (props.animation === 'pile') {
+    if (props.animation === 'pile') {
+        onBeforeRepaint(({ t }) => {
             for (const objectId of Object.keys(objects)) {
                 const obj = objects[objectId];
                 const spawnTime = units.getSpawnTime(Number(objectId) as UnitId) ?? 0;
@@ -44,8 +56,8 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
                     elevation: (1 + Math.sin((t - spawnTime) / PILE_BOUNCE_PERIOD)) * 0.1,
                 };
             }
-        }
-    });
+        });
+    }
 
     return (
         <GridObjects

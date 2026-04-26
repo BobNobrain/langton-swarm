@@ -34,7 +34,7 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
     const system = createUnitSystem<SignalsSystemData, {}>(opts, {
         name: 'mesh',
 
-        initialData: (config, state, unitId) => {
+        initialData: ({ config }, unitId) => {
             const modelType = getUnitModel(config);
             const [_, rSet] = idsByModelType[modelType];
             rSet((old) => [...old, unitId]);

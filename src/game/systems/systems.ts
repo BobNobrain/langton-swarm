@@ -1,34 +1,5 @@
-import type { UnitConfiguration } from '../config';
-import type { UnitCommand, UnitCommandCall, UnitEnvironment, UnitId, UnitState } from '../types';
-import type {
-    CreateUnitSystemCommonOptions,
-    UnitSystemFunction,
-    UnitSystemMessage,
-    UnitSystemTickContext,
-} from './types';
-
-export type UnitSystemPublic<Data> = {
-    readonly name: string;
-    readonly fns: Record<string, UnitSystemFunction>;
-    getData(unitId: UnitId): Data | null;
-};
-
-export type UnitSystem<Data> = UnitSystemPublic<Data> & {
-    tick(): void;
-    create(unitId: UnitId, config: UnitConfiguration, state: UnitState): void;
-    activate(unitId: UnitId): void;
-    deactivate(unitId: UnitId): void;
-    remove(unitId: UnitId): void;
-
-    has(unitId: UnitId): boolean;
-    handleMessage(msg: UnitSystemMessage): void;
-
-    queryCommands(unitId: UnitId): UnitCommand[];
-    handleCommand(unitId: UnitId, cmd: UnitCommandCall): void;
-    hasCommand: (name: string) => boolean;
-
-    getDebugEntry(unitId: UnitId): unknown;
-};
+import type { UnitCommand, UnitCommandCall, UnitEnvironment, UnitId } from '../types';
+import type { CreateUnitSystemCommonOptions, SpawnOptions, UnitSystem, UnitSystemTickContext } from './types';
 
 type UnitEntry<Data> = {
     unitId: UnitId;
@@ -51,13 +22,13 @@ type CreateOptions<Data, MessagePayloads extends Record<string, unknown>> = {
     hasCommand?: (name: string) => boolean;
 
     tick?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => void;
-    initialData: (config: UnitConfiguration, state: UnitState, unitId: UnitId) => Data | null;
+    initialData: (options: SpawnOptions, unitId: UnitId) => Data | null;
 
     finalize?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => void;
 };
 
 export function createUnitSystem<Data, MessagePayloads extends Record<string, unknown>>(
-    { env, states, sendMessage, updateUnitState }: CreateUnitSystemCommonOptions,
+    { env, sendMessage, systems }: CreateUnitSystemCommonOptions,
     {
         name,
         messages,
@@ -69,38 +40,32 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
         hasCommand,
     }: CreateOptions<Data, MessagePayloads>,
 ): UnitSystem<Data> {
-    const data: Record<UnitId, UnitEntry<Data>> = {};
-    const inactiveData: Record<UnitId, UnitEntry<Data>> = {};
+    const data = new Map<UnitId, UnitEntry<Data>>();
+    const inactiveData = new Map<UnitId, UnitEntry<Data>>();
 
     const createContext = (entry: UnitEntry<Data>): UnitSystemTickContext<Data> => ({
         unitId: entry.unitId,
-        state: states[entry.unitId],
         systemData: entry.systemData,
         sleep(ticksFor) {
             if (ticksFor === undefined || ticksFor < 0 || ticksFor === Infinity) {
-                delete data[entry.unitId];
-                inactiveData[entry.unitId] = entry;
+                data.delete(entry.unitId);
+                inactiveData.set(entry.unitId, entry);
                 entry.sleepUntil = 0;
                 return;
             }
 
             entry.sleepUntil = env.currentTick + ticksFor;
         },
-        update(patch) {
-            updateUnitState(entry.unitId, patch);
-        },
         sendMessage,
     });
 
-    return {
+    const system: UnitSystem<Data> = {
         name,
         fns: {},
 
         tick: tick
             ? () => {
-                  const entries = Object.values(data);
-
-                  for (const entry of entries) {
+                  for (const entry of data.values()) {
                       if (env.currentTick < entry.sleepUntil) {
                           continue;
                       }
@@ -110,42 +75,42 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
               }
             : () => {},
 
-        create(unitId, config, state) {
-            const initial = initialData(config, state, unitId);
+        create(unitId, options) {
+            const initial = initialData(options, unitId);
             if (initial === null || initial === undefined) {
                 // no need to create the entity for this system
                 return;
             }
 
-            data[unitId] = {
+            data.set(unitId, {
                 unitId,
                 systemData: initial,
                 sleepUntil: 0,
-            };
+            });
         },
 
         activate(unitId) {
-            const entry = inactiveData[unitId];
+            const entry = inactiveData.get(unitId);
             if (!entry) {
                 return;
             }
 
-            delete inactiveData[unitId];
-            data[unitId] = entry;
+            inactiveData.delete(unitId);
+            data.set(unitId, entry);
         },
         deactivate(unitId) {
-            const entry = data[unitId];
+            const entry = data.get(unitId);
             if (!entry) {
                 return;
             }
 
-            delete data[unitId];
-            inactiveData[unitId] = entry;
+            data.delete(unitId);
+            inactiveData.set(unitId, entry);
         },
 
         remove(unitId) {
             if (finalize) {
-                const unitData = data[unitId] || inactiveData[unitId];
+                const unitData = data.get(unitId) || inactiveData.get(unitId);
                 if (!unitData) {
                     return;
                 }
@@ -153,16 +118,19 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 finalize(createContext(unitData), env);
             }
 
-            delete data[unitId];
-            delete inactiveData[unitId];
+            data.delete(unitId);
+            inactiveData.delete(unitId);
         },
 
         has(unitId) {
-            return Boolean(data[unitId] || inactiveData[unitId]);
+            return data.has(unitId) || inactiveData.has(unitId);
+        },
+        getUnitIds() {
+            return [...data.keys(), ...inactiveData.keys()];
         },
 
         getData(unitId) {
-            return (data[unitId] ?? inactiveData[unitId])?.systemData ?? null;
+            return (data.get(unitId) ?? inactiveData.get(unitId))?.systemData ?? null;
         },
 
         handleMessage(msg) {
@@ -171,8 +139,8 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return;
             }
 
-            const activeData = data[msg.unitId];
-            const unitData = activeData ?? inactiveData[msg.unitId];
+            const activeData = data.get(msg.unitId);
+            const unitData = activeData ?? inactiveData.get(msg.unitId);
 
             if (!unitData) {
                 return;
@@ -180,8 +148,8 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
 
             const shouldActivate = handler.handler(msg.payload as never, createContext(unitData), env);
             if (shouldActivate && !activeData) {
-                delete inactiveData[msg.unitId];
-                data[msg.unitId] = unitData;
+                inactiveData.delete(msg.unitId);
+                data.set(msg.unitId, unitData);
             }
         },
 
@@ -190,7 +158,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return [];
             }
 
-            const unitData = data[unitId] ?? inactiveData[unitId];
+            const unitData = data.get(unitId) ?? inactiveData.get(unitId);
             if (!unitData) {
                 return [];
             }
@@ -203,8 +171,8 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return;
             }
 
-            const activeData = data[unitId];
-            const unitData = activeData ?? inactiveData[unitId];
+            const activeData = data.get(unitId);
+            const unitData = activeData ?? inactiveData.get(unitId);
             if (!unitData) {
                 console.error(`[WARN] handleCommand: unit not found`, unitId, call);
                 return;
@@ -212,8 +180,8 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
 
             const shouldActivate = executeCommand(call, createContext(unitData), env);
             if (shouldActivate && !activeData) {
-                delete inactiveData[unitId];
-                data[unitId] = unitData;
+                inactiveData.delete(unitId);
+                data.set(unitId, unitData);
                 unitData.sleepUntil = 0;
             }
         },
@@ -227,7 +195,10 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
         },
 
         getDebugEntry(unitId) {
-            return { active: data[unitId], inactive: inactiveData[unitId] };
+            return { active: data.get(unitId), inactive: inactiveData.get(unitId) };
         },
     };
+
+    systems[name] = system;
+    return system;
 }

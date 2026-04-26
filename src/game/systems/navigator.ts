@@ -1,7 +1,7 @@
-import { pick } from '@/lib/random';
 import { extractTyped } from '../program/utils';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
+import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 import {
@@ -16,7 +16,10 @@ export type NavigatorSystemData = {
     currentRoute: NodeId[];
 };
 
-type NavigatorDeps = Pick<GameWorld, 'surface' | 'nav'>;
+type NavigatorDeps = {
+    world: Pick<GameWorld, 'surface' | 'nav'>;
+    positions: PositionalSystemController;
+};
 
 export const NAVIGATOR_SYSTEM_NAME = 'navigator';
 
@@ -37,9 +40,9 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: ['to'],
         argTypes: ['position'],
         returnType: 'flag',
-        init(args, ctx, _, { nav }) {
+        init(args, ctx, _, { world: { nav }, positions }) {
             const to = extractTyped(args, 'to', 'position')!.value;
-            const route = nav.findPath(ctx.state.location, to) as NodeId[];
+            const route = nav.findPath(positions.getEffectivePosition(ctx.unitId), to) as NodeId[];
 
             returnToCpu(ctx, { type: 'flag', value: route.length > 0 });
             if (!route.length) {
@@ -84,13 +87,13 @@ export function createNavigatorSystem(options: CreateUnitSystemCommonOptions, de
             ...callableUnitSystemHandlers(deps, NAVIGATOR_FNS),
         },
 
-        initialData: (config, state) => {
+        initialData: ({ config, at }) => {
             if (!config.navigator) {
                 return null;
             }
 
             return {
-                home: state.location,
+                home: at,
                 currentRoute: [],
             };
         },

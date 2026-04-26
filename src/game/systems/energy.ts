@@ -29,7 +29,7 @@ export function createEnergySystem(opts: CreateUnitSystemCommonOptions) {
 
     const system = createUnitSystem<EnergySystemData, {}>(opts, {
         name: 'energy',
-        initialData(config, state, unitId) {
+        initialData({ config }) {
             if (!config.battery) {
                 return null;
             }

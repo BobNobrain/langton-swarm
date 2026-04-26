@@ -1,6 +1,5 @@
 import type { Vector3 } from 'three';
 import type { ID } from '@/lib/ids';
-import type { NavMesh } from '@/lib/NavMesh';
 import type { BsmlValue, BsmlValueType } from './program/value';
 
 export type NodeId = ID<number, 'NodeId'>;
@@ -36,10 +35,6 @@ export type UnitCommandArg = {
 export type UnitCommandCall = {
     name: string;
     args: BsmlValue[];
-};
-
-export type UnitState = {
-    location: NodeId;
 };
 
 export type CreateGameProgress = {

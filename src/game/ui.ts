@@ -61,7 +61,7 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
 
             rSetSelectedTile(value);
             if (selectUnits) {
-                rSetSelectedUnits(value === null ? [] : units.findByLocation(value));
+                rSetSelectedUnits(value === null ? [] : units.positions.findAtPosition(value, { strict: false }));
             }
         },
         hoverTile: rSetHoveredTile,

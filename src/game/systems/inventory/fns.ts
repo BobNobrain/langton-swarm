@@ -10,9 +10,9 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_, ctx, env, { inventories, stationaries, spawn }) {
+        init(_, ctx, env, { inventories, stationaries, spawn, positions }) {
             const inv = ctx.systemData;
-            const loc = ctx.state.location;
+            const loc = positions.getEffectivePosition(ctx.unitId);
 
             let target = stationaries.getAt(loc);
             if (target === ctx.unitId) {
@@ -44,9 +44,8 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
         argNames: [],
         argTypes: [],
         returnType: 'number',
-        init(args, ctx, env, { inventories, stationaries }) {
-            const inv = ctx.systemData;
-            const loc = ctx.state.location;
+        init(args, ctx, env, { inventories, stationaries, positions }) {
+            const loc = positions.getEffectivePosition(ctx.unitId);
 
             let pickupFrom = stationaries.getAt(loc);
             if (pickupFrom === ctx.unitId) {

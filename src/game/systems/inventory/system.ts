@@ -1,18 +1,19 @@
-import { isPile } from '@/game/config';
-import type { Stationaries } from '../stationaries';
-import { createUnitSystem, type UnitSystem } from '../systems';
-import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn } from '../types';
+import { isPile, getStorageCapacity } from '@/game/config';
+import type { PositionalSystemController } from '../positions';
+import type { StationariesSystemController } from '../stationaries';
+import { createUnitSystem } from '../systems';
+import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn, UnitSystem } from '../types';
 import { callableUnitSystemHandlers, type CallableUnitSystemMessages } from '../utils';
 import { INVENTORY_FNS } from './fns';
 import type { InventoryController, InventoryData, InventoryDeps } from './types';
 import { measure, transferAsMuchAsPossible, transferEverything } from './utils';
-import { getStorageCapacity } from '@/game/config/storage';
 
 export const INVENTORY_SYSTEM_NAME = 'storage';
 
 export function createInventorySystem(
     options: CreateUnitSystemCommonOptions,
-    stationaries: Stationaries,
+    stationaries: StationariesSystemController,
+    positions: PositionalSystemController,
     spawn: SpawnFn,
     despawn: DespawnFn,
 ) {
@@ -93,12 +94,12 @@ export function createInventorySystem(
         name: INVENTORY_SYSTEM_NAME,
         messages: {
             ...callableUnitSystemHandlers<InventoryData, InventoryDeps>(
-                { stationaries, inventories: controller, spawn },
+                { stationaries, inventories: controller, spawn, positions },
                 INVENTORY_FNS,
             ),
         },
 
-        initialData: (config, state) => {
+        initialData: ({ config }) => {
             if (!config.storage) {
                 return null;
             }

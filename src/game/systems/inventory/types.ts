@@ -1,5 +1,6 @@
 import type { UnitId } from '@/game/types';
-import type { Stationaries } from '../stationaries';
+import type { PositionalSystemController } from '../positions';
+import type { StationariesSystemController } from '../stationaries';
 import type { SpawnFn } from '../types';
 
 export type InventoryData = {
@@ -25,7 +26,8 @@ export type InventoryController = {
 };
 
 export type InventoryDeps = {
-    stationaries: Stationaries;
+    stationaries: StationariesSystemController;
     inventories: InventoryController;
+    positions: PositionalSystemController;
     spawn: SpawnFn;
 };

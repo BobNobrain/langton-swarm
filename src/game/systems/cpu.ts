@@ -4,7 +4,7 @@ import { parser } from '../program/bsml';
 import { compile, type CompiledProgram } from '../program/compile';
 import { parseProgram } from '../program/parser';
 import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderValue } from '../program/utils';
-import type { BsmlValue, BsmlValueType } from '../program/value';
+import type { BsmlValue } from '../program/value';
 import type { UnitCommand } from '../types';
 import type { EnergySystemController } from './energy';
 import { createUnitSystem } from './systems';
@@ -53,7 +53,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
             },
         },
 
-        initialData(config, state) {
+        initialData({ config }) {
             const source = config.cpu;
             if (typeof source !== 'string') {
                 return null;
@@ -65,8 +65,6 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
             if (!compiled) {
                 throw new Error('TODO');
             }
-
-            console.log(compiled);
 
             return {
                 program: compiled,
@@ -234,16 +232,6 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
             return true;
         },
     });
-
-    // battery.drained.subToAll(({ unitId }) => {
-    //     const cpu = system.getData(unitId);
-    //     if (!cpu) {
-    //         return;
-    //     }
-
-    //     setState(cpu, cpu.program.defaultState);
-    //     system.deactivate(unitId);
-    // });
 
     battery.recharged.subToAll(({ unitId }) => {
         const cpu = system.getData(unitId);

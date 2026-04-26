@@ -9,25 +9,27 @@ import {
     type BufferGeometry,
     type Material,
 } from 'three';
-import type { NodeId, SurfaceNode } from '@/game';
+import type { NodeId, SurfaceNode, DynamicLocation } from '@/game';
 import { MouseButton } from '@/lib/input';
 import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
 import { useInScene } from '../hooks/useInScene';
+import { useGame } from '@/gameContext';
 
 type GridObjectState = {
     objectId: string;
-    location: number;
+    lastSetLocation: unknown;
+    /** Used for rotation: 'auto' of moving units */
+    comingFrom: NodeId | null;
     targetPos: Vector3;
     sourcePos: Vector3;
     interpolationStarted: number;
     isDirty: boolean;
 };
 
-const INTERPOLATION_TIME = 200;
 const DEFAULT_MAX_COUNT = 1000;
 
 export type GridObjectData = {
-    location: NodeId;
+    location: NodeId | { from: NodeId; to: NodeId; progress: number };
     positioning?: GridObjectPositioning;
 };
 
@@ -50,6 +52,8 @@ export const GridObjects: Component<{
     maxCount?: number;
     onClick?: (index: number) => void;
 }> = (props) => {
+    const { gameTick } = useGame();
+
     const mesh = createMemo(() => {
         const instanced = new InstancedMesh(props.geom, props.material, props.maxCount ?? DEFAULT_MAX_COUNT);
         instanced.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -86,20 +90,32 @@ export const GridObjects: Component<{
 
         for (const objectId of objectIds) {
             const { location } = objects[objectId];
-            if (hiddenNodes && hiddenNodes.has(location)) {
+            const effectiveLocation =
+                typeof location === 'number' ? location : location.progress < 0.5 ? location.from : location.to;
+
+            if (hiddenNodes && hiddenNodes.has(effectiveLocation)) {
                 continue;
             }
 
             const stateIndex: number | undefined = stateIndexByObjectId[objectId];
+            const targetPos =
+                typeof location === 'number'
+                    ? grid[location].position
+                    : new Vector3().lerpVectors(
+                          grid[location.from].position,
+                          grid[location.to].position,
+                          location.progress,
+                      );
 
             if (stateIndex === undefined) {
                 // this is a new object, we should create a state for it
                 const newStateIndex = states.length;
                 states.push({
                     objectId,
-                    location,
-                    targetPos: grid[location].position,
-                    sourcePos: grid[location].position,
+                    lastSetLocation: location,
+                    targetPos: targetPos,
+                    sourcePos: targetPos,
+                    comingFrom: null,
                     interpolationStarted: -1,
                     isDirty: true,
                 });
@@ -112,17 +128,21 @@ export const GridObjects: Component<{
             // this state already exists and should be appropriately updated
             obsoleteObjectIds.delete(objectId);
 
-            if (location === state.location) {
+            if (location === state.lastSetLocation) {
                 // the state hasn't changed
                 continue;
             }
 
             // set interpolation params
-            state.location = location;
+            state.lastSetLocation = location;
             state.sourcePos = state.targetPos;
-            state.targetPos = grid[location].position;
+            state.targetPos = targetPos;
             state.interpolationStarted = time;
             state.isDirty = true;
+
+            if (typeof location !== 'number' && location.from !== location.to) {
+                state.comingFrom = location.from;
+            }
         }
 
         // removing the states that are no longer required
@@ -146,6 +166,7 @@ export const GridObjects: Component<{
         const N = Math.min(states.length, props.maxCount ?? DEFAULT_MAX_COUNT);
         const dummy = new Object3D();
         const up = new Vector3(0, 1, 0);
+        const grid = props.grid;
 
         let needsUpdate = false;
 
@@ -171,7 +192,7 @@ export const GridObjects: Component<{
             const interpolationCoeff =
                 state.interpolationStarted === -1
                     ? 1
-                    : Math.max(0, Math.min((time - state.interpolationStarted) / INTERPOLATION_TIME, 1));
+                    : Math.max(0, Math.min((time - state.interpolationStarted) / gameTick.tickDurationMs, 1));
 
             if (interpolationCoeff === 1) {
                 state.isDirty = false;
@@ -187,9 +208,10 @@ export const GridObjects: Component<{
             const rotation = new Quaternion();
 
             if (positioning.rotation === 'auto') {
-                const targetForward = state.targetPos.clone().sub(state.sourcePos).normalize();
+                const sourcePos = state.comingFrom === null ? state.sourcePos : grid[state.comingFrom].position;
+                const targetForward = state.targetPos.clone().sub(sourcePos).normalize();
 
-                if (targetForward.lengthSq() > 0.999) {
+                if (targetForward.lengthSq() > 0.9) {
                     const targetUp = currentPos.clone().normalize();
                     const targetRight = new Vector3().crossVectors(targetUp, targetForward).normalize();
                     targetForward.crossVectors(targetRight, targetUp).normalize();

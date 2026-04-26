@@ -3,6 +3,7 @@ import type { NodeId, ResourceDeposit, SurfaceNode } from '../types';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
+import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 import {
@@ -16,6 +17,7 @@ type ScannerDeps = {
     world: Pick<GameWorld, 'resources' | 'mineResource' | 'surface'>;
     inventory: InventoryController;
     battery: EnergySystemController;
+    positions: PositionalSystemController;
 };
 
 export type ScannerData = {
@@ -36,12 +38,12 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: ['distance'],
         argTypes: ['number'],
         returnType: 'flag',
-        init(args, ctx, _, { world, battery }) {
+        init(args, ctx, _, { world, battery, positions }) {
             const scanner = ctx.systemData;
             const radius = extractTyped(args, 'distance', 'number')!;
 
             scan(
-                ctx.state.location,
+                positions.getEffectivePosition(ctx.unitId),
                 Math.min(radius.value, scanner.maxRadius),
                 world.surface,
                 world.resources,
@@ -72,17 +74,23 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_args, ctx, _env, { world, battery }) {
+        init(_args, ctx, _env, { world, battery, positions }) {
             const scanner = ctx.systemData;
 
-            scan(ctx.state.location, scanner.maxRadius, world.surface, world.resources, (dep, loc, d) => {
-                if (!battery.withdraw(ctx.unitId, 2)) {
-                    return false;
-                }
+            scan(
+                positions.getEffectivePosition(ctx.unitId),
+                scanner.maxRadius,
+                world.surface,
+                world.resources,
+                (dep, loc, d) => {
+                    if (!battery.withdraw(ctx.unitId, 2)) {
+                        return false;
+                    }
 
-                scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
-                return false;
-            });
+                    scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
+                    return false;
+                },
+            );
 
             returnToCpu(
                 ctx,
@@ -99,8 +107,11 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx) {
-            returnToCpu(ctx, { type: 'position', value: ctx.systemData.found?.location ?? ctx.state.location });
+        init(_, ctx, _env, { positions }) {
+            returnToCpu(ctx, {
+                type: 'position',
+                value: ctx.systemData.found?.location ?? positions.getEffectivePosition(ctx.unitId),
+            });
             return false;
         },
     },
@@ -109,12 +120,13 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
 export function createScannerSystem(
     opts: CreateUnitSystemCommonOptions,
     world: ScannerDeps['world'],
+    positions: PositionalSystemController,
     inventory: InventoryController,
     battery: EnergySystemController,
 ) {
     return createUnitSystem<ScannerData, CallableUnitSystemMessages>(opts, {
         name: SCANNER_SYSTEM_NAME,
-        initialData(config, state, unitId) {
+        initialData({ config }) {
             if (!config.scanner) {
                 return null;
             }
@@ -123,7 +135,10 @@ export function createScannerSystem(
         },
 
         messages: {
-            ...callableUnitSystemHandlers<ScannerData, ScannerDeps>({ world, inventory, battery }, SCANNER_FNS),
+            ...callableUnitSystemHandlers<ScannerData, ScannerDeps>(
+                { world, inventory, battery, positions },
+                SCANNER_FNS,
+            ),
         },
     });
 }

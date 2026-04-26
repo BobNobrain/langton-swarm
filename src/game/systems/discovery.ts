@@ -1,6 +1,7 @@
 import { getDiscoveryRange, isStationary } from '../config';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
+import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 
@@ -9,15 +10,19 @@ type DiscoverySystemData = {
     lastPosition: number;
 };
 
-export function createDiscoverySystem(opts: CreateUnitSystemCommonOptions, world: GameWorld) {
+export function createDiscoverySystem(
+    opts: CreateUnitSystemCommonOptions,
+    world: GameWorld,
+    positions: PositionalSystemController,
+) {
     return createUnitSystem<DiscoverySystemData, {}>(opts, {
         name: 'discovery',
 
-        initialData(config, state, unitId) {
+        initialData({ config, at }) {
             // TODO: check "faction"
 
             const range = getDiscoveryRange(config);
-            discover(world, state.location, range);
+            discover(world, at, range);
 
             if (isStationary(config)) {
                 return null;
@@ -26,15 +31,17 @@ export function createDiscoverySystem(opts: CreateUnitSystemCommonOptions, world
             return { range, lastPosition: -1 };
         },
 
+        // TODO: events-based discovery?
         tick(ctx, env) {
             const discovery = ctx.systemData;
+            const pos = positions.getEffectivePosition(ctx.unitId);
 
-            if (ctx.state.location === discovery.lastPosition) {
+            if (pos === discovery.lastPosition) {
                 return;
             }
 
-            discover(world, ctx.state.location, discovery.range);
-            discovery.lastPosition = ctx.state.location;
+            discover(world, pos, discovery.range);
+            discovery.lastPosition = pos;
         },
     });
 }

@@ -2,12 +2,16 @@ import { isStationary } from '../config';
 import { NodeId, type UnitId } from '../types';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
+import { createScheduler } from './utils';
 
-type StationaryData = boolean; // is a valid unit
+type StationaryData = NodeId; // position
+const STATIONARIES_SYSTEM_NAME = 'stationaries';
 
-export type Stationaries = {
+export type StationariesSystemController = {
     getAt(location: NodeId): UnitId | null;
 };
+
+const schedule = createScheduler<StationaryData>(STATIONARIES_SYSTEM_NAME);
 
 export function createStationariesSystem(
     opts: CreateUnitSystemCommonOptions,
@@ -16,45 +20,46 @@ export function createStationariesSystem(
     const stationaries = new Map<NodeId, UnitId>();
 
     const system = createUnitSystem<StationaryData, {}>(opts, {
-        name: 'stationaries',
-        initialData(config, state, unitId) {
+        name: STATIONARIES_SYSTEM_NAME,
+        initialData({ config, at }, unitId) {
             if (!isStationary(config)) {
                 return null;
             }
 
-            if (stationaries.has(state.location)) {
+            if (stationaries.has(at)) {
                 // this location is already taken by another stationary object
-                return false;
+                schedule(
+                    { unitId, sendMessage: opts.sendMessage },
+                    (ctx) => {
+                        despawn(ctx.unitId);
+                    },
+                    0,
+                );
+                return null;
             }
 
-            stationaries.set(state.location, unitId);
-            return true;
+            stationaries.set(at, unitId);
+            return at;
         },
-        tick(ctx, _) {
-            const isValid = ctx.systemData;
 
-            if (!isValid) {
-                despawn(ctx.unitId);
-            }
-
-            ctx.sleep();
-        },
         finalize(ctx, env) {
             const isValid = ctx.systemData;
             if (!isValid) {
                 return;
             }
 
-            const unitId = stationaries.get(ctx.state.location);
+            const position = ctx.systemData;
+
+            const unitId = stationaries.get(position);
             if (unitId !== ctx.unitId) {
                 return;
             }
 
-            stationaries.delete(ctx.state.location);
+            stationaries.delete(position);
         },
     });
 
-    const controller: Stationaries = {
+    const controller: StationariesSystemController = {
         getAt(location) {
             return stationaries.get(location) ?? null;
         },

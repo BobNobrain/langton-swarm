@@ -29,7 +29,8 @@ export function createUnitTracker(unitId: () => UnitId | null): UnitStatusTracke
     const [rLocation, rSetLocation] = createSignal<NodeId | null>(null);
 
     onTickConditional(unitId, (uid) => () => {
-        rSetLocation(units.unitStates[uid]?.location ?? null);
+        const pos = units.positions.getEffectivePosition(uid);
+        rSetLocation(pos === -1 ? null : pos);
 
         const cpu = units.cpu.getData(uid);
         rSetStateName(renderStateName(cpu?.state));
