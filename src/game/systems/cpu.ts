@@ -21,7 +21,10 @@ export type CPUData = {
     ptr: number;
     stack: BsmlValue[];
     variables: Record<string, BsmlValue>;
-    isWaitingForReturn: boolean;
+    waitingForReturn: null | {
+        system: string;
+        ignoreResult: boolean;
+    };
 
     lastUpdated: number;
 };
@@ -38,15 +41,16 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
         messages: {
             return: {
                 handler(payload, ctx, env) {
-                    if (!ctx.systemData.isWaitingForReturn) {
+                    const cpu = ctx.systemData;
+                    if (!cpu.waitingForReturn) {
                         return false;
                     }
 
-                    if (payload.value) {
+                    if (payload.value && !cpu.waitingForReturn.ignoreResult) {
                         ctx.systemData.stack.push(payload.value);
                     }
 
-                    ctx.systemData.isWaitingForReturn = false;
+                    ctx.systemData.waitingForReturn = null;
 
                     return true;
                 },
@@ -76,7 +80,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 ptr: 0,
                 stack: [],
                 variables: {},
-                isWaitingForReturn: false,
+                waitingForReturn: null,
 
                 lastUpdated: 0,
             };
@@ -135,7 +139,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                     }
 
                     const [system, fn] = instruction.fname.split('.');
-                    cpu.isWaitingForReturn = true;
+                    cpu.waitingForReturn = { system, ignoreResult: false };
                     ctx.sleep();
                     fcall(ctx, system, { fname: fn, argv });
                     break;
@@ -266,7 +270,9 @@ function setState(cpu: CPUData, state: string) {
     cpu.variables = {};
     cpu.stack = [];
     cpu.ptr = 0;
-    cpu.isWaitingForReturn = false;
+    if (cpu.waitingForReturn) {
+        cpu.waitingForReturn.ignoreResult = true;
+    }
 }
 
 function popStack(cpu: CPUData, n = 1): BsmlValue[] {

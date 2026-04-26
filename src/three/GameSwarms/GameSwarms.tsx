@@ -16,7 +16,6 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
 
     gameTick.addGameTask((tick) => {
         const idsToDelete = new Set(Object.keys(objects));
-        // const tick = gameTick.getCurrentTick();
 
         for (const unitId of props.unitIds) {
             const state = units.positions.getFullPosition(unitId);

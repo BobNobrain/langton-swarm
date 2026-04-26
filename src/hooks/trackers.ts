@@ -93,7 +93,7 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
     const [rCpuStack, setCpuStack] = createSignal<BsmlValue[]>([]);
     const [rCpuPtr, setCpuPtr] = createSignal(0);
     const [rStateName, setStateName] = createSignal<string | null>(null);
-    const [rCpuIsWaiting, setCpuIsWaiting] = createSignal(false);
+    const [rCpuIsWaiting, setCpuIsWaiting] = createSignal('--');
 
     let unitIdForProgram: UnitId | null = null;
     const [rCpuProgram, setCpuProgram] = createSignal<CompiledProgram | null>(null);
@@ -107,7 +107,7 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
                 setCpuPtr(0);
                 setStateName(null);
                 setCpuProgram(null);
-                setCpuIsWaiting(false);
+                setCpuIsWaiting('--');
             }
 
             return;
@@ -124,7 +124,7 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
         setCpuStack(cpu.stack.slice());
         setCpuPtr(cpu.ptr >= cpu.program.stateInstructions[cpu.state].length ? 0 : cpu.ptr);
         setStateName(cpu.state);
-        setCpuIsWaiting(cpu.isWaitingForReturn);
+        setCpuIsWaiting(cpu.waitingForReturn?.system ?? '--');
         lastUpdated = cpu.lastUpdated;
     });
 

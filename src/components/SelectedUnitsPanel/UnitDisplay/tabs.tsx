@@ -33,7 +33,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
         <>
             <DefList>
                 <DefListItem name="State">{renderStateName(rStateName())}</DefListItem>
-                <DefListItem name="Waiting">{rCpuIsWaiting() ? 'yes' : 'no'}</DefListItem>
+                <DefListItem name="Waiting">{rCpuIsWaiting()}</DefListItem>
                 <DefListItem name="Instruction">
                     <Show when={currentInstruction()} fallback="--">
                         <DebuggerInstruction instruction={currentInstruction()!} />

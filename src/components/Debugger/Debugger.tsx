@@ -35,7 +35,7 @@ export const Debugger: Component<{
                 <Heading size="sm">Debugger</Heading>
                 <DefList>
                     <DefListItem name="State">{renderStateName(rStateName())}</DefListItem>
-                    <DefListItem name="Status">{rCpuIsWaiting() ? 'WAITING' : 'RUNNING'}</DefListItem>
+                    <DefListItem name="Waiting for">{rCpuIsWaiting()}</DefListItem>
                 </DefList>
             </header>
             <List class={styles.instructions} hasBorder>
