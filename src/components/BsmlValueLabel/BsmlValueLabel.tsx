@@ -43,8 +43,9 @@ export const BsmlValueLabel: Component<{ value: BsmlValue | null }> = (props) =>
             case 'state':
                 return <span class={styles.state}>{rendered}</span>;
 
-            case 'magic':
-                return <span class={styles.magic}>{rendered}</span>;
+            case 'inventory':
+                // TODO: just render the inventory content?
+                return <span class={styles.inventory}>{rendered}</span>;
 
             case 'null':
                 return <span class={styles.null}>{rendered}</span>;

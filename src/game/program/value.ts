@@ -1,4 +1,5 @@
 import type { BlueprintId } from '../deck';
+import type { InventoryDelta } from '../inventory';
 import type { NodeId } from '../types';
 
 export type BsmlValue =
@@ -7,7 +8,7 @@ export type BsmlValue =
     | { type: 'flag'; value: boolean }
     | { type: 'position'; value: NodeId }
     | { type: 'string'; value: string }
-    | { type: 'magic'; name: string }
+    | { type: 'inventory'; value: InventoryDelta }
     | { type: 'blueprint'; value: BlueprintId }
     | { type: 'state'; value: string };
 

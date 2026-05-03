@@ -81,7 +81,7 @@ export function typecheckValues(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTyp
         }
 
         const actual = values[i].type;
-        if (expected !== actual && actual !== 'magic') {
+        if (expected !== actual) {
             return `mismatching types: expected ${expected}, got ${actual}`;
         }
     }

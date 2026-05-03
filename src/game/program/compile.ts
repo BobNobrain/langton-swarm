@@ -12,11 +12,13 @@ export type CompiledInstruction =
     | { type: 'binop'; operator: string }
     | { type: 'unop'; operator: string }
     | { type: 'setstate'; nargs: number }
+    | { type: 'jump'; position: number }
     | { type: 'jumpz'; position: number };
 
 export type CompiledProgram = {
     stateInstructions: Record<string, CompiledInstruction[]>;
     defaultState: string;
+    stateArgNames: Record<string, string[]>;
     sourcemap: Record<string, CodePosition[]>;
 };
 
@@ -27,6 +29,7 @@ export function compile(program: BsmlProgram): CompiledProgram | null {
             error: [],
         },
         defaultState: 'idle',
+        stateArgNames: {},
         sourcemap: {
             idle: [],
             error: [],
@@ -39,6 +42,7 @@ export function compile(program: BsmlProgram): CompiledProgram | null {
         }
 
         result.stateInstructions[stateDecl.name] = [];
+        result.stateArgNames[stateDecl.name] = stateDecl.args.map((arg) => arg.name);
         compileCommands(stateDecl.body, result.stateInstructions[stateDecl.name]);
     }
 
@@ -88,6 +92,44 @@ function compileCommands(cmds: BsmlInstruction[], result: CompiledInstruction[])
                 result.push({ type: 'pop' }); // this call is a command, meaning its result should be ignored
                 break;
 
+            case 'while': {
+                if (cmd.isPostfix) {
+                    // loop { body } while condition
+                    const jumpzToExit = { type: 'jumpz', position: -1 } satisfies CompiledInstruction;
+                    const jumpToStart: CompiledInstruction = { type: 'jump', position: result.length };
+
+                    compileCommands(cmd.body, result);
+
+                    if (cmd.condition) {
+                        compileExpression(cmd.condition, result);
+                        result.push(jumpzToExit);
+                    }
+
+                    result.push(jumpToStart);
+                    jumpzToExit.position = result.length;
+                } else {
+                    // loop while condition { body }
+                    const jumpzToExit = { type: 'jumpz', position: -1 } satisfies CompiledInstruction;
+                    const jumpToStart: CompiledInstruction = { type: 'jump', position: result.length };
+
+                    if (cmd.condition) {
+                        compileExpression(cmd.condition, result);
+                        result.push(jumpzToExit);
+                    }
+
+                    compileCommands(cmd.body, result);
+                    result.push(jumpToStart);
+
+                    jumpzToExit.position = result.length;
+                }
+
+                break;
+            }
+
+            case 'control':
+                // TODO: somehow implement break/continue jumps
+                throw new Error('not implemented yet');
+
             default:
                 return absurd(cmd);
         }
@@ -113,17 +155,7 @@ function compileExpression(expr: BsmlExpression, into: CompiledInstruction[]) {
             break;
 
         case 'ident':
-            switch (expr.identifier) {
-                case 'random':
-                case 'zero':
-                    into.push({ type: 'push', value: { type: 'magic', name: expr.identifier } });
-                    break;
-
-                default:
-                    into.push({ type: 'read', name: expr.identifier });
-                    break;
-            }
-
+            into.push({ type: 'read', name: expr.identifier });
             break;
 
         case 'call':

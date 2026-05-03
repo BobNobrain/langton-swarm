@@ -36,6 +36,8 @@ export type BsmlInstruction = { pos: CodePosition } & (
     | BsmlAssignmentInstruction
     | BsmlFunctionCall
     | BsmlConditonalInstruction
+    | BsmlWhileLoopInstruction
+    | BsmlControlInstruction
 );
 export type BsmlSetStateInstruction = {
     type: 'set_state';
@@ -51,6 +53,16 @@ export type BsmlConditonalInstruction = {
     type: 'branch';
     condition: BsmlExpression;
     body: BsmlInstruction[];
+};
+export type BsmlWhileLoopInstruction = {
+    type: 'while';
+    condition: BsmlExpression | null;
+    isPostfix: boolean;
+    body: BsmlInstruction[];
+};
+export type BsmlControlInstruction = {
+    type: 'control';
+    operator: string;
 };
 
 export type BsmlExpression = { pos: CodePosition } & (

@@ -1,3 +1,5 @@
+import type { KnownResourceName } from './resources';
+
 export type InventoryDelta = {
     readonly content: {
         readonly [key in string]: number;
@@ -9,6 +11,8 @@ export type InventoryDelta = {
     get(this: InventoryDelta, resource: string): number;
     set(this: InventoryDelta, resource: string, amount: number): void;
     alter(this: InventoryDelta, resource: string, delta: number): void;
+
+    toShortString(): string;
 };
 
 export namespace InventoryDelta {
@@ -38,6 +42,68 @@ export namespace InventoryDelta {
         for (const [resource, amount] of Object.entries(delta2.content)) {
             result.set(resource, amount);
         }
+        return result;
+    }
+
+    export function areEqual(delta1: InventoryDelta, delta2: InventoryDelta): boolean {
+        if (delta1.size !== delta2.size) {
+            return false;
+        }
+
+        const rs1 = Object.keys(delta1.content);
+        const rs2 = Object.keys(delta2.content);
+        if (rs1.length !== rs2.length) {
+            return false;
+        }
+
+        for (const resource of rs1) {
+            if ((delta1.content[resource] ?? 0) !== (delta2.content[resource] ?? 0)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    export function compare(delta1: InventoryDelta, delta2: InventoryDelta): '>' | '=' | '<' | '?' {
+        const rs1 = Object.keys(delta1.content);
+        const rs2 = Object.keys(delta2.content);
+
+        let gt = false;
+        let lt = false;
+
+        for (const resource of rs1) {
+            const amt1 = delta1.content[resource] ?? 0;
+            const amt2 = delta2.content[resource] ?? 0;
+
+            if (amt1 > amt2) {
+                gt = true;
+                continue;
+            }
+            if (amt1 < amt2) {
+                lt = true;
+                continue;
+            }
+        }
+
+        if (gt && lt) {
+            return '?';
+        }
+        if (!gt && !lt) {
+            return '=';
+        }
+
+        return gt ? '>' : '<';
+    }
+
+    export function multiply(delta: InventoryDelta, scalar: number): InventoryDelta {
+        const result = new InventoryDeltaImpl();
+
+        for (const [resource, amount] of Object.entries(delta.content)) {
+            result.content[resource] = amount * scalar;
+        }
+        result.size *= scalar;
+
         return result;
     }
 }
@@ -85,6 +151,14 @@ export namespace Inventory {
     }
 }
 
+const SHORT_NAMES: Record<KnownResourceName, string> = {
+    electrical: 'Co',
+    structural: 'Ti',
+    energetical: 'Li',
+    combat: '◊',
+    special: '▼',
+};
+
 class InventoryDeltaImpl implements InventoryDelta {
     content: Record<string, number> = {};
     size = 0;
@@ -105,6 +179,16 @@ class InventoryDeltaImpl implements InventoryDelta {
 
     isEmpty(): boolean {
         return !Object.values(this.content).some(Boolean);
+    }
+
+    toShortString(): string {
+        const parts: string[] = [];
+        for (const resource of Object.keys(this.content)) {
+            parts.push(
+                (SHORT_NAMES[resource as never] ?? resource.substring(0, 2)) + this.content[resource].toString(),
+            );
+        }
+        return parts.join(';') ?? '--';
     }
 }
 

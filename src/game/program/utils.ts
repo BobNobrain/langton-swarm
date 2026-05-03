@@ -1,3 +1,4 @@
+import { InventoryDelta } from '../inventory';
 import type { UnitCommand } from '../types';
 import type { BsmlProgram } from './program';
 import type { BsmlValue, BsmlValueType } from './value';
@@ -45,8 +46,8 @@ export function renderValue(val: BsmlValue | null | undefined): string {
         case 'blueprint':
             return `<blueprint:${val.value}>`;
 
-        case 'magic':
-            return `<${val.name}>`;
+        case 'inventory':
+            return `<inventory:${InventoryDelta.fromMany(val.value).toShortString()}>`;
     }
 }
 
@@ -62,19 +63,8 @@ export function extractTyped<T extends BsmlValueType>(
     data: Record<string, BsmlValue>,
     name: string,
     type: T,
-    magic: Record<string, Extract<BsmlValue, { type: T }>> = {},
 ): Extract<BsmlValue, { type: T }> | null {
     const val = data[name];
-
-    if (val.type === 'magic') {
-        const magicValue = magic[val.name];
-        if (!magicValue) {
-            console.error('[WARN] extract typed: could not resolve magic value ' + val.name);
-            return null;
-        }
-
-        return magicValue;
-    }
 
     if (!val || val.type !== type) {
         return null;

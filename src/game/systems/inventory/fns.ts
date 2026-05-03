@@ -3,6 +3,7 @@ import { returnToCpu, type CallableUnitSystemFunctions } from '../utils';
 import type { InventoryData, InventoryDeps } from './types';
 import { measure } from './utils';
 import { NO_FACTION } from '@/game/factions';
+import { InventoryDelta } from '@/game/inventory';
 
 export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, InventoryDeps> = {
     unload_all: {
@@ -115,6 +116,18 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
         init(_, ctx) {
             const inv = ctx.systemData;
             returnToCpu(ctx, { type: 'flag', value: inv.size === inv.capacity });
+            return false;
+        },
+    },
+
+    content: {
+        description: "Returns inventory content of unit's storage",
+        argNames: [],
+        argTypes: [],
+        returnType: 'inventory',
+        init(_, ctx) {
+            const inv = ctx.systemData;
+            returnToCpu(ctx, { type: 'inventory', value: InventoryDelta.fromMany(inv.contents) });
             return false;
         },
     },

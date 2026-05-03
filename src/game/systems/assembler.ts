@@ -1,11 +1,14 @@
 import { getAssemblerSpeed, getConstructionCosts, getConstructionTime, type UnitConfiguration } from '../config';
 import type { BlueprintDeck, BlueprintId } from '../deck';
+import { InventoryDelta } from '../inventory';
+import { extractTyped } from '../program/utils';
 import type { UnitEnvironment, UnitId } from '../types';
 import { createUnitEvent, type UnitEvent } from './events';
 import type { InventoryController } from './inventory';
 import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions, SpawnFn, UnitSystemTickContext } from './types';
+import { callableUnitSystemHandlers, returnToCpu, type CallableUnitSystemFunctions } from './utils';
 
 export type AssemblerData = {
     readonly speed: number;
@@ -36,6 +39,34 @@ export type AssemblerSystemController = {
 
 export const ASSEMBLER_SYSTEM_NAME = 'assembler';
 
+export const ASSEMBLER_FNS: CallableUnitSystemFunctions<
+    AssemblerData,
+    {
+        deck: BlueprintDeck;
+    }
+> = {
+    get_costs: {
+        description: 'Returns amounts of materials needed to assemble specified blueprint',
+        argNames: ['blueprint'],
+        argTypes: ['blueprint'],
+        returnType: 'inventory',
+        init(args, ctx, _, { deck }) {
+            const blueprintId = extractTyped(args, 'blueprint', 'blueprint');
+            const blueprint = blueprintId ? deck.getBlueprint(blueprintId.value) : null;
+            let result: InventoryDelta | null = null;
+
+            if (blueprint) {
+                const config = blueprint.rLastVersion().config;
+                const costs = getConstructionCosts(config);
+                result = InventoryDelta.fromMany(costs);
+            }
+
+            returnToCpu(ctx, { type: 'inventory', value: result ?? InventoryDelta.empty() });
+            return false;
+        },
+    },
+};
+
 export function createAssemblerSystem(
     opts: CreateUnitSystemCommonOptions,
     spawn: SpawnFn,
@@ -51,6 +82,10 @@ export function createAssemblerSystem(
             }
 
             return { speed: getAssemblerSpeed(config), spawnQueue: [], currentSpawn: null, lastUpdated: 0 };
+        },
+
+        messages: {
+            ...callableUnitSystemHandlers({ deck }, ASSEMBLER_FNS),
         },
 
         tick(ctx, env) {

@@ -228,7 +228,7 @@ export const inputsByType: Record<BsmlValueType, Component<ArgInputProps>> = {
 
     // these cannot be set
     state: UnknownTypeInput,
-    magic: UnknownTypeInput,
+    inventory: UnknownTypeInput, // TBD?
     null: UnknownTypeInput,
 };
 

@@ -9,6 +9,7 @@ import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 import {
+    bfsSleepTime,
     callableUnitSystemHandlers,
     returnToCpu,
     type CallableUnitSystemFunctions,
@@ -48,7 +49,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
 
             while (!bfs.isDone()) {
                 const next = bfs.nextNodeToVisit();
-                if (scanner.scannedTiles.has(next.node)) {
+                if (!scanner.scannedTiles.has(next.node)) {
                     result = next.node;
                     break;
                 }
@@ -56,7 +57,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: location }, Math.floor(bfs.getVisited().size / 20));
+            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
             return false;
         },
     },
@@ -86,7 +87,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: result }, Math.floor(bfs.getVisited().size / 20));
+            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
             return false;
         },
     },
@@ -98,13 +99,12 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         returnType: 'number',
         init(_args, ctx, _env, { positions, world, battery, markers }) {
             const scanner = ctx.systemData;
-            let nScanned = 0;
             let nFound = 0;
             const location = positions.getEffectivePosition(ctx.unitId);
 
             const bfs = world.nav.bfs(location);
             while (!bfs.isDone() && bfs.nextNodeToVisit().depth <= scanner.maxRadius) {
-                if (!battery.withdraw(ctx.unitId, 2)) {
+                if (!battery.withdraw(ctx.unitId, 1)) {
                     break;
                 }
 
@@ -133,10 +133,11 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                     });
                 }
 
-                ++nScanned;
+                scanner.scannedTiles.add(loc);
+                bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'number', value: nFound }, nScanned * 2);
+            returnToCpu(ctx, { type: 'number', value: nFound }, bfsSleepTime(bfs.getVisited()));
             return false;
         },
     },

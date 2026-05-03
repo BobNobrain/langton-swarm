@@ -24,8 +24,6 @@ type LocalState = {
     variables: Record<string, BsmlValueType | null>;
 };
 
-const MAGIC_IDENTIFIERS = ['random', 'zero'];
-
 export function typecheck(program: BsmlProgram, config: UnitConfiguration | null): TypecheckMessage[] {
     const result: TypecheckMessage[] = [];
     const state: TypecheckState = {
@@ -71,35 +69,32 @@ function typecheckStatementBlock(block: BsmlInstruction[], state: TypecheckState
 function typecheckInstruction(instruction: BsmlInstruction, state: TypecheckState, localState: LocalState) {
     switch (instruction.type) {
         case 'set_state': {
-            const targetExprType = typecheckExpression(instruction.state, state, localState, 'state');
+            const targetExprType = typecheckExpression(instruction.state, state, localState);
             if (targetExprType !== 'state') {
                 state.result.push({
                     pos: instruction.state.pos,
                     message: `A state name is needed to use with "state" command (found ${targetExprType})`,
                 });
             }
-            // TODO: check arg types
+
+            if (instruction.state.type === 'state') {
+                const argTypesExpected = state.stateArgTypes[instruction.state.stateName] ?? [];
+                typecheckArguments(instruction, argTypesExpected, instruction.args, state, localState);
+            } else if (instruction.args.length > 0) {
+                state.result.push({
+                    pos: instruction.state.pos,
+                    message: `To set the state with arguments, you must specify a concrete state name (starting with ':')`,
+                });
+            }
             break;
         }
 
         case 'assign':
-            if (MAGIC_IDENTIFIERS.includes(instruction.variable)) {
-                state.result.push({
-                    pos: instruction.pos,
-                    message: `"${instruction.variable}" is a reserved variable name, you cannot assign it`,
-                });
-            } else {
-                localState.variables[instruction.variable] = typecheckExpression(
-                    instruction.value,
-                    state,
-                    localState,
-                    null,
-                );
-            }
+            localState.variables[instruction.variable] = typecheckExpression(instruction.value, state, localState);
             break;
 
         case 'branch': {
-            const conditionType = typecheckExpression(instruction.condition, state, localState, 'flag');
+            const conditionType = typecheckExpression(instruction.condition, state, localState);
             if (conditionType !== 'flag') {
                 state.result.push({
                     pos: instruction.condition.pos,
@@ -125,35 +120,43 @@ function typecheckFunctionCall(
 ): BsmlValueType | null {
     const fn = state.fns[call.name];
     if (!fn) {
-        state.result.push({ pos: call.pos, message: `Unknown function ${call.name}` });
+        state.result.push({ pos: call.pos, message: `Unknown function "${call.name}"` });
         return null;
     }
 
-    if (fn.argTypes.length !== call.args.length) {
+    typecheckArguments(call, fn.argTypes, call.args, state, localState);
+    return fn.returnType;
+}
+
+function typecheckArguments(
+    fragment: { pos: CodePosition },
+    expected: BsmlValueType[],
+    actual: BsmlExpression[],
+    state: TypecheckState,
+    localState: LocalState,
+): void {
+    if (expected.length !== actual.length) {
         state.result.push({
-            pos: call.pos,
-            message: `Wrong argument count for ${call.name} (expected ${fn.argTypes.length})`,
+            pos: fragment.pos,
+            message: `Wrong argument count: expected ${expected.length}`,
         });
     } else {
-        for (let i = 0; i < call.args.length; i++) {
-            const type = typecheckExpression(call.args[i], state, localState, fn.argTypes[i]);
-            if (type !== fn.argTypes[i]) {
+        for (let i = 0; i < actual.length; i++) {
+            const type = typecheckExpression(actual[i], state, localState);
+            if (type !== expected[i]) {
                 state.result.push({
-                    pos: call.args[i].pos,
-                    message: `Type mismatch: expected ${fn.argTypes[i]}, but found ${type ?? '??'}`,
+                    pos: actual[i].pos,
+                    message: `Type mismatch: expected ${expected[i]}, but found ${type ?? '??'}`,
                 });
             }
         }
     }
-
-    return fn.returnType;
 }
 
 function typecheckExpression(
     expr: BsmlExpression,
     state: TypecheckState,
     localState: LocalState,
-    expectedType: BsmlValueType | null,
 ): BsmlValueType | null {
     switch (expr.type) {
         case 'bool':
@@ -173,19 +176,16 @@ function typecheckExpression(
             return 'state';
 
         case 'ident':
-            if (MAGIC_IDENTIFIERS.includes(expr.identifier)) {
-                return expectedType;
-            }
             return localState.variables[expr.identifier] ?? null;
 
         case 'call':
             return typecheckFunctionCall(expr, state, localState);
 
         case 'unary':
-            return typecheckUnaryExpression(expr, state, localState, expectedType);
+            return typecheckUnaryExpression(expr, state, localState);
 
         case 'binary':
-            return typecheckBinaryExpression(expr, state, localState, expectedType);
+            return typecheckBinaryExpression(expr, state, localState);
     }
 }
 
@@ -193,21 +193,20 @@ function typecheckUnaryExpression(
     expr: Extract<BsmlExpression, { type: 'unary' }>,
     state: TypecheckState,
     localState: LocalState,
-    expectedType: BsmlValueType | null,
 ): BsmlValueType | null {
+    const operandType = typecheckExpression(expr.operand, state, localState);
+
     switch (expr.operator) {
         case 'not':
             return 'flag';
 
+        case 'size_of':
+            checkType(state, expr.operand, operandType, ['inventory']);
+            return 'number';
+
         case '-':
         case '+': {
-            const operandType = typecheckExpression(expr.operand, state, localState, 'number');
-            if (operandType !== 'number') {
-                state.result.push({
-                    pos: expr.operand.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${operandType ?? '??'}`,
-                });
-            }
+            checkType(state, expr.operand, operandType, ['number']);
             return 'number';
         }
 
@@ -220,28 +219,17 @@ function typecheckBinaryExpression(
     expr: Extract<BsmlExpression, { type: 'binary' }>,
     state: TypecheckState,
     localState: LocalState,
-    expectedType: BsmlValueType | null,
 ): BsmlValueType | null {
+    const leftType = typecheckExpression(expr.left, state, localState);
+    const rightType = typecheckExpression(expr.right, state, localState);
+
     switch (expr.operator) {
         case 'and':
         case 'or':
-        case 'xor': {
-            const leftType = typecheckExpression(expr.left, state, localState, 'flag');
-            const rightType = typecheckExpression(expr.right, state, localState, 'flag');
-            if (leftType !== 'flag') {
-                state.result.push({
-                    pos: expr.left.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${leftType ?? '??'}`,
-                });
-            }
-            if (rightType !== 'flag') {
-                state.result.push({
-                    pos: expr.right.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected flag, got ${rightType ?? '??'}`,
-                });
-            }
+        case 'xor':
+            checkType(state, expr.left, leftType, ['flag']);
+            checkType(state, expr.right, rightType, ['flag']);
             return 'flag';
-        }
 
         case '==':
         case '/=':
@@ -250,45 +238,33 @@ function typecheckBinaryExpression(
         case '>':
         case '>=':
         case '<':
-        case '<=': {
-            const leftType = typecheckExpression(expr.left, state, localState, 'number');
-            const rightType = typecheckExpression(expr.right, state, localState, 'number');
-            if (leftType !== 'number') {
-                state.result.push({
-                    pos: expr.left.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${leftType ?? '??'}`,
-                });
-            }
-            if (rightType !== 'number') {
-                state.result.push({
-                    pos: expr.right.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${rightType ?? '??'}`,
-                });
-            }
+        case '<=':
+            checkType(state, expr.left, leftType, ['number', 'inventory']);
+            checkType(state, expr.right, rightType, [leftType ?? 'number']);
             return 'flag';
-        }
 
         case '*':
         case '/':
+            checkType(state, expr.left, leftType, ['number', 'inventory']);
+            checkType(state, expr.right, rightType, ['number', 'inventory']);
+            if (leftType === 'inventory' && rightType === 'inventory') {
+                state.result.push({
+                    pos: expr.pos,
+                    message: `Type mismatch: cannot use two inventories with ${expr.operator} operator (either left or right must be a number)`,
+                });
+            }
+            return leftType === 'inventory' || rightType === 'inventory' ? 'inventory' : 'number';
+
         case '+':
         case '-':
-        case '%': {
-            const leftType = typecheckExpression(expr.left, state, localState, 'number');
-            const rightType = typecheckExpression(expr.right, state, localState, 'number');
-            if (leftType !== 'number') {
-                state.result.push({
-                    pos: expr.left.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${leftType ?? '??'}`,
-                });
-            }
-            if (rightType !== 'number') {
-                state.result.push({
-                    pos: expr.right.pos,
-                    message: `Type mismatch for operator ${expr.operator}: expected number, got ${rightType ?? '??'}`,
-                });
-            }
+            checkType(state, expr.left, leftType, ['number', 'inventory']);
+            checkType(state, expr.right, rightType, [leftType ?? 'number']);
+            return leftType === 'inventory' ? 'inventory' : 'number';
+
+        case '%':
+            checkType(state, expr.left, leftType, ['number']);
+            checkType(state, expr.right, rightType, ['number']);
             return 'number';
-        }
 
         default:
             return null;
@@ -307,4 +283,18 @@ function localStateWithArgs(args: BsmlArgument[]): LocalState {
         state.variables[arg.name] = arg.type as BsmlValueType;
     }
     return state;
+}
+
+function checkType(
+    state: TypecheckState,
+    fragment: { pos: CodePosition },
+    actual: BsmlValueType | null,
+    expected: BsmlValueType[],
+) {
+    if (!expected.includes(actual as never)) {
+        state.result.push({
+            pos: fragment.pos,
+            message: `Type mismatch: expected ${expected.join('/')}, got ${actual ?? '??'}`,
+        });
+    }
 }

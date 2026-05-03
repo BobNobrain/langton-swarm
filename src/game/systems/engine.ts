@@ -1,7 +1,5 @@
-import { pick } from '@/lib/random';
 import { getEnergyPerMove, getTicksPerMove } from '../config';
 import { extractTyped } from '../program/utils';
-import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { PositionalSystemController } from './positions';
@@ -38,13 +36,7 @@ export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
         init(args, ctx, _, { world: { nav }, battery, positions }) {
             const currentPosition = positions.getEffectivePosition(ctx.unitId);
 
-            const to = extractTyped(args, 'to', 'position', {
-                zero: { type: 'position', value: currentPosition },
-                random: {
-                    type: 'position',
-                    value: pick(Math.random, nav.getNeighbours(currentPosition) as NodeId[]),
-                },
-            })!;
+            const to = extractTyped(args, 'to', 'position')!;
 
             const engine = ctx.systemData;
             const destination = to.value;

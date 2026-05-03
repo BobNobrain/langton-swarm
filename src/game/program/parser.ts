@@ -107,7 +107,7 @@ function matchProgram(root: SyntaxNode, state: MatcherState) {
             state.program.eventListeners.push(decl);
 
             matchChildNodes(node, {
-                NestedIdentifier: (node) => {
+                EventName: (node) => {
                     decl.event = state.src(node);
                 },
                 StatementBlock: (node) => {
@@ -142,15 +142,31 @@ function matchStatementBlock(node: SyntaxNode, state: MatcherState): BsmlInstruc
 
     matchChildNodes(node, {
         SetStateCommand: (node) => {
-            const exprNode = node.getChild('Expression');
-            const expr = exprNode ? matchExpression(exprNode, state) : null;
-
             const instruction: Extract<BsmlInstruction, { type: 'set_state' }> = {
                 pos: nodePos(node),
                 type: 'set_state',
-                state: expr ?? { pos: nodePos(node), type: 'state', stateName: 'idle' },
+                state: { pos: nodePos(node), type: 'state', stateName: 'idle' },
                 args: [],
             };
+
+            matchChildNodes(node, {
+                Expression: (node) => {
+                    const stateName = matchExpression(node, state);
+                    if (stateName) {
+                        instruction.state = stateName;
+                    }
+                },
+                ArgumentsList: (node) => {
+                    matchChildNodes(node, {
+                        Expression: (node) => {
+                            const expr = matchExpression(node, state);
+                            if (expr) {
+                                instruction.args.push(expr);
+                            }
+                        },
+                    });
+                },
+            });
 
             into.push(instruction);
         },
@@ -184,6 +200,52 @@ function matchStatementBlock(node: SyntaxNode, state: MatcherState): BsmlInstruc
                 pos: nodePos(node),
                 type: 'branch',
                 condition: { pos: nodePos(node), type: 'bool', value: false },
+                body: [],
+            };
+
+            matchChildNodes(node, {
+                StatementBlock: (node) => {
+                    instruction.body = matchStatementBlock(node, state);
+                },
+                Expression: (node) => {
+                    const expr = matchExpression(node, state);
+                    if (expr) {
+                        instruction.condition = expr;
+                    }
+                },
+            });
+
+            into.push(instruction);
+        },
+        LoopWhilePrefixStatement: (node) => {
+            const instruction: Extract<BsmlInstruction, { type: 'while' }> = {
+                pos: nodePos(node),
+                type: 'while',
+                isPostfix: false,
+                condition: null,
+                body: [],
+            };
+
+            matchChildNodes(node, {
+                Expression: (node) => {
+                    const expr = matchExpression(node, state);
+                    if (expr) {
+                        instruction.condition = expr;
+                    }
+                },
+                StatementBlock: (node) => {
+                    instruction.body = matchStatementBlock(node, state);
+                },
+            });
+
+            into.push(instruction);
+        },
+        LoopWhilePostfixStatement: (node) => {
+            const instruction: Extract<BsmlInstruction, { type: 'while' }> = {
+                pos: nodePos(node),
+                type: 'while',
+                isPostfix: true,
+                condition: null,
                 body: [],
             };
 
@@ -298,7 +360,7 @@ function matchProcCall(node: SyntaxNode, state: MatcherState): BsmlFunctionCall 
         args: [],
     };
     matchChildNodes(node, {
-        NestedIdentifier: (node) => {
+        ProcedureName: (node) => {
             call.name = state.src(node);
         },
         ArgumentsList: (node) => {

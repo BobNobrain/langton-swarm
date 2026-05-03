@@ -41,14 +41,14 @@ state scouting default {
     state :scouting_move
 }
 state scouting_move {
-    when not navigator.has_next {
+    if not navigator.has_next {
         state :scouting
     }
     engine.move(navigator.next_step)
 }
 
 state navigating {
-    when not navigator.has_next {
+    if not navigator.has_next {
         state :idle
     }
     engine.move(navigator.next_step)
@@ -91,21 +91,21 @@ state roaming_start default {
     state :roaming_moving
 }
 state roaming_moving {
-    when not navigator.has_next {
+    if not navigator.has_next {
         state :roaming_start
     }
     engine.move(navigator.next_step)
 }
 
 state navigating {
-    when not navigator.has_next {
+    if not navigator.has_next {
         state :idle
     }
     engine.move(navigator.next_step)
 }
 
 state mining {
-    when storage.get_free_space <= 0 or not drill.probe {
+    if storage.get_free_space <= 0 or not drill.probe {
         state :full
     }
 
@@ -140,13 +140,13 @@ when spawned {
 }
 
 command move(position to) {
-    when navigator.find_route(to) {
+    if navigator.find_route(to) {
         state :navigating
     }
 }
 
 state navigating {
-    when not navigator.has_next {
+    if not navigator.has_next {
         # the destination has been reached
         state :idle
     }
@@ -159,11 +159,11 @@ command mine {
 }
 
 state mining {
-    when storage.is_full {
+    if storage.is_full {
         # cannot mine anymore, no storage space left
         state :idle
     }
-    when not drill.probe {
+    if not drill.probe {
         state :idle
     }
 
@@ -180,7 +180,7 @@ command home {
 }
 
 state returning {
-    when not navigator.has_next {
+    if not navigator.has_next {
         storage.unload_all # transfer what we have to main storage
         engine.move(navigator.random)
         state :idle
@@ -214,12 +214,12 @@ command return {
 
 state roaming default {
     deposit = scanner.closest_surface_deposit
-    when deposit /= navigator.location {
+    if deposit /= navigator.location {
         navigator.find_route(deposit)
         state :navigating
     }
 
-    when storage.get_filled_share > 0 {
+    if storage.get_filled_share > 0 {
         state :find_home
     }
 
@@ -227,7 +227,7 @@ state roaming default {
 }
 
 state navigating {
-    when not navigator.has_next {
+    if not navigator.has_next {
         state :mining
     }
 
@@ -235,12 +235,12 @@ state navigating {
 }
 
 state mining {
-    when storage.is_full {
+    if storage.is_full {
         # cannot mine anymore, no storage space left or the deposit has been drained
         state :find_home
     }
-    when not drill.probe {
-        when storage.get_filled_share > 0.3 {
+    if not drill.probe {
+        if storage.get_filled_share > 0.3 {
             state :find_home
         }
         state :roaming
@@ -255,7 +255,7 @@ state find_home {
 }
 
 state returning {
-    when not navigator.has_next {
+    if not navigator.has_next {
         # we're home
         storage.unload_all
         state :roaming
@@ -271,4 +271,46 @@ state returning {
     storage: StorageConfiguration.Tier1Big,
     solar: SolarConfiguration.Tier1Regular,
     scanner: true,
+};
+
+export const SIMPLE_BUILDER_PRESET: UnitConfiguration = {
+    cpu: `# This is a program for a simple manual construction unit
+
+when spawned {
+    engine.move(navigator.random)
+}
+
+command move(position to) {
+    if navigator.find_route(to) {
+        state :navigating
+    }
+}
+
+state navigating {
+    if not navigator.has_next {
+        # the destination has been reached
+        state :idle
+    }
+
+    engine.move(navigator.next_step)
+}
+
+command assemble(blueprint target) {
+    assembler.start_construction(target)
+    state :assembling
+}
+
+state assembling {
+    if not assembler.construct {
+        engine.move(navigator.random)
+        state :idle
+    }
+}
+`,
+    battery: BatteryConfiguration.Tier1Regular,
+    engine: EngineConfiguration.Tier1Cheap,
+    navigator: true,
+    storage: StorageConfiguration.Tier1Big,
+    solar: SolarConfiguration.Tier1Regular,
+    assembler: AssemblerConfiguration.Tier1,
 };

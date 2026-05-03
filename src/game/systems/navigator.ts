@@ -5,6 +5,7 @@ import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
 import {
+    bfsSleepTime,
     callableUnitSystemHandlers,
     returnToCpu,
     type CallableUnitSystemFunctions,
@@ -129,7 +130,7 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: result }, Math.floor(bfs.getVisited().size / 20));
+            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
             return false;
         },
     },

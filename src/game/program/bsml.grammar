@@ -1,4 +1,4 @@
-@precedence { mul @left, sum @left, cmp @left, logic @left }
+@precedence { mul @left, sum @left, cmp @left, logic @left, fcall @left }
 
 @top Program { declaration* }
 
@@ -8,11 +8,26 @@ declaration {
     EventDeclaration
 }
 
-CommandDeclaration { @specialize[@name=Declkw]<Identifier, "command"> ~amb2 Identifier ArgumentsDeclaration? StatementBlock }
+CommandDeclaration {
+    @specialize[@name=Declkw]<Identifier, "command"> ~amb2
+    Identifier
+    ArgumentsDeclaration?
+    StatementBlock
+}
 
-StateDeclaration { @specialize[@name=Declkw]<Identifier, "state"> ~amb2 Identifier ArgumentsDeclaration? @specialize[@name=Defaultkw]<Identifier, "default">? StatementBlock }
+StateDeclaration {
+    @extend[@name=Declkw]<Identifier, "state"> ~amb2
+    Identifier
+    ArgumentsDeclaration?
+    @specialize[@name=Defaultkw]<Identifier, "default">?
+    StatementBlock
+}
 
-EventDeclaration { @specialize[@name=Declkw]<Identifier, "when"> ~amb2 NestedIdentifier StatementBlock }
+EventDeclaration {
+    @specialize[@name=Declkw]<Identifier, "when"> ~amb2
+    EventName { nestedOrSingleIdentifier }
+    StatementBlock
+}
 
 StatementBlock { "{" statement* "}" }
 
@@ -20,32 +35,76 @@ statement {
     SetStateCommand |
     ProcedureCall |
     VariableAssignment |
-    ConditionalStatement
+    ConditionalStatement |
+    loopStatement |
+    LoopControlStatement
 }
 
-SetStateCommand { @specialize[@name=Declkw]<Identifier, "state"> Expression }
+SetStateCommand { @extend[@name=Declkw]<Identifier, "state"> Expression !fcall ArgumentsList? }
 
-ConditionalStatement { @specialize[@name=Declkw]<Identifier, "when"> Expression StatementBlock }
+ConditionalStatement { @specialize[@name=Declkw]<Identifier, "if"> Expression StatementBlock }
 
-ProcedureCall { NestedIdentifier ~amb1 ArgumentsList? }
+ProcedureCall { shortProcedureCall | longProcedureCall }
+
+shortProcedureCall {
+    ProcedureName { Identifier ~amb1 }
+    !fcall
+    ArgumentsList
+}
+longProcedureCall {
+    ProcedureName { nestedIdentifier }
+    !fcall
+    ArgumentsList?
+}
 
 VariableRead { Identifier ~amb1 }
 
 VariableAssignment { Identifier "=" Expression }
 
-NestedIdentifier { Identifier ("." Identifier)* }
+nestedOrSingleIdentifier { Identifier ("." Identifier)* }
+
+nestedIdentifier { Identifier ("." Identifier)+ }
 
 ArgumentsList { "(" (Expression ("," Expression)* )? ")" }
 
 ArgumentsDeclaration { "(" ArgumentDeclaration ("," ArgumentDeclaration)* ")" }
 
-ArgumentDeclaration { Typename Identifier }
+ArgumentDeclaration {
+    Typename { Identifier }
+    Identifier
+}
 
-Typename { Identifier }
+loopStatement { LoopOverStatement | LoopWhilePrefixStatement | LoopWhilePostfixStatement }
+
+LoopOverStatement {
+    @specialize[@name=Declkw]<Identifier, "loop">
+    Identifier ~ambloop
+    @specialize[@name=Declkw]<Identifier, "over">
+    Expression
+    StatementBlock
+}
+
+LoopWhilePrefixStatement {
+    @specialize[@name=Declkw]<Identifier, "loop">
+    @specialize[@name=Declkw]<Identifier, "while"> ~ambloop
+    Expression
+    StatementBlock
+}
+
+LoopWhilePostfixStatement {
+    @specialize[@name=Declkw]<Identifier, "loop"> ~ambloop
+    StatementBlock
+    (@specialize[@name=Declkw]<Identifier, "while"> Expression)?
+}
+
+LoopControlStatement {
+    @specialize[@name=Declkw]<Identifier, "break" | "continue">
+    @specialize[@name=Declkw]<Identifier, "loop">
+}
 
 Expression {
-    ProcedureCall |
     VariableRead |
+    ProcedureCall |
     BoolLiteral |
     StringLiteral |
     IntegerLiteral |
@@ -61,7 +120,7 @@ nestedExpression { "(" Expression ")" }
 UnaryExpression { UnaryOperator Expression }
 
 UnaryOperator {
-    @specialize[@name=UnaryOp]<Identifier, "not"> | "-" | "+"
+    @specialize[@name=UnaryOp]<Identifier, "not" | "size_of"> | "-" | "+"
 }
 
 BinaryExpression {
