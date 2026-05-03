@@ -3,12 +3,12 @@ import { NavMesh } from '@/lib/NavMesh';
 import type { Landscape } from '@/lib/planet/Landscape';
 import type { PlanetGraph } from '@/lib/planet/PlanetGraph';
 import { createEvent, type Event } from '@/lib/sparse';
-import type { CreateGameProgressListener, NodeId, ResourceDeposit, SurfaceNode, WorldgenOptions } from './types';
+import type { CreateGameProgressListener, NodeId, SurfaceNode, WorldgenOptions } from './types';
 import { generatePlanet } from './worldgen/planet';
 import type { RawVertex } from '@/lib/3d';
 import type { GameLoop } from './loop';
+import type { PlanetaryResources } from './resources';
 
-type ResourceUpdateEvent = Event<(at: NodeId, dep: ResourceDeposit) => void>;
 type FogOfWarUpdateEvent = Event<(nodes: Set<NodeId>, status: 'forgotten' | 'discovered') => void>;
 
 export type GameWorld = {
@@ -26,9 +26,7 @@ export type GameWorld = {
     forgetNodes(nodes: Set<NodeId>): void;
     discoverNodes(nodes: Set<NodeId>): void;
 
-    readonly resources: Map<NodeId, ResourceDeposit>;
-    mineResource(at: NodeId, resource: string, amount: number): boolean;
-    readonly resourceUpdate: ResourceUpdateEvent;
+    readonly resources: PlanetaryResources;
 
     readonly sunPosition: RawVertex;
     readonly dayLengthTicks: number;
@@ -42,8 +40,6 @@ export async function createGameWorld(
     const { resources, radius, spawnLocation, graph, landscape } = await generatePlanet(opts, onProgress);
     onProgress?.({ progress: 1, stage: 'Done' });
 
-    const resourceUpdate: ResourceUpdateEvent = createEvent();
-
     const surface = new Array<SurfaceNode>(graph.size());
     const coords = graph.coords();
     const connections = graph.getConnections();
@@ -51,7 +47,7 @@ export async function createGameWorld(
     const elevations = landscape.getBaseElevations();
 
     for (let vi = 0 as NodeId; vi < graph.size(); vi++) {
-        // terraIncognita.add(vi);
+        terraIncognita.add(vi);
         surface[vi] = {
             index: vi,
             position: new Vector3(...coords[vi]),
@@ -106,17 +102,6 @@ export async function createGameWorld(
         },
 
         resources,
-        resourceUpdate,
-        mineResource(at, resource, amount) {
-            const deposit = resources.get(at);
-            if (!deposit || deposit.resource !== resource || deposit.amount < amount) {
-                return false;
-            }
-
-            deposit.amount -= amount;
-            resourceUpdate.trigger(at, deposit);
-            return true;
-        },
     };
 }
 

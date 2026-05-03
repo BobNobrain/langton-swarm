@@ -1,4 +1,6 @@
 import { For, onMount, type Component } from 'solid-js';
+import type { KnownResourceName, NodeId } from '@/game';
+import { InventoryDelta } from '@/game/inventory';
 import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
 import { GridObjects, GridObjectData } from '../GridObjects/GridObjects';
@@ -7,32 +9,68 @@ import { depositModel, materialsByResource, defaultMat } from '../models/deposit
 export const PlanetResources: Component = () => {
     const { world } = useGame();
 
-    const byResource: Record<string, Record<string, GridObjectData>> = {};
+    const byResource: Record<string, Record<string, GridObjectData>> = {
+        combat: {},
+        electrical: {},
+        energetical: {},
+        special: {},
+        structural: {},
+    } satisfies Record<KnownResourceName, unknown>;
 
-    for (const [nodeId, deposit] of world.resources.entries()) {
-        byResource[deposit.resource] ??= {};
-        byResource[deposit.resource][nodeId] = { location: nodeId };
+    const totalDepositTilesCount: Record<string, Set<NodeId>> = {
+        combat: new Set(),
+        electrical: new Set(),
+        energetical: new Set(),
+        special: new Set(),
+        structural: new Set(),
+    } satisfies Record<KnownResourceName, Set<NodeId>>;
+
+    for (const { location, deposits } of world.resources.getAll()) {
+        for (const deposit of deposits) {
+            totalDepositTilesCount[deposit.resource].add(location);
+            if (!deposit.isDiscovered) {
+                continue;
+            }
+
+            byResource[deposit.resource][location] = { location };
+        }
     }
 
     const resourceDeposits = Object.entries(byResource).map(([resource, objects]) => ({
         resource,
         objects,
+        maxCount: totalDepositTilesCount[resource].size,
     }));
 
-    onMount(() =>
-        createEventListener(world.resourceUpdate, (tileId, deposit) => {
-            if (deposit.amount > 0) {
-                return;
+    onMount(() => {
+        createEventListener(world.resources.updated, (tileId) => {
+            const deposits = world.resources.findDeposits({ location: tileId });
+
+            // TODO: rework this
+            const amounts = InventoryDelta.empty();
+            for (const deposit of deposits) {
+                if (!deposit.isDiscovered) {
+                    continue;
+                }
+
+                amounts.alter(deposit.resource, deposit.amount);
             }
 
-            const objects = byResource[deposit.resource];
-            delete objects[tileId];
-        }),
-    );
+            for (const resource of Object.keys(amounts.content)) {
+                const objects = byResource[resource];
+                const amt = amounts.content[resource];
+                if (amt <= 0) {
+                    delete objects[tileId];
+                } else if (!objects[tileId]) {
+                    objects[tileId] = { location: tileId };
+                }
+            }
+        });
+    });
 
     return (
         <For each={resourceDeposits}>
-            {({ resource, objects }) => {
+            {({ resource, objects, maxCount }) => {
                 return (
                     <GridObjects
                         geom={depositModel}
@@ -40,7 +78,7 @@ export const PlanetResources: Component = () => {
                         grid={world.surface}
                         hiddenNodes={world.terraIncognita}
                         objects={objects}
-                        maxCount={Object.keys(objects).length}
+                        maxCount={maxCount}
                         positioning={{ elevation: 0.1 }}
                     />
                 );

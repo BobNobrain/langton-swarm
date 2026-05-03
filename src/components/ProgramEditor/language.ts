@@ -19,6 +19,7 @@ const parserWithMetadata = parser.configure({
             Defaultkw: tags.definitionKeyword,
             Boolkw: tags.bool,
             IntegerLiteral: tags.number,
+            FloatLiteral: tags.number,
             StringLiteral: tags.string,
             LineComment: tags.lineComment,
             StateNameLiteral: tags.atom,

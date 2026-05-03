@@ -18,7 +18,7 @@ export const DEFAULT_SCOUT_PRESET: UnitConfiguration = {
     engine: EngineConfiguration.Tier1Cheap,
     solar: SolarConfiguration.Tier1Cheap,
     navigator: true,
-    scanner: true,
+    scanner: false,
     cpu: `# this is a simple program for a scouting drone
 command move(position to) {
     navigator.find_route(to)
@@ -37,7 +37,14 @@ command return {
 command idle {}
 
 state scouting default {
-    engine.move(random)
+    navigator.find_route(navigator.closest_unknown)
+    state :scouting_move
+}
+state scouting_move {
+    when not navigator.has_next {
+        state :scouting
+    }
+    engine.move(navigator.next_step)
 }
 
 state navigating {
@@ -62,18 +69,13 @@ command mine {
 }
 
 command roam {
-    state :roaming
+    state :roaming_start
 }
 
 command idle {}
 
 command scan {
-    when scanner.find_largest_deposit(3) {
-        navigator.find_route(scanner.found_location())
-        state :navigating
-    }
-
-    state :idle
+    scanner.scan
 }
 
 command drop {
@@ -83,8 +85,16 @@ command load {
     storage.pickup_all
 }
 
-state roaming default {
-    engine.move(random)
+state roaming_start default {
+    scanner.scan
+    navigator.find_route(scanner.find_closest_unscanned)
+    state :roaming_moving
+}
+state roaming_moving {
+    when not navigator.has_next {
+        state :roaming_start
+    }
+    engine.move(navigator.next_step)
 }
 
 state navigating {
@@ -96,10 +106,15 @@ state navigating {
 
 state mining {
     when storage.get_free_space <= 0 or not drill.probe {
-        state :idle
+        state :full
     }
 
     drill.mine
+}
+
+state full {
+    navigator.find_route(navigator.home)
+    state :navigating
 }
 `,
 
@@ -120,7 +135,7 @@ export function createDefaultUnitConfig(): UnitConfiguration {
     return {
         cpu: `# Unit's program is a state machine
 when spawned {
-    engine.move(random) # move away 1 cell in random direction
+    engine.move(navigator.random) # move away 1 cell in random direction
     state :idle
 }
 
@@ -167,7 +182,7 @@ command home {
 state returning {
     when not navigator.has_next {
         storage.unload_all # transfer what we have to main storage
-        engine.move(random)
+        engine.move(navigator.random)
         state :idle
     }
 
@@ -198,11 +213,17 @@ command return {
 }
 
 state roaming default {
-    engine.move(random)
-    when scanner.find_closest_deposit {
-        navigator.find_route(scanner.found_location)
+    deposit = scanner.closest_surface_deposit
+    when deposit /= navigator.location {
+        navigator.find_route(deposit)
         state :navigating
     }
+
+    when storage.get_filled_share > 0 {
+        state :find_home
+    }
+
+    engine.move(navigator.random)
 }
 
 state navigating {
@@ -214,9 +235,15 @@ state navigating {
 }
 
 state mining {
-    when storage.is_full or not drill.probe {
+    when storage.is_full {
         # cannot mine anymore, no storage space left or the deposit has been drained
         state :find_home
+    }
+    when not drill.probe {
+        when storage.get_filled_share > 0.3 {
+            state :find_home
+        }
+        state :roaming
     }
 
     drill.mine

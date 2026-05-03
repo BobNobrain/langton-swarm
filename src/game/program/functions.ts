@@ -1,11 +1,12 @@
+import type { UnitConfiguration } from '../config';
 import { CPU_FNS } from '../systems/cpu';
 import { DRILL_FNS, DRILL_SYSTEM_NAME } from '../systems/drill';
 import { ENGINE_FNS, ENGINE_SYSTEM_NAME } from '../systems/engine';
 import { INVENTORY_FNS, INVENTORY_SYSTEM_NAME } from '../systems/inventory';
+import { MARKERS_FNS, MARKERS_SYSTEM_NAME } from '../systems/markers';
 import { NAVIGATOR_FNS, NAVIGATOR_SYSTEM_NAME } from '../systems/navigator';
 import { SCANNER_FNS, SCANNER_SYSTEM_NAME } from '../systems/scanner';
 import type { UnitSystemFunction } from '../systems/types';
-import type { UnitConfiguration } from '../types';
 import type { BsmlValue, BsmlValueType } from './value';
 
 type BuiltinFn = {
@@ -29,6 +30,10 @@ export function getFunctions(config: UnitConfiguration | null) {
 
     for (const [name, fn] of Object.entries(CPU_FNS)) {
         add('', name, fn);
+    }
+
+    for (const [name, fn] of Object.entries(MARKERS_FNS)) {
+        add(MARKERS_SYSTEM_NAME, name, fn);
     }
 
     if (config?.navigator) {

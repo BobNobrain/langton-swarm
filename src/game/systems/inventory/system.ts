@@ -88,6 +88,14 @@ export function createInventorySystem(
         getInfo(unitId) {
             return system.getData(unitId);
         },
+
+        getFreeSpace(unitId) {
+            const inventory = system.getData(unitId);
+            if (!inventory) {
+                return 0;
+            }
+            return inventory.capacity - inventory.size;
+        },
     };
 
     system = createUnitSystem<InventoryData, CallableUnitSystemMessages>(options, {

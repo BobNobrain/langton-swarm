@@ -1,4 +1,5 @@
 import { distSquared, type RawVertex } from './3d';
+import { BFS } from './bfs';
 
 type VisitedNode = {
     from: number;
@@ -7,7 +8,8 @@ type VisitedNode = {
 
 type VisitCandidate = {
     node: number;
-    d2ToTarget: number;
+    dToTarget: number;
+    pathLength: number;
 };
 
 export class NavMesh {
@@ -19,7 +21,7 @@ export class NavMesh {
         this.connections = connections.map((cs) => Array.from(cs).sort((a, b) => a - b));
     }
 
-    // TODO: optimize performance and also somehow make it find optimal path?
+    // TODO: optimize performance somehow?
     findPath(from: number, to: number): number[] {
         if (from === to) {
             return [from];
@@ -29,11 +31,11 @@ export class NavMesh {
         }
 
         const toCoords = this.coords[to];
-        const spatialDistanceSquares = new Map<number, number>();
+        const spatialDistances = new Map<number, number>();
         const candidatesToVisit: VisitCandidate[] = [];
         const visited = new Map<number, VisitedNode>();
 
-        candidatesToVisit.push({ node: from, d2ToTarget: Infinity });
+        candidatesToVisit.push({ node: from, dToTarget: Infinity, pathLength: 0 });
         visited.set(from, { length: 0, from: -1 });
 
         while (candidatesToVisit.length) {
@@ -56,12 +58,12 @@ export class NavMesh {
                 }
 
                 if (isCandidate) {
-                    let d2 = spatialDistanceSquares.get(c);
-                    if (d2 === undefined) {
-                        d2 = distSquared(this.coords[c], toCoords);
-                        spatialDistanceSquares.set(c, d2);
+                    let dist = spatialDistances.get(c);
+                    if (dist === undefined) {
+                        dist = Math.sqrt(distSquared(this.coords[c], toCoords));
+                        spatialDistances.set(c, dist);
                     }
-                    candidatesToVisit.push({ node: c, d2ToTarget: d2 });
+                    candidatesToVisit.push({ node: c, dToTarget: dist, pathLength: currentVisit.length });
                 }
             }
 
@@ -91,8 +93,12 @@ export class NavMesh {
     getNeighbours(node: number): number[] {
         return this.connections[node];
     }
+
+    bfs<NId extends number = number>(start: NId) {
+        return new BFS(start, this.connections as NId[][]);
+    }
 }
 
 function candidateSorter(c1: VisitCandidate, c2: VisitCandidate): number {
-    return c2.d2ToTarget - c1.d2ToTarget;
+    return Math.sqrt(c2.dToTarget) + c2.pathLength - (Math.sqrt(c1.dToTarget) + c2.pathLength);
 }

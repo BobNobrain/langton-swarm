@@ -23,6 +23,7 @@ export type InventoryController = {
     }): Record<string, number> | null;
     hasSpace(unitId: UnitId, space: number): boolean;
     getInfo(unitId: UnitId): InventoryData | null;
+    getFreeSpace(unitId: UnitId): number;
 };
 
 export type InventoryDeps = {

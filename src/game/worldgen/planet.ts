@@ -6,6 +6,7 @@ import { generateResourceDeposits } from './resources';
 import { generateSpawnPoint } from './spawn';
 import type { GeneratedPlanet } from './types';
 import { Landscape } from '@/lib/planet/Landscape';
+import { PlanetaryResources } from '../resources';
 
 export async function generatePlanet(
     opts: WorldgenOptions,
@@ -61,14 +62,14 @@ export async function generatePlanet(
         radius: planetRadius,
         graph,
         landscape,
-        resources: new Map(),
+        resources: new PlanetaryResources(graph),
         spawnLocation: generateSpawnPoint(seq, graph, landscape),
     };
 
     onProgress?.({ progress: 0.95, stage: 'Generating resources' });
     await sleep(0);
 
-    generateResourceDeposits(opts.seed, planet);
+    generateResourceDeposits(seq, planet);
 
     return planet;
 }

@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, Show, type ParentComponent } from 'solid-js';
 import { createGame, type Game } from '@/game';
 import { getCameraOrbitForCoords } from '@/game/camera';
-import { DEFAULT_SCOUT_PRESET, MOTHER_PRESET, TEST_PRESET } from '@/game/config/presets';
+import { AUTO_MINER_PRESET, DEFAULT_SCOUT_PRESET, MOTHER_PRESET, TEST_PRESET } from '@/game/config/presets';
 import { spawnFromDeck } from '@/game/utils';
 import { GameProvider } from '@/gameContext';
 import { DeckBrowser } from '../DeckBrowser/DeckBrowser';
@@ -34,6 +34,7 @@ export const GameUI: ParentComponent = (props) => {
             g.camera.setInstant({ yaw, pitch });
 
             g.deck.create('Simple_Scout', DEFAULT_SCOUT_PRESET);
+            g.deck.create('Simple_Miner', AUTO_MINER_PRESET);
 
             g.deck.create('Test', TEST_PRESET);
 

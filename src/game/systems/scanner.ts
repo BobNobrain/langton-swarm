@@ -1,8 +1,10 @@
-import { extractTyped } from '../program/utils';
-import type { NodeId, ResourceDeposit, SurfaceNode } from '../types';
+import { FactionId } from '../factions';
+import { ResourceTier } from '../resources';
+import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
+import type { MarkersSystemController } from './markers';
 import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
@@ -14,104 +16,138 @@ import {
 } from './utils';
 
 type ScannerDeps = {
-    world: Pick<GameWorld, 'resources' | 'mineResource' | 'surface'>;
+    world: Pick<GameWorld, 'resources' | 'nav' | 'terraIncognita'>;
     inventory: InventoryController;
     battery: EnergySystemController;
     positions: PositionalSystemController;
+    markers: MarkersSystemController;
 };
 
 export type ScannerData = {
     maxRadius: number;
-    found: {
-        resource: string;
-        amount: number;
-        location: NodeId;
-        distance: number;
-    } | null;
+    scannedTiles: ScannedTilesData;
 };
+
+type ScannedTilesData = Set<NodeId>;
+type ScannedTilesDataByFaction = Map<FactionId, ScannedTilesData>;
+const emptyScannedData = (): ScannedTilesData => new Set();
 
 export const SCANNER_SYSTEM_NAME = 'scanner';
 
 export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> = {
-    find_largest_deposit: {
-        description: 'Finds the largest resource deposit in specified radius',
-        argNames: ['distance'],
-        argTypes: ['number'],
-        returnType: 'flag',
-        init(args, ctx, _, { world, battery, positions }) {
-            const scanner = ctx.systemData;
-            const radius = extractTyped(args, 'distance', 'number')!;
-
-            scan(
-                positions.getEffectivePosition(ctx.unitId),
-                Math.min(radius.value, scanner.maxRadius),
-                world.surface,
-                world.resources,
-                (dep, loc, d) => {
-                    if (!battery.withdraw(ctx.unitId, 2)) {
-                        return false;
-                    }
-
-                    if (!scanner.found || scanner.found.amount < dep.amount) {
-                        scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
-                    }
-
-                    return true;
-                },
-            );
-
-            returnToCpu(
-                ctx,
-                { type: 'flag', value: Boolean(ctx.systemData.found) },
-                scanner.found ? scanner.found.distance * 2 : undefined,
-            );
-            return false;
-        },
-    },
-
-    find_closest_deposit: {
-        description: 'Finds the closest resource deposit',
-        argNames: [],
-        argTypes: [],
-        returnType: 'flag',
-        init(_args, ctx, _env, { world, battery, positions }) {
-            const scanner = ctx.systemData;
-
-            scan(
-                positions.getEffectivePosition(ctx.unitId),
-                scanner.maxRadius,
-                world.surface,
-                world.resources,
-                (dep, loc, d) => {
-                    if (!battery.withdraw(ctx.unitId, 2)) {
-                        return false;
-                    }
-
-                    scanner.found = { resource: dep.resource, amount: dep.amount, location: loc, distance: d };
-                    return false;
-                },
-            );
-
-            returnToCpu(
-                ctx,
-                { type: 'flag', value: Boolean(ctx.systemData.found) },
-                scanner.found ? scanner.found.distance * 2 : undefined,
-            );
-            return false;
-        },
-    },
-
-    found_location: {
-        description:
-            'Allows to retrieve the location of a resource deposit that has been previously found with scanner.find_closest_deposit or scanner.find_largest_deposit(radius)',
+    find_closest_unscanned: {
+        description: 'Finds the closest location that has not been scanned yet',
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx, _env, { positions }) {
-            returnToCpu(ctx, {
-                type: 'position',
-                value: ctx.systemData.found?.location ?? positions.getEffectivePosition(ctx.unitId),
-            });
+        init(_, ctx, _env, { world: { nav }, positions }) {
+            const scanner = ctx.systemData;
+            const location = positions.getEffectivePosition(ctx.unitId);
+            const bfs = nav.bfs<NodeId>(location);
+            let result = location;
+
+            while (!bfs.isDone()) {
+                const next = bfs.nextNodeToVisit();
+                if (scanner.scannedTiles.has(next.node)) {
+                    result = next.node;
+                    break;
+                }
+
+                bfs.expand();
+            }
+
+            returnToCpu(ctx, { type: 'position', value: location }, Math.floor(bfs.getVisited().size / 20));
+            return false;
+        },
+    },
+    closest_surface_deposit: {
+        description: 'Returns the location of the closest surface resource deposit',
+        argNames: [],
+        argTypes: [],
+        returnType: 'position',
+        init(_, ctx, _env, { positions, world: { nav, resources, terraIncognita } }) {
+            const location = positions.getEffectivePosition(ctx.unitId);
+            const bfs = nav.bfs<NodeId>(location);
+            let result = location;
+
+            while (!bfs.isDone()) {
+                const next = bfs.nextNodeToVisit().node;
+
+                if (
+                    !terraIncognita.has(next) &&
+                    resources
+                        .findDeposits({ location: next, maxTier: ResourceTier.Tier1 })
+                        .some((dep) => dep.amount > 0)
+                ) {
+                    result = next;
+                    break;
+                }
+
+                bfs.expand();
+            }
+
+            returnToCpu(ctx, { type: 'position', value: result }, Math.floor(bfs.getVisited().size / 20));
+            return false;
+        },
+    },
+
+    scan: {
+        description: 'Scans for nearby resource deposits',
+        argNames: [],
+        argTypes: [],
+        returnType: 'number',
+        init(_args, ctx, _env, { positions, world, battery, markers }) {
+            const scanner = ctx.systemData;
+            let nScanned = 0;
+            let nFound = 0;
+            const location = positions.getEffectivePosition(ctx.unitId);
+
+            const bfs = world.nav.bfs(location);
+            while (!bfs.isDone() && bfs.nextNodeToVisit().depth <= scanner.maxRadius) {
+                if (!battery.withdraw(ctx.unitId, 2)) {
+                    break;
+                }
+
+                const loc = bfs.nextNodeToVisit().node;
+                const newDeposits = world.resources.discover(loc, ResourceTier.Tier2);
+
+                if (newDeposits.length > 0) {
+                    markers.getMapForUnit(ctx.unitId).set({
+                        location: loc,
+                        type: 'resource',
+                        author: ctx.unitId,
+                    });
+                    nFound += newDeposits.length;
+                }
+
+                for (const deposit of newDeposits) {
+                    markers.getMapForUnit(ctx.unitId).set({
+                        location: loc,
+                        type: 'resource:' + deposit.resource,
+                        author: ctx.unitId,
+                        attrs: {
+                            resource: { type: 'string', value: deposit.resource },
+                            tier: { type: 'number', value: deposit.tier },
+                            amount: { type: 'number', value: deposit.amount },
+                        },
+                    });
+                }
+
+                ++nScanned;
+            }
+
+            returnToCpu(ctx, { type: 'number', value: nFound }, nScanned * 2);
+            return false;
+        },
+    },
+
+    radius: {
+        description: 'Returns the scan radius of this scanner',
+        argNames: [],
+        argTypes: [],
+        returnType: 'number',
+        init(_, ctx) {
+            returnToCpu(ctx, { type: 'number', value: ctx.systemData.maxRadius });
             return false;
         },
     },
@@ -123,60 +159,26 @@ export function createScannerSystem(
     positions: PositionalSystemController,
     inventory: InventoryController,
     battery: EnergySystemController,
+    markers: MarkersSystemController,
 ) {
+    const scannedTilesByFaction: ScannedTilesDataByFaction = new Map();
+
     return createUnitSystem<ScannerData, CallableUnitSystemMessages>(opts, {
         name: SCANNER_SYSTEM_NAME,
-        initialData({ config }) {
+        initialData({ config, faction }) {
             if (!config.scanner) {
                 return null;
             }
 
-            return { found: null, maxRadius: 3 };
+            const scannedTiles = scannedTilesByFaction.getOrInsertComputed(faction, emptyScannedData);
+            return { maxRadius: 3, scannedTiles };
         },
 
         messages: {
             ...callableUnitSystemHandlers<ScannerData, ScannerDeps>(
-                { world, inventory, battery, positions },
+                { world, inventory, battery, positions, markers },
                 SCANNER_FNS,
             ),
         },
     });
-}
-
-function scan(
-    start: NodeId,
-    maxDistance: number,
-    surface: SurfaceNode[],
-    resources: Map<NodeId, ResourceDeposit>,
-    fn: (dep: ResourceDeposit, loc: NodeId, distance: number) => boolean,
-) {
-    const visited = new Set<NodeId>();
-    const queue = [{ node: start, distance: 0 }];
-
-    while (queue.length) {
-        const next = queue.shift()!;
-        visited.add(next.node);
-
-        const dep = resources.get(next.node);
-        if (dep) {
-            const shouldContinue = fn(dep, next.node, next.distance);
-            if (!shouldContinue) {
-                return;
-            }
-        }
-
-        if (next.distance >= maxDistance) {
-            continue;
-        }
-
-        const nbors = surface[next.node].connections;
-
-        for (const nbor of nbors) {
-            if (visited.has(nbor)) {
-                continue;
-            }
-
-            queue.push({ node: nbor, distance: next.distance + 1 });
-        }
-    }
 }

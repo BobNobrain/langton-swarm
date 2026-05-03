@@ -224,6 +224,9 @@ function matchExpression(node: SyntaxNode, state: MatcherState): BsmlExpression 
         IntegerLiteral: (node) => {
             result = { pos: nodePos(node), type: 'number', value: Number(state.src(node)) };
         },
+        FloatLiteral: (node) => {
+            result = { pos: nodePos(node), type: 'number', value: Number(state.src(node)) };
+        },
         StateNameLiteral: (node) => {
             result = { pos: nodePos(node), type: 'state', stateName: state.src(node).substring(1) };
         },

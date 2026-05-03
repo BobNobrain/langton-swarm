@@ -117,7 +117,11 @@ export function createAssemblerSystem(
     ) {
         if (currentSpawn.started !== null) {
             if (currentSpawn.started + currentSpawn.timeToBuild <= env.currentTick) {
-                const unitId = spawn({ at: positions.getEffectivePosition(ctx.unitId), config: currentSpawn.config });
+                const unitId = spawn({
+                    at: positions.getEffectivePosition(ctx.unitId),
+                    config: currentSpawn.config,
+                    faction: deck.owner,
+                });
 
                 spawned.pub({ unitId: ctx.unitId, payload: { id: unitId } });
 

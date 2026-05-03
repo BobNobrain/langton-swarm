@@ -2,6 +2,7 @@ import { createMemo, createSignal } from 'solid-js';
 import { sequentialId, type ID } from '@/lib/ids';
 import type { UnitConfiguration } from './config';
 import type { UnitId } from './types';
+import type { FactionId } from './factions';
 
 export type BlueprintId = ID<number, 'BlueprintId'>;
 
@@ -31,6 +32,8 @@ type BlueprintControllerFull = BlueprintController & {
 };
 
 export type BlueprintDeck = {
+    readonly owner: FactionId;
+
     rBlueprints: () => BlueprintController[];
 
     create(name: string, config: UnitConfiguration): BlueprintController;
@@ -41,11 +44,13 @@ export type BlueprintDeck = {
     findByUnitId(unitId: UnitId): { bp: BlueprintController; v: number } | null;
 };
 
-export function createBlueprintDeck(): BlueprintDeck {
+export function createBlueprintDeck(owner: FactionId): BlueprintDeck {
     const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>({});
     const blueprintId = sequentialId<BlueprintId>();
 
     return {
+        owner,
+
         rBlueprints: createMemo(() => Object.values(rCards())),
 
         getBlueprint(id) {

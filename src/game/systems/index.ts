@@ -28,17 +28,21 @@ import type {
     UnitSystemMessage,
     UnitSystemPublic,
 } from './types';
+import { createMarkers, type MarkersSystemController } from './markers';
+import { createFactionsSystem, type FactionSystemController } from './faction';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
 
     readonly energy: EnergySystemController;
     readonly positions: PositionalSystemController;
+    readonly markers: MarkersSystemController;
     readonly inventory: InventoryController;
     readonly assembler: AssemblerSystemController;
     readonly cpu: UnitSystemPublic<CPUData>;
     readonly navigator: UnitSystemPublic<NavigatorSystemData>;
     readonly scanner: UnitSystemPublic<ScannerData>;
+    readonly factions: FactionSystemController;
 
     readonly debug: unknown;
 
@@ -116,6 +120,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
     const energy = createEnergySystem(opts);
     const positions = createPositionalSystem(opts);
+    const factions = createFactionsSystem(opts);
+    const markers = createMarkers(opts, positions.controller, world.nav);
     const cpu = createCPUSystem(opts, energy.controller);
     const engine = createEngineSystem(opts, { world, battery: energy.controller, positions: positions.controller });
     const stationaries = createStationariesSystem(opts, { despawn });
@@ -123,7 +129,14 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     const assembler = createAssemblerSystem(opts, spawn, positions.controller, inventory.controller, deck);
     const signals = createSignalsSystem(opts);
     const drill = createDrillSystem(opts, world, positions.controller, inventory.controller, energy.controller);
-    const scanner = createScannerSystem(opts, world, positions.controller, inventory.controller, energy.controller);
+    const scanner = createScannerSystem(
+        opts,
+        world,
+        positions.controller,
+        inventory.controller,
+        energy.controller,
+        markers.controller,
+    );
     const navigator = createNavigatorSystem(opts, { world, positions: positions.controller });
     const discovery = createDiscoverySystem(opts, world, positions.controller);
     const solar = createSolarSystem(opts, world, positions.controller, energy.controller);
@@ -169,8 +182,9 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         energy: energy.controller,
         positions: positions.controller,
+        factions: factions.controller,
+        markers: markers.controller,
         inventory: inventory.controller,
-        // mother,
         assembler: assembler.controller,
         cpu,
         navigator,
@@ -212,3 +226,5 @@ export { UnitModelType } from './signals';
 export { type InventoryController, type InventoryData } from './inventory';
 export type { AssemblerData } from './assembler';
 export type { DynamicPosition as DynamicLocation, PositionalSystemController } from './positions';
+export type { MarkersSystemController } from './markers';
+export type { MarkerData, MarkersMap } from './MarkersMap';

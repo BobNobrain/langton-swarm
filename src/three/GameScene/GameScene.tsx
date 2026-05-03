@@ -10,6 +10,7 @@ import { onSceneEmptyClick } from '../hooks/handlers';
 // import { PathTrace } from '../PathTrace/PathTrace';
 import { PlanetResources } from '../PlanetResources/PlanetResources';
 import { useInScene } from '../hooks/useInScene';
+import { GameMarkers } from '../GameMarkers/GameMarkers';
 
 export const GameScene: Component = () => {
     const game = useGame();
@@ -58,6 +59,7 @@ export const GameScene: Component = () => {
             />
             <PlanetResources />
             <GameSwarms />
+            <GameMarkers />
             <GameGlobalLight />
             <GameCamera fov={75} far={100_000} near={0.01} />
             {/* <PathTrace nodes={game.world.planet()?.nodes ?? []} path={testPath()} /> */}

@@ -2,6 +2,7 @@ import { PILE_PRESET } from '@/game/config';
 import { returnToCpu, type CallableUnitSystemFunctions } from '../utils';
 import type { InventoryData, InventoryDeps } from './types';
 import { measure } from './utils';
+import { NO_FACTION } from '@/game/factions';
 
 export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, InventoryDeps> = {
     unload_all: {
@@ -23,7 +24,7 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
 
             if (!target) {
                 // a pile of material on the ground
-                target = spawn({ at: loc, config: PILE_PRESET });
+                target = spawn({ at: loc, config: PILE_PRESET, faction: NO_FACTION });
             }
 
             const transfered = inventories.transfer({
@@ -44,7 +45,7 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
         argNames: [],
         argTypes: [],
         returnType: 'number',
-        init(args, ctx, env, { inventories, stationaries, positions }) {
+        init(_, ctx, env, { inventories, stationaries, positions }) {
             const loc = positions.getEffectivePosition(ctx.unitId);
 
             let pickupFrom = stationaries.getAt(loc);
@@ -84,14 +85,36 @@ export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, Inventory
             return false;
         },
     },
+    get_filled_share: {
+        description: 'Returns how much storage is filled, on scale of 0 to 1',
+        argNames: [],
+        argTypes: [],
+        returnType: 'number',
+        init(_, ctx) {
+            const inv = ctx.systemData;
+            returnToCpu(ctx, { type: 'number', value: inv.size / inv.capacity });
+            return false;
+        },
+    },
     is_empty: {
-        description: "Allows to check is unit's storage is empty",
+        description: "Allows to check if unit's storage is empty",
         argNames: [],
         argTypes: [],
         returnType: 'flag',
         init(_, ctx) {
             const inv = ctx.systemData;
             returnToCpu(ctx, { type: 'flag', value: inv.size === 0 });
+            return false;
+        },
+    },
+    is_full: {
+        description: "Allows to check if unit's storage is full",
+        argNames: [],
+        argTypes: [],
+        returnType: 'flag',
+        init(_, ctx) {
+            const inv = ctx.systemData;
+            returnToCpu(ctx, { type: 'flag', value: inv.size === inv.capacity });
             return false;
         },
     },

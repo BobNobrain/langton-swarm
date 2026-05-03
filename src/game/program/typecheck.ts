@@ -1,4 +1,4 @@
-import type { UnitConfiguration } from '../types';
+import type { UnitConfiguration } from '../config';
 import { getFunctions } from './functions';
 import type {
     BsmlArgument,
@@ -45,7 +45,9 @@ export function typecheck(program: BsmlProgram, config: UnitConfiguration | null
         }
 
         state.stateArgTypes[stateDecl.name] = stateDecl.args.map((argDecl) => argDecl.type as BsmlValueType);
+    }
 
+    for (const stateDecl of program.stateDeclarations) {
         typecheckStatementBlock(stateDecl.body, state, localStateWithArgs(stateDecl.args));
     }
 
@@ -163,7 +165,10 @@ function typecheckExpression(
 
         case 'state':
             if (!state.stateArgTypes[expr.stateName]) {
-                state.result.push({ pos: expr.pos, message: `Unknown state name :${expr.stateName}` });
+                state.result.push({
+                    pos: expr.pos,
+                    message: `Unknown state name :${expr.stateName} (known: ${Object.keys(state.stateArgTypes).join(', ')})`,
+                });
             }
             return 'state';
 

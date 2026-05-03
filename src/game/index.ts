@@ -55,6 +55,13 @@ export type { GameLoop as Engine, Ticker };
 export { getProcessorTickRate, type UnitConfiguration } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
 export {
+    type KnownResourceName,
+    type PlanetaryResources,
+    type ResourceDeposit,
+    ResourceTier,
+    type ResourceUpdateEvent,
+} from './resources';
+export {
     type GameUnitSystems,
     UnitModelType,
     type InventoryController,

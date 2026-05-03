@@ -12,12 +12,6 @@ export type SurfaceNode = {
     elevation: number;
 };
 
-export type ResourceDeposit = {
-    resource: string;
-    amount: number;
-    isDiscovered: boolean;
-};
-
 // TODO: maybe just move it to tick context?
 export type UnitEnvironment = {
     currentTick: number;

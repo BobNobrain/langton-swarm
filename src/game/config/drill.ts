@@ -1,3 +1,4 @@
+import { ResourceTier } from '../resources';
 import type { CommonCharacteristics, UnitConfiguration } from './types';
 
 export enum DrillConfiguration {
@@ -7,9 +8,10 @@ export enum DrillConfiguration {
 
 type DrillCharacteristics = CommonCharacteristics & {
     energyConsumption: number;
-    maxDepositTier: 1 | 2;
+    maxDepositTier: ResourceTier;
     miningAmount: number;
     miningTime: number;
+    miningRadius: number;
 };
 
 export const DRILL_CHARACTERISTICS: Record<DrillConfiguration, DrillCharacteristics> = {
@@ -18,18 +20,20 @@ export const DRILL_CHARACTERISTICS: Record<DrillConfiguration, DrillCharacterist
         constructionTime: 2,
         mass: 3,
         energyConsumption: 5,
-        maxDepositTier: 1,
+        maxDepositTier: ResourceTier.Tier1,
         miningAmount: 1,
         miningTime: 5,
+        miningRadius: 1,
     },
     [DrillConfiguration.Tier2]: {
         constructionCosts: { electrical: 15, structural: 50 },
         constructionTime: 20,
         mass: 10_000,
         energyConsumption: 50,
-        maxDepositTier: 2,
+        maxDepositTier: ResourceTier.Tier2,
         miningAmount: 2,
         miningTime: 1,
+        miningRadius: 2,
     },
 };
 
@@ -40,6 +44,7 @@ export function getDrillProperties(config: UnitConfiguration): Omit<DrillCharact
             maxDepositTier: 1,
             miningAmount: 0,
             miningTime: Infinity,
+            miningRadius: 0,
         };
     }
 

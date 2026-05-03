@@ -47,10 +47,10 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                     }
 
                     if (payload.value && !cpu.waitingForReturn.ignoreResult) {
-                        ctx.systemData.stack.push(payload.value);
+                        cpu.stack.push(payload.value);
                     }
 
-                    ctx.systemData.waitingForReturn = null;
+                    cpu.waitingForReturn = null;
 
                     return true;
                 },
@@ -116,9 +116,8 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
 
             switch (instruction.type) {
                 case 'assign': {
-                    const value = cpu.stack.pop();
+                    const [value] = popStack(cpu, 1);
                     if (!value) {
-                        toErrorState(cpu, 'stack is empty');
                         break;
                     }
 
@@ -129,7 +128,6 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 case 'call': {
                     const argv = popStack(cpu, instruction.nargs);
                     if (argv.length !== instruction.nargs) {
-                        toErrorState(cpu, `need at least ${instruction.nargs} elements in stack`);
                         break;
                     }
 

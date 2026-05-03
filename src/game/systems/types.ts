@@ -1,4 +1,5 @@
 import type { UnitConfiguration } from '../config';
+import type { FactionId } from '../factions';
 import type { BsmlValueType } from '../program/value';
 import type { NodeId, UnitCommand, UnitCommandCall, UnitEnvironment, UnitId } from '../types';
 import type { UnitEventController } from './events';
@@ -35,6 +36,7 @@ export type CreateUnitSystemCommonOptions = {
 export type SpawnOptions = {
     config: UnitConfiguration;
     at: NodeId;
+    faction: FactionId;
 };
 
 export type SpawnFn = (opts: SpawnOptions) => UnitId;

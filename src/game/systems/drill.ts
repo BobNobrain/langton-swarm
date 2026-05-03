@@ -1,4 +1,5 @@
 import { getDrillProperties } from '../config';
+import type { ResourceTier } from '../resources';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { InventoryController } from './inventory';
@@ -19,11 +20,12 @@ type DrillData = {
     drillTime: number;
     drillAmount: number;
     powerConsumption: number;
-    tier: number;
+    tier: ResourceTier;
+    radius: number;
 };
 
 type DrillDeps = {
-    world: Pick<GameWorld, 'resources' | 'mineResource'>;
+    world: Pick<GameWorld, 'resources'>;
     inventory: InventoryController;
     battery: EnergySystemController;
     positions: PositionalSystemController;
@@ -35,7 +37,7 @@ const schedule = createScheduler<DrillData>(DRILL_SYSTEM_NAME);
 
 export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
     mine: {
-        description: 'Commands the drill to mine 1 unit of any resource deposit that unit has underneath it',
+        description: 'Commands the drill to mine a batch of any resource deposit that unit has underneath it',
         argNames: [],
         argTypes: [],
         returnType: 'flag',
@@ -46,20 +48,24 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
                 ctx,
                 (ctx, env) => {
                     const position = positions.getEffectivePosition(ctx.unitId);
-                    const resource = world.resources.get(position);
                     let success = false;
                     const drill = ctx.systemData;
-                    const amountToMine = Math.min(drill.drillAmount, resource?.amount ?? 0);
 
-                    if (resource && resource.amount > 0) {
-                        if (battery.withdraw(ctx.unitId, drill.powerConsumption)) {
-                            const effectiveAmount =
-                                inventory.add({
-                                    to: ctx.unitId,
-                                    amounts: { [resource.resource]: amountToMine },
-                                    tick: env.currentTick,
-                                })[resource.resource] ?? 0;
-                            world.mineResource(position, resource.resource, effectiveAmount);
+                    if (battery.withdraw(ctx.unitId, drill.powerConsumption)) {
+                        const mined = world.resources.mine({
+                            location: position,
+                            maxAmount: Math.min(drill.drillAmount, inventory.getFreeSpace(ctx.unitId)),
+                            maxTier: drill.tier,
+                            resource: undefined, // TODO: add ability to specify which resource to mine
+                        });
+
+                        if (!mined.isEmpty()) {
+                            inventory.add({
+                                to: ctx.unitId,
+                                amounts: mined.content,
+                                tick: env.currentTick,
+                            });
+
                             success = true;
                         }
                     }
@@ -77,8 +83,8 @@ export const DRILL_FNS: CallableUnitSystemFunctions<DrillData, DrillDeps> = {
         argTypes: [],
         returnType: 'flag',
         init(_args, ctx, _env, { world, battery, positions }) {
-            const deposit = world.resources.get(positions.getEffectivePosition(ctx.unitId));
-            let result = deposit !== undefined && deposit.amount > 0;
+            const deposits = world.resources.getDepositsAt(positions.getEffectivePosition(ctx.unitId));
+            let result = deposits.some((d) => d.amount > 0);
 
             if (!battery.withdraw(ctx.unitId, 1)) {
                 result = false;
@@ -111,6 +117,7 @@ export function createDrillSystem(
                 drillTime: chars.miningTime,
                 powerConsumption: chars.energyConsumption,
                 tier: chars.maxDepositTier,
+                radius: chars.miningRadius,
             };
         },
 
