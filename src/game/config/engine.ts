@@ -14,21 +14,21 @@ type EngineCharacteristics = CommonCharacteristics & {
 export const ENGINE_CHARACTERISTICS: Record<EngineConfiguration, EngineCharacteristics> = {
     [EngineConfiguration.Tier1Cheap]: {
         mass: 1,
-        constructionTime: 1,
+        constructionPoints: 10,
         constructionCosts: { electrical: 5, structural: 5 },
         power: 1,
         energyConsumption: 5,
     },
     [EngineConfiguration.Tier1Regular]: {
         mass: 2,
-        constructionTime: 1,
+        constructionPoints: 10,
         constructionCosts: { electrical: 8, structural: 12 },
         power: 2,
         energyConsumption: 8,
     },
     [EngineConfiguration.Tier2]: {
         mass: 5,
-        constructionTime: 20,
+        constructionPoints: 200,
         constructionCosts: { electrical: 15, structural: 35, special: 3 },
         power: 3,
         energyConsumption: 11,

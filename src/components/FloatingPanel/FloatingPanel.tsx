@@ -1,4 +1,5 @@
 import { createEffect, type ParentComponent } from 'solid-js';
+import { triggerResize } from '@/lib/BoundsTracker';
 import styles from './FloatingPanel.module.css';
 
 export const FloatingPanel: ParentComponent<{
@@ -12,7 +13,7 @@ export const FloatingPanel: ParentComponent<{
 }> = (props) => {
     createEffect(() => {
         props.expandedWidth;
-        window.dispatchEvent(new Event('resize'));
+        triggerResize();
     });
 
     return (

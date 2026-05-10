@@ -98,3 +98,7 @@ const eq = (r1: DOMRect, r2: DOMRect): boolean => {
             r1.right === r2.right)
     );
 };
+
+export function triggerResize() {
+    window.dispatchEvent(new Event('resize'));
+}

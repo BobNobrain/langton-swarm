@@ -70,7 +70,13 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
     );
 };
 
-const ALL_MODELS = [UnitModelType.Mother, UnitModelType.Rover, UnitModelType.Pile, UnitModelType.Unknown];
+const ALL_MODELS = [
+    UnitModelType.Mother,
+    UnitModelType.Rover,
+    UnitModelType.Pile,
+    UnitModelType.ConstructionSite,
+    UnitModelType.Unknown,
+];
 
 export const GameSwarms: Component = () => {
     const { world, units, ui } = useGame();

@@ -10,7 +10,7 @@ import { createGameWorld, type GameWorld } from './world';
 
 export type GameState = {
     readonly world: GameWorld;
-    readonly deck: BlueprintDeck;
+    readonly playerDeck: BlueprintDeck;
     readonly ui: GameUIState;
     readonly time: GameTimeState;
     readonly units: GameUnitSystems;
@@ -27,16 +27,19 @@ type Options = {
 export async function createGameState({ gameTick, onProgress, worldgen }: Options): Promise<GameState> {
     const time = createGameTime(gameTick);
     const world = await createGameWorld(gameTick, worldgen, onProgress);
+
     const factions = createFactions();
-    const deck = createBlueprintDeck(factions.player.id);
-    const units = createGameSystems(world, deck, gameTick);
+    const playerDeck = createBlueprintDeck(factions.player.id);
+    factions.player.deck = playerDeck;
+
+    const units = createGameSystems(world, gameTick, factions);
     const ui = createGameUIState(units);
     const camera = createGameCamera(world.radius);
 
     const state: GameState = {
         world,
         units,
-        deck,
+        playerDeck,
         ui,
         time,
         camera,

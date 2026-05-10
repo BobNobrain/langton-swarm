@@ -1,7 +1,8 @@
 import type { UnitConfiguration } from '../config';
 import type { FactionId } from '../factions';
+import type { GameLoop } from '../loop';
 import type { BsmlValueType } from '../program/value';
-import type { NodeId, UnitCommand, UnitCommandCall, UnitEnvironment, UnitId } from '../types';
+import type { NodeId, UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { UnitEventController } from './events';
 
 export type SendMessage = (to: string, message: UnitSystemMessage, delay?: number) => void;
@@ -9,6 +10,7 @@ export type SendMessage = (to: string, message: UnitSystemMessage, delay?: numbe
 export type UnitSystemTickContext<Data> = {
     unitId: UnitId;
     systemData: Data;
+    system: UnitSystem<Data>;
     sleep: (ticksFor?: number) => void;
     sendMessage: SendMessage;
 };
@@ -27,10 +29,10 @@ export type UnitSystemMessage = {
 };
 
 export type CreateUnitSystemCommonOptions = {
-    env: UnitEnvironment;
     sendMessage: SendMessage;
     events: UnitEventController[];
     systems: Record<string, UnitSystem<unknown>>;
+    logicTick: GameLoop;
 };
 
 export type SpawnOptions = {

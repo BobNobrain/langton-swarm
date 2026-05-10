@@ -49,6 +49,18 @@ const pile: UnitModel = {
     }),
 };
 
+const site: UnitModel = {
+    geom: new BoxGeometry(0.7, 0.3, 0.7),
+    mat: new MeshStandardMaterial({
+        color: '#d2e5ea',
+        emissive: '#d2e5ea',
+        emissiveIntensity: 0.4,
+        transparent: true,
+        opacity: 0.7,
+        wireframe: true,
+    }),
+};
+
 const unknown: UnitModel = {
     geom: new BoxGeometry(0.3, 0.3, 0.3),
     mat: new MeshStandardMaterial({
@@ -70,6 +82,9 @@ export function getUnitModel(type: UnitModelType): UnitModel {
 
         case UnitModelType.Pile:
             return pile;
+
+        case UnitModelType.ConstructionSite:
+            return site;
 
         default:
             return unknown;

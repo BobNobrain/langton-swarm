@@ -1,9 +1,10 @@
 import { isPile, getStorageCapacity } from '@/game/config';
+import { createUnitEvent } from '../events';
+import { usfHandlers, type CallableUnitSystemMessages } from '../func';
 import type { PositionalSystemController } from '../positions';
 import type { StationariesSystemController } from '../stationaries';
 import { createUnitSystem } from '../systems';
 import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn, UnitSystem } from '../types';
-import { callableUnitSystemHandlers, type CallableUnitSystemMessages } from '../utils';
 import { INVENTORY_FNS } from './fns';
 import type { InventoryController, InventoryData, InventoryDeps } from './types';
 import { measure, transferAsMuchAsPossible, transferEverything } from './utils';
@@ -19,34 +20,41 @@ export function createInventorySystem(
 ) {
     let system: UnitSystem<InventoryData>;
 
+    const updated = createUnitEvent<InventoryData>();
+    options.events.push(updated);
+
     const controller: InventoryController = {
-        add({ to, amounts, tick }) {
+        updated,
+
+        add({ to, amounts }) {
             const inv = system.getData(to);
             if (!inv) {
                 return {};
             }
 
-            const effective = transferAsMuchAsPossible({ from: null, to: inv, amounts, tick });
+            const effective = transferAsMuchAsPossible({ from: null, to: inv, amounts });
             if (measure(effective) !== 0) {
                 system.activate(to);
+                controller.updated.pub({ unitId: to, payload: inv });
             }
 
             return effective;
         },
-        withdraw({ from, amounts, tick }) {
+        withdraw({ from, amounts }) {
             const inv = system.getData(from);
             if (!inv) {
                 return false;
             }
 
-            const ok = transferEverything({ from: inv, to: null, amounts, tick });
+            const ok = transferEverything({ from: inv, to: null, amounts });
             if (ok) {
                 system.activate(from);
+                controller.updated.pub({ unitId: from, payload: inv });
             }
             return ok;
         },
 
-        transfer({ from, to, amounts, tick, strategy }) {
+        transfer({ from, to, amounts, strategy }) {
             const invFrom = system.getData(from);
             const invTo = system.getData(to);
             if (!invFrom || !invTo) {
@@ -60,17 +68,24 @@ export function createInventorySystem(
             let result: Record<string, number> | null = null;
             switch (strategy) {
                 case 'all':
-                    result = transferEverything({ from: invFrom, to: invTo, amounts, tick }) ? amounts : null;
+                    result = transferEverything({ from: invFrom, to: invTo, amounts }) ? amounts : null;
                     break;
 
                 case 'max':
-                    result = transferAsMuchAsPossible({ from: invFrom, to: invTo, amounts, tick });
+                    result = transferAsMuchAsPossible({
+                        from: invFrom,
+                        to: invTo,
+                        amounts,
+                    });
                     break;
             }
 
             if (result) {
                 system.activate(from);
                 system.activate(to);
+
+                controller.updated.pub({ unitId: from, payload: invFrom });
+                controller.updated.pub({ unitId: to, payload: invTo });
             }
 
             return result;
@@ -101,10 +116,12 @@ export function createInventorySystem(
     system = createUnitSystem<InventoryData, CallableUnitSystemMessages>(options, {
         name: INVENTORY_SYSTEM_NAME,
         messages: {
-            ...callableUnitSystemHandlers<InventoryData, InventoryDeps>(
-                { stationaries, inventories: controller, spawn, positions },
-                INVENTORY_FNS,
-            ),
+            ...usfHandlers<InventoryData, InventoryDeps>(INVENTORY_FNS, {
+                stationaries,
+                inventories: controller,
+                spawn,
+                positions,
+            }),
         },
 
         initialData: ({ config }) => {
@@ -116,12 +133,11 @@ export function createInventorySystem(
                 capacity: getStorageCapacity(config),
                 size: 0,
                 contents: {},
-                lastUpdated: -1,
                 shouldDespawnWhenEmpty: isPile(config),
             };
         },
 
-        tick(ctx, env) {
+        tick(ctx) {
             if (!ctx.systemData.shouldDespawnWhenEmpty || ctx.systemData.size > 0) {
                 ctx.sleep();
                 return;

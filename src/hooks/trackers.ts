@@ -1,12 +1,14 @@
-import { createMemo, createSignal } from 'solid-js';
+import { createEffect, createMemo, createSignal } from 'solid-js';
 import type { NodeId, UnitId, InventoryData, BsmlValue } from '@/game';
 import type { CompiledProgram } from '@/game/program/compile';
 import { renderStateName } from '@/game/program/utils';
-import type { AssemblerData } from '@/game/systems';
+import type { AssemblerData, CPUData } from '@/game/systems';
 import { useGame } from '@/gameContext';
 import { onTickConditional } from '@/hooks/onTick';
 import { createUnitEventListener } from './events';
 import type { UnitEventData } from '@/game/systems/events';
+import type { ConstructionSiteData } from '@/game/systems/sites';
+import { InventoryDelta } from '@/game/inventory';
 
 export type UnitStatusTracker = {
     rStateName: () => string;
@@ -54,33 +56,33 @@ const NO_INVENTORY: InventoryData = {
     capacity: 0,
     size: 0,
     contents: {},
-    lastUpdated: 0,
     shouldDespawnWhenEmpty: false,
 };
 
 export function createInventoryTracker(unitId: () => UnitId | null) {
     const { units } = useGame();
     const [rInventory, rSetInventory] = createSignal(NO_INVENTORY);
-    let lastUpdated = -1;
-    let lastUnitId: UnitId | null = null;
 
-    onTickConditional(unitId, (uid) => () => {
-        const inv = units.inventory.getInfo(uid);
-
-        if (!inv) {
-            if (lastUpdated >= 0) {
-                lastUpdated = -1;
-                rSetInventory(NO_INVENTORY);
-            }
-
+    createEffect(() => {
+        const uid = unitId();
+        if (!uid) {
+            rSetInventory(NO_INVENTORY);
             return;
         }
 
-        if (lastUpdated < inv.lastUpdated || lastUnitId !== uid) {
-            rSetInventory({ ...inv });
-            lastUpdated = inv.lastUpdated;
-            lastUnitId = uid;
-        }
+        const inventory = units.inventory.getInfo(uid);
+        rSetInventory(inventory ? { ...inventory } : NO_INVENTORY);
+    });
+
+    createUnitEventListener({
+        ev: units.inventory.updated,
+        unitId,
+        listener(ev) {
+            rSetInventory({ ...ev.payload });
+        },
+        cleanup() {
+            rSetInventory(NO_INVENTORY);
+        },
     });
 
     return rInventory;
@@ -89,43 +91,46 @@ export function createInventoryTracker(unitId: () => UnitId | null) {
 export function createCPUStateTracker(unitId: () => UnitId | null) {
     const { units } = useGame();
 
-    let lastUpdated = -1;
     const [rCpuStack, setCpuStack] = createSignal<BsmlValue[]>([]);
     const [rCpuPtr, setCpuPtr] = createSignal(0);
     const [rStateName, setStateName] = createSignal<string | null>(null);
     const [rCpuIsWaiting, setCpuIsWaiting] = createSignal('--');
 
-    let unitIdForProgram: UnitId | null = null;
     const [rCpuProgram, setCpuProgram] = createSignal<CompiledProgram | null>(null);
 
-    onTickConditional(unitId, (unitId) => () => {
-        const cpu = units.cpu.getData(unitId);
-
+    const update = (cpu: CPUData | null) => {
         if (!cpu) {
-            if (lastUpdated > 0) {
-                setCpuStack([]);
-                setCpuPtr(0);
-                setStateName(null);
-                setCpuProgram(null);
-                setCpuIsWaiting('--');
-            }
-
+            setCpuStack([]);
+            setCpuPtr(0);
+            setStateName(null);
+            setCpuProgram(null);
+            setCpuIsWaiting('--');
             return;
         }
 
-        if (unitId !== unitIdForProgram) {
-            setCpuProgram(cpu.program);
-        }
-
-        if (lastUpdated >= cpu.lastUpdated) {
-            return;
-        }
-
+        setCpuProgram(cpu.program);
         setCpuStack(cpu.stack.slice());
         setCpuPtr(cpu.ptr >= cpu.program.stateInstructions[cpu.state].length ? 0 : cpu.ptr);
         setStateName(cpu.state);
         setCpuIsWaiting(cpu.waitingForReturn?.system ?? '--');
-        lastUpdated = cpu.lastUpdated;
+    };
+
+    createEffect(() => {
+        const uid = unitId();
+        if (!uid) {
+            update(null);
+            return;
+        }
+
+        update(units.cpu.getData(uid));
+    });
+
+    createUnitEventListener({
+        ev: units.cpu.updated,
+        unitId,
+        listener(ev) {
+            update(ev.payload);
+        },
     });
 
     return {
@@ -137,93 +142,123 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
     };
 }
 
-// export function createMotherTracker(unitId: () => UnitId | null) {
-//     const { units } = useGame();
-//     let lastUpdated = -1;
-//     let lastUnitId: UnitId | null = null;
-
-//     const [rCurrentSpawn, setCurrentSpawn] = createSignal<MotherData['currentSpawn'] | null>(null);
-//     const [rSpawnQueue, setSpawnQueue] = createSignal<MotherData['spawnQueue']>([]);
-//     const [rSpawnProgress, setSpawnProgress] = createSignal(0);
-
-//     onTickConditional(unitId, (unitId) => (tick) => {
-//         const mother = units.mother.getData(unitId);
-//         if (!mother) {
-//             if (lastUnitId !== null) {
-//                 lastUnitId = null;
-//                 lastUpdated = -1;
-//                 setCurrentSpawn(null);
-//                 setSpawnQueue([]);
-//                 setSpawnProgress(0);
-//             }
-//             return;
-//         }
-
-//         if (mother.lastUpdated > lastUpdated || unitId !== lastUnitId) {
-//             lastUnitId = unitId;
-//             lastUpdated = mother.lastUpdated;
-
-//             setCurrentSpawn(mother.currentSpawn ? { ...mother.currentSpawn } : null);
-//             setSpawnQueue(mother.spawnQueue.slice());
-//         }
-
-//         setSpawnProgress(
-//             mother.currentSpawn?.started ? (tick - mother.currentSpawn.started) / mother.currentSpawn.timeToBuild : 0,
-//         );
-//     });
-
-//     return { rCurrentSpawn, rSpawnQueue, rSpawnProgress };
-// }
-
 export function createAssemblerTracker(unitId: () => UnitId | null) {
     const { units } = useGame();
 
     const [rCurrentSpawn, setCurrentSpawn] = createSignal<AssemblerData['currentSpawn'] | null>(null);
     const [rSpawnQueue, setSpawnQueue] = createSignal<AssemblerData['spawnQueue']>([]);
     const [rSpawnProgress, setSpawnProgress] = createSignal(0);
+    const [rCharacteristics, setCharacteristics] = createSignal({ speed: 0 });
 
-    const applyUpdates = (ev: UnitEventData<unknown>) => {
-        const data = units.assembler.getData(ev.unitId)!;
-
-        setCurrentSpawn(data.currentSpawn ? { ...data.currentSpawn } : null);
-        setSpawnQueue(data.spawnQueue.slice());
-
-        if (!data.currentSpawn) {
-            setSpawnProgress(0);
-        }
+    const updateCurrentSpawn = (spawnData: AssemblerData['currentSpawn'] | null) => {
+        setCurrentSpawn(spawnData);
+        setSpawnProgress(
+            spawnData && spawnData.resourcesConsumed ? spawnData.pointsSpent / spawnData.pointsToBuild : 0,
+        );
     };
+
+    createEffect(() => {
+        const uid = unitId();
+        if (!uid) {
+            updateCurrentSpawn(null);
+            setSpawnQueue([]);
+            setCharacteristics({ speed: 0 });
+            return;
+        }
+
+        const assembler = units.assembler.getData(uid);
+        if (!assembler) {
+            return;
+        }
+
+        setCharacteristics({ speed: assembler.speed });
+        setSpawnQueue(assembler.spawnQueue.slice());
+        updateCurrentSpawn(assembler.currentSpawn);
+    });
 
     createUnitEventListener({
         ev: units.assembler.queueUpdated,
         unitId,
-        listener: applyUpdates,
+        listener(ev) {
+            setSpawnQueue(ev.payload.slice());
+        },
     });
 
     createUnitEventListener({
-        ev: units.assembler.spawned,
+        ev: units.assembler.currentSpawnUpdated,
         unitId,
-        listener: applyUpdates,
+        listener(ev) {
+            updateCurrentSpawn(ev.payload);
+        },
     });
 
+    return { rCurrentSpawn, rSpawnQueue, rSpawnProgress, rCharacteristics };
+}
+
+export function createUnitsAtLocationTracker(location: () => NodeId | null) {
+    const { units } = useGame();
+    const [rUnitIds, setUnitIds] = createSignal<UnitId[]>([]);
+
     onTickConditional(
-        () => {
-            if (!rCurrentSpawn()) {
-                return null;
-            }
+        location,
+        (location) => () => {
+            const newIds = units.positions.findAtPosition(location, { strict: true });
+            setUnitIds((oldIds) => {
+                if (oldIds.length !== newIds.length) {
+                    return newIds;
+                }
 
-            return unitId();
-        },
-        (unitId) => (tick) => {
-            const data = units.assembler.getData(unitId);
-            if (!data) {
-                return;
-            }
+                for (let i = 0; i < oldIds.length; i++) {
+                    if (oldIds[i] !== newIds[i]) {
+                        return newIds;
+                    }
+                }
 
-            setSpawnProgress(
-                data.currentSpawn?.started ? (tick - data.currentSpawn.started) / data.currentSpawn.timeToBuild : 0,
-            );
+                return oldIds;
+            });
         },
+        () => setUnitIds([]),
     );
 
-    return { rCurrentSpawn, rSpawnQueue, rSpawnProgress };
+    return rUnitIds;
+}
+
+export function createConstructionSiteUnderAssemblerTracker(assemblerUnitId: () => UnitId | null) {
+    const { units } = useGame();
+    const [rSiteProgress, setConstructionSiteProgress] = createSignal(0);
+    const [rSiteMatsRequired, setSiteMatsRequired] = createSignal<InventoryDelta | null>(null);
+
+    onTickConditional(assemblerUnitId, (unitId) => () => {
+        const location = units.positions.getEffectivePosition(unitId);
+        const siteId = units.sites.findByLocation(location);
+
+        if (!siteId) {
+            setConstructionSiteProgress(0);
+            return;
+        }
+
+        const progress = units.sites.getProgress(siteId);
+        const mats = units.sites.getMatsRequired(siteId);
+        setConstructionSiteProgress(progress);
+        setSiteMatsRequired(mats);
+    });
+
+    return { rSiteProgress, rSiteMatsRequired };
+}
+
+export function createIsStaticTracker(unitId: () => UnitId | null) {
+    const { units } = useGame();
+    const [rIsStatic, setIsStatic] = createSignal(false);
+
+    createEffect(() => {
+        const uid = unitId();
+        if (!uid) {
+            setIsStatic(false);
+            return;
+        }
+
+        setIsStatic(units.stationaries.isStationary(uid));
+    });
+
+    return { rIsStatic };
 }

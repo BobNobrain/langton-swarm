@@ -8,7 +8,7 @@ export const TimeLabel: Component<{ ticks: number | null; title?: string }> = (p
     return (
         <span class={styles.label} title={props.title}>
             {Symbols.CircleQuarterTopRight}{' '}
-            {props.ticks === null
+            {props.ticks === null || !Number.isFinite(props.ticks)
                 ? '--'
                 : (Math.round((props.ticks * gameTick.tickDurationMs) / 100) / 10).toFixed(1) + 's'}
         </span>

@@ -34,13 +34,13 @@ export namespace InventoryDelta {
         return result;
     }
 
-    export function combine(delta1: InventoryDelta, delta2: InventoryDelta): InventoryDelta {
+    export function combine(delta1: InventoryDelta, delta2: InventoryDelta, factor1 = 1, factor2 = 1): InventoryDelta {
         const result = new InventoryDeltaImpl();
         for (const [resource, amount] of Object.entries(delta1.content)) {
-            result.set(resource, amount);
+            result.set(resource, amount * factor1);
         }
         for (const [resource, amount] of Object.entries(delta2.content)) {
-            result.set(resource, amount);
+            result.set(resource, amount * factor2);
         }
         return result;
     }
@@ -72,7 +72,7 @@ export namespace InventoryDelta {
         let gt = false;
         let lt = false;
 
-        for (const resource of rs1) {
+        for (const resource of new Set([...rs1, ...rs2])) {
             const amt1 = delta1.content[resource] ?? 0;
             const amt2 = delta2.content[resource] ?? 0;
 
@@ -105,6 +105,45 @@ export namespace InventoryDelta {
         result.size *= scalar;
 
         return result;
+    }
+
+    export function min(delta1: InventoryDelta, delta2: InventoryDelta): InventoryDelta {
+        const rs = new Set([...Object.keys(delta1.content), ...Object.keys(delta2.content)]);
+        const result = new InventoryDeltaImpl();
+
+        for (const resource of rs) {
+            const amt1 = delta1.content[resource] ?? 0;
+            const amt2 = delta2.content[resource] ?? 0;
+            const min = Math.min(amt1, amt2);
+            result.content[resource] = min;
+            result.size += min;
+        }
+
+        return result;
+    }
+
+    export function abs(delta: InventoryDelta): InventoryDelta {
+        const result = new InventoryDeltaImpl();
+
+        for (const resource of Object.keys(delta.content)) {
+            const amt = Math.max(0, delta.content[resource]);
+            result.content[resource] = amt;
+            result.size += amt;
+        }
+
+        return result;
+    }
+
+    export function fulfillment(target: InventoryDelta, actual: InventoryDelta): number {
+        let totalProvided = 0;
+
+        for (const resource of Object.keys(target.content)) {
+            const targetAmount = target.content[resource];
+            const actualAmount = actual.content[resource] ?? 0;
+            totalProvided += Math.min(targetAmount, actualAmount);
+        }
+
+        return totalProvided / target.size;
     }
 }
 

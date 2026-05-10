@@ -1,4 +1,4 @@
-import type { KnownResourceName } from '../worldgen/resources';
+import type { KnownResourceName } from '../resources';
 import type { AssemblerConfiguration } from './assembler';
 import type { BatteryConfiguration } from './battery';
 import type { DrillConfiguration } from './drill';
@@ -42,6 +42,6 @@ export type ConfigSpecific<T> = {
 
 export type CommonCharacteristics = {
     mass: number;
-    constructionTime: number;
+    constructionPoints: number;
     constructionCosts: ConstructionCosts;
 };

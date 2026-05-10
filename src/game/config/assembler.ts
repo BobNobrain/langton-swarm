@@ -6,21 +6,21 @@ export enum AssemblerConfiguration {
 }
 
 type AssemblerCharacteristics = CommonCharacteristics & {
-    speed: number;
+    pointsPerTick: number;
 };
 
 export const ASSEMBLER_CHARACTERISTICS: Record<AssemblerConfiguration, AssemblerCharacteristics> = {
     [AssemblerConfiguration.Tier1]: {
         constructionCosts: { electrical: 15, structural: 20, energetical: 5 },
-        constructionTime: 10,
+        constructionPoints: 100,
         mass: 10,
-        speed: 0.1,
+        pointsPerTick: 1,
     },
     [AssemblerConfiguration.Tier2]: {
         constructionCosts: { electrical: 200, structural: 100, energetical: 30 },
-        constructionTime: 100,
+        constructionPoints: 1000,
         mass: 10_000,
-        speed: 1,
+        pointsPerTick: 10,
     },
 };
 
@@ -29,5 +29,5 @@ export function getAssemblerSpeed(config: UnitConfiguration): number {
         return 0;
     }
 
-    return ASSEMBLER_CHARACTERISTICS[config.assembler].speed;
+    return ASSEMBLER_CHARACTERISTICS[config.assembler].pointsPerTick;
 }

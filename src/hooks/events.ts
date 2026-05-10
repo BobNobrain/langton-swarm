@@ -12,14 +12,17 @@ export function createUnitEventListener<P>({
     ev,
     listener,
     unitId,
+    cleanup,
 }: {
     ev: UnitEvent<P>;
     listener: (ev: UnitEventData<P>) => void;
     unitId: () => UnitId | null;
+    cleanup?: () => void;
 }) {
     createEffect(() => {
         const uid = unitId();
         if (!uid) {
+            cleanup?.();
             return;
         }
 

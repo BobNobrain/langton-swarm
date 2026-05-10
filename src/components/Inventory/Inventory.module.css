@@ -1,12 +1,26 @@
-.status {
-    padding: 4px 8px;
+.inventory {
+    position: relative;
+}
+.fullHeight {
+    height: 100%;
+}
+
+.header {
     margin-bottom: 4px;
-    font-size: 0.8em;
-    line-height: 0.9em;
     background-color: var(--c-gray-d);
-    color: var(--c-gray-l);
     margin-left: calc(-1 * var(--container-padding-l, 0));
     margin-right: calc(-1 * var(--container-padding-r, 0));
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status {
+    padding: 4px 8px;
+    font-size: 0.8em;
+    line-height: 0.9em;
+    color: var(--c-gray-l);
 }
 
 .contents {
@@ -99,5 +113,60 @@
         .concise & {
             display: none;
         }
+    }
+}
+
+.dropZoneWrapper {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(from var(--c-gray-d) r g b / 75%);
+}
+
+.dropZoneDynamic {
+    height: 30%;
+    border: 1px solid var(--c-primary);
+    text-align: center;
+    align-content: center;
+    color: var(--c-primary);
+    background-color: rgba(from var(--c-primary) r g b / 25%);
+
+    &.dropover {
+        background: linear-gradient(
+            to right,
+            var(--c-primary) 0%,
+            var(--c-primary) var(--drop-zone-fill-width, 100%),
+            rgba(from var(--c-primary) r g b / 25%) var(--drop-zone-fill-width, 100%),
+            rgba(from var(--c-primary) r g b / 25%) 100%
+        );
+        color: var(--c-white);
+        border-color: var(--c-white);
+    }
+}
+
+.dropZonesStatic {
+    height: 70%;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.dropZone {
+    flex: 1 1 20%;
+    min-width: calc(33% - 2px);
+    min-height: calc(50% - 2px);
+
+    border: 1px solid var(--c-primary);
+    text-align: center;
+    align-content: center;
+    color: var(--c-primary);
+    font-weight: 500;
+
+    &.dropover {
+        background-color: var(--c-primary);
+        color: var(--c-white);
+        border-color: var(--c-white);
     }
 }

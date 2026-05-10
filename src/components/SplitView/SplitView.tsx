@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Show, type Component, type JSX } from 'solid-js';
+import { triggerResize } from '@/lib/BoundsTracker';
 import { createDragTracker } from '@/lib/drag';
 import { MouseButton } from '@/lib/input';
 import styles from './SplitView.module.css';
@@ -24,7 +25,7 @@ export const SplitView: Component<{
             const newHeight = Math.max(0, Math.min(dragStartHeight + deltaHeightShare, 1));
             setHeight(newHeight);
 
-            window.dispatchEvent(new Event('resize'));
+            triggerResize();
         },
     });
 

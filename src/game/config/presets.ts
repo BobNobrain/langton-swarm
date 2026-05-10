@@ -7,6 +7,32 @@ import { AssemblerConfiguration } from './assembler';
 import { DrillConfiguration } from './drill';
 
 export const MOTHER_PRESET: UnitConfiguration = {
+    cpu: `# This script handles unit assembly process for Cores
+command spawn(blueprint target) {
+    assembler.queue(target)
+    state :assembling
+}
+
+command kick() {
+    state :assembling
+}
+
+state assembling {
+    if not assembler.is_assembling {
+        if assembler.queue_length == 0 {
+            state :idle
+        }
+
+        assembler.start_from_queue
+    }
+
+    # perform the construction
+    if not assembler.finish_assembling {
+        # if something went wrong
+        state :idle
+    }
+}
+`,
     assembler: AssemblerConfiguration.Tier2,
     battery: BatteryConfiguration.Tier2,
     solar: SolarConfiguration.Tier2Mobile,
@@ -125,10 +151,6 @@ state full {
     scanner: true,
     storage: StorageConfiguration.Tier1Big,
     solar: SolarConfiguration.Tier1Regular,
-};
-
-export const PILE_PRESET: UnitConfiguration = {
-    storage: StorageConfiguration.Infinite,
 };
 
 export function createDefaultUnitConfig(): UnitConfiguration {
@@ -295,16 +317,29 @@ state navigating {
     engine.move(navigator.next_step)
 }
 
-command assemble(blueprint target) {
-    assembler.start_construction(target)
-    state :assembling
+command start(blueprint target) {
+    if not assembler.create_construction_site(target) {
+        state :idle
+    }
+
+    state :constructing
 }
 
-state assembling {
-    if not assembler.construct {
+command construct {
+    state :constructing
+}
+
+state constructing {
+    storage.unload_max(assembler.get_site_missing_materials)
+    if not assembler.finish_construction {
+        # show_error("Not enough materials")
         engine.move(navigator.random)
         state :idle
     }
+
+    # send_notification("Construction done")
+    engine.move(navigator.random) # and then move 1 tile away
+    state :idle
 }
 `,
     battery: BatteryConfiguration.Tier1Regular,
@@ -314,3 +349,32 @@ state assembling {
     solar: SolarConfiguration.Tier1Regular,
     assembler: AssemblerConfiguration.Tier1,
 };
+
+export const MINING_RIG_PRESET: UnitConfiguration = {
+    cpu: `
+command mine {
+    state :mining
+}
+command halt {}
+
+state mining {
+    drill.mine
+}
+`,
+    drill: DrillConfiguration.Tier2,
+    storage: StorageConfiguration.Tier1Big,
+    solar: SolarConfiguration.Tier1Regular,
+    battery: BatteryConfiguration.Tier1Big,
+};
+
+// private presets for in-game use
+export const PILE_PRESET: UnitConfiguration = {
+    storage: StorageConfiguration.Infinite,
+};
+
+export function constructionSitePreset(target: UnitConfiguration): UnitConfiguration {
+    return {
+        construction: target,
+        storage: StorageConfiguration.Infinite,
+    };
+}

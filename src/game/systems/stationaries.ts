@@ -9,6 +9,7 @@ const STATIONARIES_SYSTEM_NAME = 'stationaries';
 
 export type StationariesSystemController = {
     getAt(location: NodeId): UnitId | null;
+    isStationary(unitId: UnitId): boolean;
 };
 
 const schedule = createScheduler<StationaryData>(STATIONARIES_SYSTEM_NAME);
@@ -42,7 +43,7 @@ export function createStationariesSystem(
             return at;
         },
 
-        finalize(ctx, env) {
+        finalize(ctx) {
             const isValid = ctx.systemData;
             if (!isValid) {
                 return;
@@ -62,6 +63,9 @@ export function createStationariesSystem(
     const controller: StationariesSystemController = {
         getAt(location) {
             return stationaries.get(location) ?? null;
+        },
+        isStationary(unitId) {
+            return system.getData(unitId) !== null;
         },
     };
 

@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, onMount, Show, type Component } from 'solid-js';
 import type { BlueprintId, InventoryData, UnitId } from '@/game';
-import { getConstructionCosts, getConstructionTime, isStationary } from '@/game/config';
+import { getConstructionCosts, getConstructionPoints, isStationary } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { KeyCode } from '@/lib/input';
 import { Button } from '../Button/Button';
@@ -16,11 +16,12 @@ import { createTextInputController } from '../TextInput/TextInput';
 export const AssemblerMenu: Component<{
     unitId: UnitId | null;
     enabled: boolean;
+    speed: number;
     unitInventory: InventoryData;
     onClose: () => void;
     onQueue: (blueprintId: BlueprintId, amount: number) => void;
 }> = (props) => {
-    const { deck, units } = useGame();
+    const { playerDeck, units } = useGame();
 
     const blueprintOptions = createMemo((): SelectOption<BlueprintId>[] => {
         const result: SelectOption<BlueprintId>[] = [];
@@ -35,7 +36,7 @@ export const AssemblerMenu: Component<{
 
         const assemblerIsStationary = isStationary(assemblerConfig);
 
-        for (const bp of deck.rBlueprints()) {
+        for (const bp of playerDeck.rBlueprints()) {
             const targetVersion = bp.rLastVersion();
 
             if (assemblerIsStationary && isStationary(targetVersion.config)) {
@@ -75,7 +76,7 @@ export const AssemblerMenu: Component<{
             return null;
         }
 
-        const bp = deck.getBlueprint(selected);
+        const bp = playerDeck.getBlueprint(selected);
         if (!bp) {
             return null;
         }
@@ -84,7 +85,7 @@ export const AssemblerMenu: Component<{
         const amount = selectedAmount();
         return {
             config,
-            time: getConstructionTime(config),
+            time: getConstructionPoints(config) / props.speed,
             costs: getConstructionCosts(config, amount),
         };
     });

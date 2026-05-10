@@ -11,12 +11,17 @@ export function onTick(handler: Ticker) {
     });
 }
 
-export function onTickConditional<T>(condition: () => T | null, handlerFactory: (t: T) => Ticker) {
+export function onTickConditional<T>(
+    condition: () => T | null,
+    handlerFactory: (t: T) => Ticker,
+    cleanup?: () => void,
+) {
     const { gameTick: engine } = useGame();
 
     createEffect(() => {
         const data = condition();
         if (!data) {
+            cleanup?.();
             return;
         }
 

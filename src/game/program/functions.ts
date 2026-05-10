@@ -1,4 +1,5 @@
 import type { UnitConfiguration } from '../config';
+import { ASSEMBLER_FNS, ASSEMBLER_SYSTEM_NAME } from '../systems/assembler';
 import { CPU_FNS } from '../systems/cpu';
 import { DRILL_FNS, DRILL_SYSTEM_NAME } from '../systems/drill';
 import { ENGINE_FNS, ENGINE_SYSTEM_NAME } from '../systems/engine';
@@ -63,6 +64,12 @@ export function getFunctions(config: UnitConfiguration | null) {
     if (config?.storage) {
         for (const [name, fn] of Object.entries(INVENTORY_FNS)) {
             add(INVENTORY_SYSTEM_NAME, name, fn);
+        }
+    }
+
+    if (config?.assembler) {
+        for (const [name, fn] of Object.entries(ASSEMBLER_FNS)) {
+            add(ASSEMBLER_SYSTEM_NAME, name, fn);
         }
     }
 

@@ -14,25 +14,25 @@ export type SolarCharacteristics = CommonCharacteristics & {
 export const SOLAR_CHARACTERISTICS: Record<SolarConfiguration, SolarCharacteristics> = {
     [SolarConfiguration.Tier1Cheap]: {
         constructionCosts: { electrical: 5, structural: 1, energetical: 5 },
-        constructionTime: 1,
+        constructionPoints: 10,
         mass: 2,
         maxPower: 1,
     },
     [SolarConfiguration.Tier1Regular]: {
         constructionCosts: { electrical: 15, structural: 3, energetical: 12 },
-        constructionTime: 2,
+        constructionPoints: 20,
         mass: 5,
         maxPower: 3,
     },
     [SolarConfiguration.Tier2Mobile]: {
         constructionCosts: { electrical: 80, structural: 15, energetical: 120 },
-        constructionTime: 20,
+        constructionPoints: 200,
         mass: 20,
         maxPower: 15,
     },
     [SolarConfiguration.Tier2Static]: {
         constructionCosts: { electrical: 120, structural: 50, energetical: 250 },
-        constructionTime: 50,
+        constructionPoints: 500,
         mass: 5000,
         maxPower: 35,
     },

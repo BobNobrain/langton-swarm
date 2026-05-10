@@ -1,16 +1,16 @@
-import { extractTyped } from '../program/utils';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
+import {
+    usfSleep,
+    usfHandlers,
+    typedUSF,
+    type CallableUnitSystemFunctions,
+    type CallableUnitSystemMessages,
+} from './func';
 import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
-import {
-    bfsSleepTime,
-    callableUnitSystemHandlers,
-    returnToCpu,
-    type CallableUnitSystemFunctions,
-    type CallableUnitSystemMessages,
-} from './utils';
+import { bfsSleepTime } from './utils';
 
 export type NavigatorSystemData = {
     home: NodeId;
@@ -30,9 +30,8 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx) {
-            returnToCpu(ctx, { type: 'position', value: ctx.systemData.home });
-            return false;
+        *body(_, ctx) {
+            return { type: 'position', value: ctx.systemData.home };
         },
     },
     location: {
@@ -40,40 +39,35 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_args, ctx, _env, { positions }) {
-            returnToCpu(ctx, { type: 'position', value: positions.getEffectivePosition(ctx.unitId) });
-            return false;
+        *body(_, ctx, { positions }) {
+            return { type: 'position', value: positions.getEffectivePosition(ctx.unitId) };
         },
     },
 
-    find_route: {
+    find_route: typedUSF({
         description:
             'Finds a route to specified location. Call navigator.next_step and navigator.has_next to use the found route',
-        argNames: ['to'],
-        argTypes: ['position'],
+        args: { to: 'position' },
         returnType: 'flag',
-        init(args, ctx, _, { world: { nav }, positions }) {
-            const to = extractTyped(args, 'to', 'position')!.value;
+        *body(args, ctx, { world: { nav }, positions }) {
+            const to = args.to.value;
             const route = nav.findPath(positions.getEffectivePosition(ctx.unitId), to) as NodeId[];
 
-            returnToCpu(ctx, { type: 'flag', value: route.length > 0 });
-            if (!route.length) {
-                return false;
+            if (route.length) {
+                const map = ctx.systemData;
+                map.currentRoute = route.slice(1);
             }
 
-            const map = ctx.systemData;
-            map.currentRoute = route.slice(1);
-
-            return false;
+            return { type: 'flag', value: route.length > 0 };
         },
-    },
+    }),
     make_circle_route: {
         description:
             'Builds a route that circles around current position once. Call navigator.next_step and navigator.has_next to use the found route',
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_args, ctx, _env, { positions, world }) {
+        *body(_, ctx, { positions, world }) {
             const current = positions.getEffectivePosition(ctx.unitId);
             const unvisitedNbors = (world.nav.getNeighbours(current) as NodeId[]).slice();
             const navigator = ctx.systemData;
@@ -105,8 +99,7 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
                 }
             }
 
-            returnToCpu(ctx, { type: 'flag', value: navigator.currentRoute.length > 0 });
-            return false;
+            return { type: 'flag', value: navigator.currentRoute.length > 0 };
         },
     },
 
@@ -115,7 +108,7 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx, _env, { positions, world }) {
+        *body(_, ctx, { positions, world }) {
             const location = positions.getEffectivePosition(ctx.unitId);
             const bfs = world.nav.bfs(location);
             let result = location;
@@ -130,8 +123,8 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
-            return false;
+            yield usfSleep(bfsSleepTime(bfs.getVisited()));
+            return { type: 'position', value: result };
         },
     },
 
@@ -140,11 +133,11 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx) {
+        *body(_, ctx) {
             const map = ctx.systemData;
-            returnToCpu(ctx, { type: 'position', value: map.currentRoute[0] });
+            const result = map.currentRoute[0];
             map.currentRoute.shift();
-            return false;
+            return { type: 'position', value: result };
         },
     },
     has_next: {
@@ -153,9 +146,8 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'flag',
-        init(_, ctx) {
-            returnToCpu(ctx, { type: 'flag', value: ctx.systemData.currentRoute.length > 0 });
-            return false;
+        *body(_, ctx) {
+            return { type: 'flag', value: ctx.systemData.currentRoute.length > 0 };
         },
     },
     route_length: {
@@ -163,25 +155,23 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
         argNames: [],
         argTypes: [],
         returnType: 'number',
-        init(_, ctx) {
-            returnToCpu(ctx, { type: 'number', value: ctx.systemData.currentRoute.length });
-            return false;
+        *body(_, ctx) {
+            return { type: 'number', value: ctx.systemData.currentRoute.length };
         },
     },
 
-    away_from: {
+    away_from: typedUSF({
         description: 'Returns a nearby position that is directed away from some source position',
-        argNames: ['source'],
-        argTypes: ['position'],
+        args: { source: 'position' },
         returnType: 'position',
-        init(args, ctx, env, { world, positions }) {
-            const source = extractTyped(args, 'source', 'position');
+        *body(args, ctx, { world, positions }) {
+            const source = args.source.value;
             const current = positions.getEffectivePosition(ctx.unitId);
             let result: NodeId | null = null;
 
             if (source) {
-                const nbors = world.nav.getNeighbours(source.value) as NodeId[];
-                const path = world.nav.findPath(current, source.value);
+                const nbors = world.nav.getNeighbours(source) as NodeId[];
+                const path = world.nav.findPath(current, source);
 
                 if (path.length >= 2) {
                     const towards = path[1] as NodeId;
@@ -207,43 +197,39 @@ export const NAVIGATOR_FNS: CallableUnitSystemFunctions<NavigatorSystemData, Nav
                 }
             }
 
-            returnToCpu(ctx, { type: 'position', value: result ?? current });
-            return false;
+            return { type: 'position', value: result ?? current };
         },
-    },
-    towards: {
+    }),
+    towards: typedUSF({
         description: 'Returns a nearby position that will move you closer to given destination',
-        argNames: ['destination'],
-        argTypes: ['position'],
+        args: { destination: 'position' },
         returnType: 'position',
-        init(args, ctx, env, { world, positions }) {
-            const destination = extractTyped(args, 'destination', 'position');
+        *body(args, ctx, { world, positions }) {
+            const destination = args.destination.value;
             const current = positions.getEffectivePosition(ctx.unitId);
             let result: NodeId | null = null;
 
             if (destination) {
-                const path = world.nav.findPath(current, destination.value);
+                const path = world.nav.findPath(current, destination);
 
                 if (path.length >= 2) {
                     result = path[1] as NodeId;
                 }
             }
 
-            returnToCpu(ctx, { type: 'position', value: result ?? current });
-            return false;
+            return { type: 'position', value: result ?? current };
         },
-    },
+    }),
     random: {
         description: 'Returns a random nearby position that you can move towards',
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(args, ctx, env, { world, positions }) {
+        *body(_, ctx, { world, positions }) {
             const current = positions.getEffectivePosition(ctx.unitId);
             const nbors = world.nav.getNeighbours(current) as NodeId[];
             const result = nbors.length ? nbors[Math.floor(Math.random() * nbors.length)] : current;
-            returnToCpu(ctx, { type: 'position', value: result });
-            return false;
+            return { type: 'position', value: result };
         },
     },
 };
@@ -252,7 +238,7 @@ export function createNavigatorSystem(options: CreateUnitSystemCommonOptions, de
     return createUnitSystem<NavigatorSystemData, CallableUnitSystemMessages>(options, {
         name: NAVIGATOR_SYSTEM_NAME,
         messages: {
-            ...callableUnitSystemHandlers(deps, NAVIGATOR_FNS),
+            ...usfHandlers(NAVIGATOR_FNS, deps),
         },
 
         initialData: ({ config, at }) => {

@@ -1,8 +1,8 @@
 import { sequentialId } from '@/lib/ids';
 import type { UnitConfiguration } from '../config';
-import type { BlueprintDeck } from '../deck';
+import type { GameFactions } from '../factions';
 import type { GameLoop } from '../loop';
-import type { UnitCommand, UnitCommandCall, UnitEnvironment, UnitId } from '../types';
+import type { UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { GameWorld } from '../world';
 import { createAssemblerSystem, type AssemblerSystemController } from './assembler';
 import { createCPUSystem, type CPUData } from './cpu';
@@ -17,7 +17,7 @@ import { createPositionalSystem, type PositionalSystemController } from './posit
 import { createScannerSystem, type ScannerData } from './scanner';
 import { createSignalsSystem } from './signals';
 import { createSolarSystem } from './solar';
-import { createStationariesSystem } from './stationaries';
+import { createStationariesSystem, type StationariesSystemController } from './stationaries';
 import type {
     CreateUnitSystemCommonOptions,
     DespawnFn,
@@ -30,19 +30,23 @@ import type {
 } from './types';
 import { createMarkers, type MarkersSystemController } from './markers';
 import { createFactionsSystem, type FactionSystemController } from './faction';
+import { createConstructionSitesSystem, type ConstructionSitesController } from './sites';
+import type { CPUSystemController } from './cpu/system';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
 
     readonly energy: EnergySystemController;
     readonly positions: PositionalSystemController;
+    readonly stationaries: StationariesSystemController;
     readonly markers: MarkersSystemController;
     readonly inventory: InventoryController;
     readonly assembler: AssemblerSystemController;
-    readonly cpu: UnitSystemPublic<CPUData>;
+    readonly cpu: CPUSystemController;
     readonly navigator: UnitSystemPublic<NavigatorSystemData>;
     readonly scanner: UnitSystemPublic<ScannerData>;
     readonly factions: FactionSystemController;
+    readonly sites: ConstructionSitesController;
 
     readonly debug: unknown;
 
@@ -57,7 +61,7 @@ export type GameUnitSystems = {
     getSpawnTime(id: UnitId): number;
 };
 
-export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTick: GameLoop): GameUnitSystems {
+export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFactions: GameFactions): GameUnitSystems {
     const systems: Record<string, UnitSystem<unknown>> = {};
     const messageQueue: { to: string; message: UnitSystemMessage; notUntil?: number }[] = [];
     const events: UnitEventController[] = [];
@@ -70,12 +74,8 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     const unitUpdateTimes: Record<UnitId, number> = {};
     const unitConfigs: Record<UnitId, UnitConfiguration> = {};
 
-    const env: UnitEnvironment = {
-        currentTick: -1,
-    };
-
     const sendMessage: SendMessage = (to, message, delay) => {
-        messageQueue.push({ to, message, notUntil: delay ? env.currentTick + delay : undefined });
+        messageQueue.push({ to, message, notUntil: delay ? logicTick.getCurrentTick() + delay : undefined });
     };
 
     const spawn: SpawnFn = (opts) => {
@@ -85,7 +85,7 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         unitUpdateTimes[id] = -1;
         unitConfigs[id] = config;
-        unitSpawnTimes[id] = env.currentTick;
+        unitSpawnTimes[id] = logicTick.getCurrentTick();
 
         for (const system of Object.values(systems)) {
             system.create(id, opts);
@@ -112,21 +112,36 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
     };
 
     const opts: CreateUnitSystemCommonOptions = {
-        env,
         sendMessage,
         events,
         systems,
+        logicTick,
     };
 
     const energy = createEnergySystem(opts);
-    const positions = createPositionalSystem(opts);
-    const factions = createFactionsSystem(opts);
+    const positions = createPositionalSystem(opts, logicTick);
+    const factions = createFactionsSystem(opts, gameFactions);
     const markers = createMarkers(opts, positions.controller, world.nav);
     const cpu = createCPUSystem(opts, energy.controller);
     const engine = createEngineSystem(opts, { world, battery: energy.controller, positions: positions.controller });
     const stationaries = createStationariesSystem(opts, { despawn });
     const inventory = createInventorySystem(opts, stationaries.controller, positions.controller, spawn, despawn);
-    const assembler = createAssemblerSystem(opts, spawn, positions.controller, inventory.controller, deck);
+    const sites = createConstructionSitesSystem(
+        opts,
+        inventory.controller,
+        positions.controller,
+        factions.controller,
+        spawn,
+        despawn,
+    );
+    const assembler = createAssemblerSystem(
+        opts,
+        spawn,
+        positions.controller,
+        inventory.controller,
+        factions.controller,
+        sites.controller,
+    );
     const signals = createSignalsSystem(opts);
     const drill = createDrillSystem(opts, world, positions.controller, inventory.controller, energy.controller);
     const scanner = createScannerSystem(
@@ -143,14 +158,11 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
     logicTick.addGameTask((tick) => {
         // main unit update loop
-        // update the env object
-        env.currentTick = tick;
 
         // tick all the components, in order
         solar.tick();
-        cpu.tick();
+        cpu.system.tick();
         inventory.system.tick();
-        assembler.system.tick();
         discovery.tick();
 
         // process all the messages to activate the components
@@ -182,29 +194,31 @@ export function createGameSystems(world: GameWorld, deck: BlueprintDeck, logicTi
 
         energy: energy.controller,
         positions: positions.controller,
+        stationaries: stationaries.controller,
         factions: factions.controller,
         markers: markers.controller,
         inventory: inventory.controller,
         assembler: assembler.controller,
-        cpu,
+        cpu: cpu.controller,
         navigator,
         scanner,
+        sites: sites.controller,
 
         queryCommands(unitId) {
-            if (cpu.has(unitId)) {
-                return cpu.queryCommands(unitId);
+            if (cpu.system.has(unitId)) {
+                return cpu.system.queryCommands(unitId);
             }
 
             return [];
         },
 
         executeCommand(unitId, call) {
-            cpu.handleCommand(unitId, call);
+            cpu.system.handleCommand(unitId, call);
         },
 
         executeCommandMany(unitIds, call) {
             for (const unitId of unitIds) {
-                cpu.handleCommand(unitId, call);
+                cpu.system.handleCommand(unitId, call);
             }
         },
 

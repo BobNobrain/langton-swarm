@@ -119,9 +119,9 @@ const BlueprintInput: Component<ArgInputProps> = (props) => {
         () => props.controllerRef,
     );
 
-    const { deck } = useGame();
+    const { playerDeck } = useGame();
     const options = createMemo(() =>
-        deck.rBlueprints().map(
+        playerDeck.rBlueprints().map(
             (bp): SelectOption<BlueprintId> => ({
                 value: bp.id,
                 text: bp.rName(),

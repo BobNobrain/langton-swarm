@@ -1,6 +1,6 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
 import { type BlueprintController, type BlueprintId, type UnitId } from '@/game';
-import { getConstructionCosts, getConstructionTime } from '@/game/config';
+import { getConstructionCosts, getConstructionPoints } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
@@ -58,7 +58,10 @@ const DeckListItem: Component<{
             onClick={() => props.onSelect(props.item.id)}
             bottom={
                 <div class={styles.deckItemProperties}>
-                    <TimeLabel ticks={getConstructionTime(props.item.rLastVersion().config)} />
+                    <TimeLabel
+                        title="Construction time (on a tier 1 assembler)"
+                        ticks={getConstructionPoints(props.item.rLastVersion().config)}
+                    />
                     <InventoryContent contents={getConstructionCosts(props.item.rLastVersion().config)} concise />
                 </div>
             }
@@ -88,7 +91,7 @@ const DeckList: Component<{
 };
 
 export const DeckBrowser: Component = () => {
-    const { deck, ui } = useGame();
+    const { playerDeck, ui } = useGame();
 
     const selectedBlueprint = createMemo(() => {
         const bpId = ui.rDeckSelectedBlueprint();
@@ -96,7 +99,7 @@ export const DeckBrowser: Component = () => {
             return null;
         }
 
-        return deck.getBlueprint(bpId);
+        return playerDeck.getBlueprint(bpId);
     });
 
     const editor = useBlueprintEditorController();
@@ -112,7 +115,7 @@ export const DeckBrowser: Component = () => {
             return null;
         }
 
-        const found = deck.findByUnitId(selectedIds[0]);
+        const found = playerDeck.findByUnitId(selectedIds[0]);
         if (!found) {
             return null;
         }
@@ -141,7 +144,7 @@ export const DeckBrowser: Component = () => {
                         return;
                     }
 
-                    const controller = deck.getBlueprint(id);
+                    const controller = playerDeck.getBlueprint(id);
                     if (!controller) {
                         return;
                     }
@@ -171,7 +174,7 @@ export const DeckBrowser: Component = () => {
                     </div>
                 }
             >
-                <DeckList items={deck.rBlueprints()} onSelect={(id) => ui.deckSelectBlueprint(id)} />
+                <DeckList items={playerDeck.rBlueprints()} onSelect={(id) => ui.deckSelectBlueprint(id)} />
                 <footer class={styles.footer}>
                     <Button style="text">Show Archived</Button>
                     <Button style="text">Show Library</Button>

@@ -29,7 +29,7 @@ export function createSolarSystem(
             return { maxOutput: getMaxSolarPower(config) * SLEEP_TIME_TICKS };
         },
 
-        tick(ctx, env) {
+        tick(ctx) {
             const solar = ctx.systemData;
             const cos = dot(
                 normz(world.sunPosition),

@@ -1,5 +1,6 @@
 import type { BlueprintDeck, BlueprintId } from './deck';
 import type { createGameSystems } from './systems';
+import type { SpawnFn } from './systems/types';
 import type { NodeId, UnitId } from './types';
 
 export function renderTileId(tid: NodeId | null | undefined) {
@@ -48,7 +49,7 @@ export function renderEnergy(e: number | null | undefined): string {
 
 export function spawnFromDeck(
     deck: BlueprintDeck,
-    systems: Pick<ReturnType<typeof createGameSystems>, 'spawn'>,
+    spawn: SpawnFn,
     at: NodeId,
     bpId: BlueprintId,
     bpVersionNumber?: number,
@@ -72,7 +73,7 @@ export function spawnFromDeck(
     }
 
     bp.lockVersion(version.version);
-    const unitId = systems.spawn({ at, config: version.config, faction: deck.owner });
+    const unitId = spawn({ at, config: version.config, faction: deck.owner });
     bp.registerUnit(unitId, version.version);
     return unitId;
 }

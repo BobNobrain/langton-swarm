@@ -113,7 +113,7 @@ export function binop(cpu: CPUData, op: string): BsmlValue | null {
             if (left.type === 'inventory' && right.type === 'inventory') {
                 return {
                     type: 'inventory',
-                    value: InventoryDelta.combine(left.value, InventoryDelta.multiply(right.value, -1)),
+                    value: InventoryDelta.combine(left.value, right.value, 1, -1),
                 };
             }
 

@@ -3,18 +3,13 @@ import { ResourceTier } from '../resources';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
+import { usfSleep, usfHandlers, type CallableUnitSystemFunctions, type CallableUnitSystemMessages } from './func';
 import type { InventoryController } from './inventory';
 import type { MarkersSystemController } from './markers';
 import type { PositionalSystemController } from './positions';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
-import {
-    bfsSleepTime,
-    callableUnitSystemHandlers,
-    returnToCpu,
-    type CallableUnitSystemFunctions,
-    type CallableUnitSystemMessages,
-} from './utils';
+import { bfsSleepTime } from './utils';
 
 type ScannerDeps = {
     world: Pick<GameWorld, 'resources' | 'nav' | 'terraIncognita'>;
@@ -41,7 +36,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx, _env, { world: { nav }, positions }) {
+        *body(_, ctx, { world: { nav }, positions }) {
             const scanner = ctx.systemData;
             const location = positions.getEffectivePosition(ctx.unitId);
             const bfs = nav.bfs<NodeId>(location);
@@ -57,8 +52,8 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
-            return false;
+            yield usfSleep(bfsSleepTime(bfs.getVisited()));
+            return { type: 'position', value: result };
         },
     },
     closest_surface_deposit: {
@@ -66,7 +61,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'position',
-        init(_, ctx, _env, { positions, world: { nav, resources, terraIncognita } }) {
+        *body(_, ctx, { positions, world: { nav, resources, terraIncognita } }) {
             const location = positions.getEffectivePosition(ctx.unitId);
             const bfs = nav.bfs<NodeId>(location);
             let result = location;
@@ -87,8 +82,8 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
-            return false;
+            yield usfSleep(bfsSleepTime(bfs.getVisited()));
+            return { type: 'position', value: result };
         },
     },
 
@@ -97,7 +92,7 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'number',
-        init(_args, ctx, _env, { positions, world, battery, markers }) {
+        *body(_, ctx, { positions, world, battery, markers }) {
             const scanner = ctx.systemData;
             let nFound = 0;
             const location = positions.getEffectivePosition(ctx.unitId);
@@ -137,8 +132,8 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            returnToCpu(ctx, { type: 'number', value: nFound }, bfsSleepTime(bfs.getVisited()));
-            return false;
+            yield usfSleep(bfsSleepTime(bfs.getVisited()));
+            return { type: 'number', value: nFound };
         },
     },
 
@@ -147,9 +142,8 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
         argNames: [],
         argTypes: [],
         returnType: 'number',
-        init(_, ctx) {
-            returnToCpu(ctx, { type: 'number', value: ctx.systemData.maxRadius });
-            return false;
+        *body(_, ctx) {
+            return { type: 'number', value: ctx.systemData.maxRadius };
         },
     },
 };
@@ -176,10 +170,13 @@ export function createScannerSystem(
         },
 
         messages: {
-            ...callableUnitSystemHandlers<ScannerData, ScannerDeps>(
-                { world, inventory, battery, positions, markers },
-                SCANNER_FNS,
-            ),
+            ...usfHandlers<ScannerData, ScannerDeps>(SCANNER_FNS, {
+                world,
+                inventory,
+                battery,
+                positions,
+                markers,
+            }),
         },
     });
 }

@@ -17,7 +17,7 @@ export const DeckHeader: Component<{
     onReset: () => void;
     onSave: () => void;
 }> = (props) => {
-    const { deck, ui } = useGame();
+    const { playerDeck, ui } = useGame();
 
     const title = () => {
         if (props.canSave) {
@@ -91,7 +91,7 @@ export const DeckHeader: Component<{
                                     }
 
                                     ev.preventDefault();
-                                    deck.rename(props.bp.id, newName());
+                                    playerDeck.rename(props.bp.id, newName());
                                     (ev.target as HTMLInputElement).blur();
                                 }}
                             />
@@ -111,14 +111,14 @@ export const DeckHeader: Component<{
                     <Button
                         style="primary"
                         onClick={() => {
-                            const names = new Set(deck.rBlueprints().map((bp) => bp.rName()));
+                            const names = new Set(playerDeck.rBlueprints().map((bp) => bp.rName()));
                             let name = 'New_Blueprint';
                             let i = 1;
                             while (names.has(name)) {
                                 name = 'New_Blueprint_' + i;
                                 i++;
                             }
-                            deck.create(name, createDefaultUnitConfig());
+                            playerDeck.create(name, createDefaultUnitConfig());
                         }}
                     >
                         Create

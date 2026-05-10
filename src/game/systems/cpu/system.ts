@@ -3,19 +3,34 @@ import { compile, type CompiledInstruction } from '@/game/program/compile';
 import { parseProgram } from '@/game/program/parser';
 import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderValue } from '@/game/program/utils';
 import type { BsmlValue } from '@/game/program/value';
+import type { UnitId } from '@/game/types';
 import { absurd } from '@/lib/errors';
 import { parser } from '../../program/bsml';
 import type { EnergySystemController } from '../energy';
+import { fcall } from '../func';
+import { createUnitEvent, type UnitEvent } from '../events';
 import { createUnitSystem } from '../systems';
 import type { CreateUnitSystemCommonOptions, UnitSystemTickContext } from '../types';
-import { fcall } from '../utils';
 import { binop } from './binop';
 import { CPU_FNS } from './fns';
 import type { CPUData } from './types';
 import { unop } from './unop';
 import { popStack, setState, toErrorState } from './utils';
 
+export type CPUSystemController = {
+    updated: UnitEvent<CPUData>;
+    getData: (unitId: UnitId) => CPUData | null;
+};
+
 export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: EnergySystemController) {
+    const updated = createUnitEvent<CPUData>();
+    opts.events.push(updated);
+
+    const controller: CPUSystemController = {
+        updated,
+        getData: null as never,
+    };
+
     const system = createUnitSystem<
         CPUData,
         {
@@ -26,11 +41,13 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
 
         messages: {
             return: {
-                handler(payload, ctx, env) {
+                handler(payload, ctx) {
                     const cpu = ctx.systemData;
                     if (!cpu.waitingForReturn) {
                         return false;
                     }
+
+                    updated.pub({ unitId: ctx.unitId, payload: cpu });
 
                     if (payload.value && !cpu.waitingForReturn.ignoreResult) {
                         cpu.stack.push(payload.value);
@@ -67,12 +84,10 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 stack: [],
                 variables: {},
                 waitingForReturn: null,
-
-                lastUpdated: 0,
             };
         },
 
-        tick(ctx, env) {
+        tick(ctx) {
             const cpu = ctx.systemData;
             const instructions = cpu.program.stateInstructions[cpu.state];
 
@@ -84,6 +99,8 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 ctx.sleep();
                 return;
             }
+
+            updated.pub({ unitId: ctx.unitId, payload: cpu });
 
             if (cpu.ptr >= instructions.length || cpu.ptr < 0) {
                 cpu.ptr = 0;
@@ -98,8 +115,6 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
 
             const instruction = instructions[cpu.ptr];
             ++cpu.ptr;
-            cpu.lastUpdated = env.currentTick;
-
             runInstruction(ctx, cpu, instruction);
         },
 
@@ -122,9 +137,12 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 ),
             );
 
+            updated.pub({ unitId: ctx.unitId, payload: ctx.systemData });
             return true;
         },
     });
+
+    controller.getData = system.getData;
 
     battery.recharged.subToAll(({ unitId }) => {
         const cpu = system.getData(unitId);
@@ -135,7 +153,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
         system.activate(unitId);
     });
 
-    return system;
+    return { system, controller };
 }
 
 function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instruction: CompiledInstruction) {

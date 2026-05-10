@@ -7,16 +7,11 @@ import type { UnitId } from '@/game';
 import { renderStateName } from '@/game/program/utils';
 import { useGame } from '@/gameContext';
 import { createCPUStateTracker, createInventoryTracker } from '@/hooks/trackers';
-import styles from './UnitDisplay.module.css';
 import { KeyCode } from '@/lib/input';
-
-export const InventoryTabContent: Component<{ unitId: UnitId | null }> = (props) => {
-    const inventory = createInventoryTracker(() => props.unitId);
-    return <Inventory data={inventory()} />;
-};
+import styles from './UnitDisplay.module.css';
 
 export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
-    const { ui, deck } = useGame();
+    const { ui, playerDeck } = useGame();
     const { rStateName, rCpuIsWaiting, rCpuPtr, rCpuProgram } = createCPUStateTracker(() => props.unitId);
     const currentInstruction = createMemo(() => {
         const program = rCpuProgram();
@@ -47,7 +42,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
                     hotkey={{ key: KeyCode.KeyE }}
                     onClick={() => {
                         const unitId = ui.rSelectedUnits()[0];
-                        const found = deck.findByUnitId(unitId);
+                        const found = playerDeck.findByUnitId(unitId);
 
                         if (!found) {
                             return;

@@ -5,8 +5,9 @@ import { useGame } from '@/gameContext';
 import type { HotkeyDescriptor } from '@/lib/hotkey';
 import { KeyCode } from '@/lib/input';
 import { AssemblerTabContent } from './AssemblerTabContent/AssemblerTabContent';
-import { CpuTabContent, InventoryTabContent, NavigatorTabContent, ScannerTabContent } from './tabs';
+import { CpuTabContent, NavigatorTabContent, ScannerTabContent } from './tabs';
 import styles from './UnitDisplay.module.css';
+import { InventoryTabContent } from './InventoryTabContent/InventoryTabContent';
 
 type UnitDisplayTab = 'assembler' | 'cpu' | 'inventory' | 'navigator' | 'scanner';
 

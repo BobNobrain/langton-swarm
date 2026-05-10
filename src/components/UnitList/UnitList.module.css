@@ -1,0 +1,24 @@
+.nonTargetUnit {
+    opacity: 0.3;
+}
+
+.unitActions {
+    display: flex;
+
+    & > * {
+        display: block;
+    }
+}
+
+.unitIcon {
+    margin-right: 8px;
+    color: var(--c-red);
+
+    &.ownUnit {
+        color: var(--c-primary);
+    }
+
+    &.neutralUnit {
+        color: var(--c-gray-l);
+    }
+}

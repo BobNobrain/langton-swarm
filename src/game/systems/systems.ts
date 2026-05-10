@@ -1,4 +1,4 @@
-import type { UnitCommand, UnitCommandCall, UnitEnvironment, UnitId } from '../types';
+import type { UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { CreateUnitSystemCommonOptions, SpawnOptions, UnitSystem, UnitSystemTickContext } from './types';
 
 type UnitEntry<Data> = {
@@ -9,7 +9,7 @@ type UnitEntry<Data> = {
 
 export type MessageHandlers<Data, MessagePayloads extends Record<string, unknown>> = {
     [key in keyof MessagePayloads]: {
-        handler: (payload: MessagePayloads[key], ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
+        handler: (payload: MessagePayloads[key], ctx: UnitSystemTickContext<Data>) => boolean;
     };
 };
 
@@ -17,18 +17,19 @@ type CreateOptions<Data, MessagePayloads extends Record<string, unknown>> = {
     name: string;
     messages?: MessageHandlers<Data, MessagePayloads>;
 
-    queryCommands?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => UnitCommand[];
-    executeCommand?: (call: UnitCommandCall, ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => boolean;
+    // TODO: move into CPU controller
+    queryCommands?: (ctx: UnitSystemTickContext<Data>) => UnitCommand[];
+    executeCommand?: (call: UnitCommandCall, ctx: UnitSystemTickContext<Data>) => boolean;
     hasCommand?: (name: string) => boolean;
 
-    tick?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => void;
+    tick?: (ctx: UnitSystemTickContext<Data>) => void;
     initialData: (options: SpawnOptions, unitId: UnitId) => Data | null;
 
-    finalize?: (ctx: UnitSystemTickContext<Data>, env: UnitEnvironment) => void;
+    finalize?: (ctx: UnitSystemTickContext<Data>) => void;
 };
 
 export function createUnitSystem<Data, MessagePayloads extends Record<string, unknown>>(
-    { env, sendMessage, systems }: CreateUnitSystemCommonOptions,
+    { sendMessage, systems, logicTick }: CreateUnitSystemCommonOptions,
     {
         name,
         messages,
@@ -54,9 +55,10 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return;
             }
 
-            entry.sleepUntil = env.currentTick + ticksFor;
+            entry.sleepUntil = logicTick.getCurrentTick() + ticksFor;
         },
         sendMessage,
+        system,
     });
 
     const system: UnitSystem<Data> = {
@@ -65,12 +67,13 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
 
         tick: tick
             ? () => {
+                  const currentTick = logicTick.getCurrentTick();
                   for (const entry of data.values()) {
-                      if (env.currentTick < entry.sleepUntil) {
+                      if (currentTick < entry.sleepUntil) {
                           continue;
                       }
 
-                      tick(createContext(entry), env);
+                      tick(createContext(entry));
                   }
               }
             : () => {},
@@ -115,7 +118,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                     return;
                 }
 
-                finalize(createContext(unitData), env);
+                finalize(createContext(unitData));
             }
 
             data.delete(unitId);
@@ -146,7 +149,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return;
             }
 
-            const shouldActivate = handler.handler(msg.payload as never, createContext(unitData), env);
+            const shouldActivate = handler.handler(msg.payload as never, createContext(unitData));
             if (shouldActivate && !activeData) {
                 inactiveData.delete(msg.unitId);
                 data.set(msg.unitId, unitData);
@@ -163,7 +166,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return [];
             }
 
-            return queryCommands(createContext(unitData), env);
+            return queryCommands(createContext(unitData));
         },
 
         handleCommand(unitId, call) {
@@ -178,7 +181,7 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
                 return;
             }
 
-            const shouldActivate = executeCommand(call, createContext(unitData), env);
+            const shouldActivate = executeCommand(call, createContext(unitData));
             if (shouldActivate && !activeData) {
                 inactiveData.delete(unitId);
                 data.set(unitId, unitData);

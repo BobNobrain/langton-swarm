@@ -22,12 +22,12 @@ const ALL: AllCharacteristics = {
     engine: ENGINE_CHARACTERISTICS,
     navigator: {
         constructionCosts: { electrical: 5, structural: 1 },
-        constructionTime: 1,
+        constructionPoints: 10,
         mass: 1,
     },
     scanner: {
         constructionCosts: { electrical: 5, structural: 1, energetical: 1 },
-        constructionTime: 1,
+        constructionPoints: 10,
         mass: 1,
     },
     solar: SOLAR_CHARACTERISTICS,
@@ -57,10 +57,10 @@ function getAllCharacteristics(config: UnitConfiguration): CommonCharacteristics
     return result;
 }
 
-export function getConstructionTime(config: UnitConfiguration): number {
+export function getConstructionPoints(config: UnitConfiguration): number {
     let result = 0;
     for (const next of getAllCharacteristics(config)) {
-        result += next.constructionTime;
+        result += next.constructionPoints;
     }
     return result;
 }

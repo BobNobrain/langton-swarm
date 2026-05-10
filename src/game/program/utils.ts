@@ -14,6 +14,15 @@ export function isTruthy(val: BsmlValue): boolean {
         case 'string':
             return val.value.length > 0;
 
+        case 'blueprint':
+            return val.value !== 0;
+
+        case 'null':
+            return false;
+
+        case 'inventory':
+            return val.value.size > 0;
+
         default:
             return true;
     }
@@ -47,7 +56,7 @@ export function renderValue(val: BsmlValue | null | undefined): string {
             return `<blueprint:${val.value}>`;
 
         case 'inventory':
-            return `<inventory:${InventoryDelta.fromMany(val.value).toShortString()}>`;
+            return `<inventory:${val.value.toShortString()}>`;
     }
 }
 

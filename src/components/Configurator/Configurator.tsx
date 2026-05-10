@@ -3,7 +3,7 @@ import type { UnitConfiguration } from '@/game';
 import {
     getBatteryCapacity,
     getConstructionCosts,
-    getConstructionTime,
+    getConstructionPoints,
     getDrillProperties,
     getEnergyPerMove,
     getMaxSolarPower,
@@ -11,6 +11,7 @@ import {
     getTicksPerMove,
     getUnitMass,
 } from '@/game/config';
+import { useGame } from '@/gameContext';
 import { Symbols } from '@/lib/ascii';
 import { Badge } from '../Badge/Badge';
 import { Heading } from '../Header/Header';
@@ -26,7 +27,6 @@ import { CustomScannerOption, SCANNER_OPTIONS } from './scanner';
 import { CustomSolarOption, SOLAR_OPTIONS } from './solar';
 import { CustomStorageOption, STORAGE_OPTIONS } from './storage';
 import styles from './Configurator.module.css';
-import { useGame } from '@/gameContext';
 
 const ConfiguratorField: ParentComponent<{ name: string; config: UnitConfiguration }> = (props) => {
     return (
@@ -35,7 +35,10 @@ const ConfiguratorField: ParentComponent<{ name: string; config: UnitConfigurati
             <div class={styles.fieldInput}>{props.children}</div>
             <div class={styles.fieldCosts}>
                 <div class={styles.timeCost}>
-                    <TimeLabel ticks={getConstructionTime(props.config) || null} />
+                    <TimeLabel
+                        title="Construction time on a tier 1 assembler"
+                        ticks={getConstructionPoints(props.config) || null}
+                    />
                 </div>
                 <InventoryContent contents={getConstructionCosts(props.config)} concise empty="--" />
             </div>
@@ -148,7 +151,7 @@ export const Configurator: Component<{
                     customOption={CustomBatteryOption}
                 />
             </ConfiguratorField>
-            <ConfiguratorField name="Assembler" config={{ battery: props.value?.battery ?? undefined }}>
+            <ConfiguratorField name="Assembler" config={{ assembler: props.value?.assembler ?? undefined }}>
                 <Select
                     options={ASSEMBLER_OPTIONS}
                     value={findValue(ASSEMBLER_OPTIONS, props.value?.assembler)}
@@ -170,8 +173,8 @@ export const Configurator: Component<{
                 <div class={styles.fieldBadges}>
                     <div class={styles.timeCost}>
                         <TimeLabel
-                            ticks={props.value ? getConstructionTime(props.value) : null}
-                            title="Construction time"
+                            ticks={props.value ? getConstructionPoints(props.value) : null}
+                            title="Construction time (on tier 1 assembler)"
                         />
                     </div>
                     <InventoryContent contents={props.value ? getConstructionCosts(props.value) : {}} concise />

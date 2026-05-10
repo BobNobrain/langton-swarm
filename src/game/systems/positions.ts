@@ -1,3 +1,4 @@
+import type { GameLoop } from '../loop';
 import type { NodeId, UnitId } from '../types';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
@@ -19,7 +20,7 @@ export type PositionalSystemController = {
     findAtPosition(pos: NodeId, opts?: { strict?: boolean }): UnitId[];
 };
 
-export function createPositionalSystem(opts: CreateUnitSystemCommonOptions) {
+export function createPositionalSystem(opts: CreateUnitSystemCommonOptions, gameLoop: GameLoop) {
     const system = createUnitSystem<DynamicPosition, {}>(opts, {
         name: 'positions',
         initialData({ at }) {
@@ -40,7 +41,7 @@ export function createPositionalSystem(opts: CreateUnitSystemCommonOptions) {
                 return -1 as NodeId;
             }
 
-            const tick = opts.env.currentTick;
+            const tick = gameLoop.getCurrentTick();
             if (tick >= pos.targetTime) {
                 return pos.targetPosition;
             }
@@ -52,7 +53,7 @@ export function createPositionalSystem(opts: CreateUnitSystemCommonOptions) {
 
         isMoving(unitId) {
             const pos = system.getData(unitId);
-            return pos ? opts.env.currentTick < pos.targetTime : false;
+            return pos ? gameLoop.getCurrentTick() < pos.targetTime : false;
         },
 
         move(unitId, to, deltaTime) {
@@ -61,7 +62,7 @@ export function createPositionalSystem(opts: CreateUnitSystemCommonOptions) {
                 return false;
             }
 
-            const time = opts.env.currentTick;
+            const time = gameLoop.getCurrentTick();
             if (time < pos.targetTime) {
                 return false;
             }
@@ -86,9 +87,10 @@ export function createPositionalSystem(opts: CreateUnitSystemCommonOptions) {
                 return result;
             }
 
+            const time = gameLoop.getCurrentTick();
             for (const unitId of system.getUnitIds()) {
                 const data = controller.getFullPosition(unitId)!;
-                if (data.sourcePosition === pos || data.targetPosition === pos) {
+                if (data.targetPosition === pos || (data.sourcePosition === pos && time <= data.targetTime)) {
                     result.push(unitId);
                 }
             }

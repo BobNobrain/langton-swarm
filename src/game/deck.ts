@@ -28,7 +28,7 @@ export type BlueprintController = {
 
 type BlueprintControllerFull = BlueprintController & {
     rSetName: (name: string) => void;
-    getConfiguration(v: number): UnitConfiguration | null;
+    getConfiguration(v?: number): UnitConfiguration | null;
 };
 
 export type BlueprintDeck = {
@@ -39,14 +39,15 @@ export type BlueprintDeck = {
     create(name: string, config: UnitConfiguration): BlueprintController;
     getBlueprint(id: BlueprintId): BlueprintController | null;
     rename(id: BlueprintId, newName: string): void;
-    getConfiguration(id: BlueprintId, version: number): UnitConfiguration | null;
+    getConfiguration(id: BlueprintId, version?: number): UnitConfiguration | null;
     findByName(name: string): BlueprintController | null;
     findByUnitId(unitId: UnitId): { bp: BlueprintController; v: number } | null;
 };
 
+const blueprintId = sequentialId<BlueprintId>();
+
 export function createBlueprintDeck(owner: FactionId): BlueprintDeck {
     const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>({});
-    const blueprintId = sequentialId<BlueprintId>();
 
     return {
         owner,
@@ -161,6 +162,10 @@ function createBlueprintController(id: BlueprintId, name: string, config: UnitCo
         },
 
         getConfiguration(v) {
+            if (v === undefined) {
+                return rLastVersion().config;
+            }
+
             return rVersions()[v]?.config ?? null;
         },
 

@@ -12,10 +12,11 @@ export function isPile({ storage, ...rest }: UnitConfiguration): boolean {
         return false;
     }
 
-    return (
-        !Number.isFinite(getStorageCapacity({ storage })) &&
-        Object.values(rest).every((value) => value === undefined || value === null || value === false)
-    );
+    return !Number.isFinite(getStorageCapacity({ storage })) && isConfigEmpty(rest);
+}
+
+export function isConstructionSite({ construction, storage, ...rest }: UnitConfiguration): boolean {
+    return Boolean(construction) && Boolean(storage) && isConfigEmpty(rest);
 }
 
 export function getDiscoveryRange(config: UnitConfiguration): number {
@@ -41,4 +42,8 @@ export function getTicksPerMove(config: UnitConfiguration): number {
     const power = chars.power;
 
     return Math.ceil((mass / power) * 0.1) * 3;
+}
+
+function isConfigEmpty(config: UnitConfiguration): boolean {
+    return Object.values(config).every((value) => value === undefined || value === null || value === false);
 }

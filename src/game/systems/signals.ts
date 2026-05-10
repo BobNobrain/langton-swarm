@@ -3,13 +3,14 @@ import type { BlueprintId } from '../deck';
 import type { UnitId } from '../types';
 import { createUnitSystem } from './systems';
 import type { CreateUnitSystemCommonOptions } from './types';
-import { isPile, type UnitConfiguration } from '../config';
+import { isConstructionSite, isPile, type UnitConfiguration } from '../config';
 
 export enum UnitModelType {
     Unknown = 'unknown',
     Rover = 'rover',
     Mother = 'mother',
     Pile = 'pile',
+    ConstructionSite = 'constructionSite',
 }
 
 type SignalsSystemData = {
@@ -28,6 +29,7 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
         [UnitModelType.Rover]: createSignal<UnitId[]>([]),
         [UnitModelType.Mother]: createSignal<UnitId[]>([]),
         [UnitModelType.Pile]: createSignal<UnitId[]>([]),
+        [UnitModelType.ConstructionSite]: createSignal<UnitId[]>([]),
     };
     const idsByBlueprint: Record<BlueprintId, Signal<UnitId[]>[]> = {};
 
@@ -42,7 +44,7 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
             return { modelType };
         },
 
-        finalize(ctx, env) {
+        finalize(ctx) {
             const [_, rSet] = idsByModelType[ctx.systemData.modelType];
             rSet((old) => old.filter((id) => id !== ctx.unitId));
         },
@@ -67,6 +69,10 @@ function getUnitModel(config: UnitConfiguration): UnitModelType {
 
     if (isPile(config)) {
         return UnitModelType.Pile;
+    }
+
+    if (isConstructionSite(config)) {
+        return UnitModelType.ConstructionSite;
     }
 
     return UnitModelType.Unknown;

@@ -17,7 +17,7 @@ type DrillCharacteristics = CommonCharacteristics & {
 export const DRILL_CHARACTERISTICS: Record<DrillConfiguration, DrillCharacteristics> = {
     [DrillConfiguration.Tier1]: {
         constructionCosts: { electrical: 3, structural: 15 },
-        constructionTime: 2,
+        constructionPoints: 20,
         mass: 3,
         energyConsumption: 5,
         maxDepositTier: ResourceTier.Tier1,
@@ -27,7 +27,7 @@ export const DRILL_CHARACTERISTICS: Record<DrillConfiguration, DrillCharacterist
     },
     [DrillConfiguration.Tier2]: {
         constructionCosts: { electrical: 15, structural: 50 },
-        constructionTime: 20,
+        constructionPoints: 200,
         mass: 10_000,
         energyConsumption: 50,
         maxDepositTier: ResourceTier.Tier2,

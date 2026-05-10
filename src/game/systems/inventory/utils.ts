@@ -4,10 +4,9 @@ type TransferOptions = {
     from: InventoryData | null;
     to: InventoryData | null;
     amounts: Record<string, number>;
-    tick: number;
 };
 
-export function transferEverything({ from, to, amounts, tick }: TransferOptions): boolean {
+export function transferEverything({ from, to, amounts }: TransferOptions): boolean {
     if (from && !hasItems(from, amounts)) {
         return false;
     }
@@ -16,15 +15,15 @@ export function transferEverything({ from, to, amounts, tick }: TransferOptions)
     }
 
     if (from) {
-        alter({ target: from, amounts, factor: -1, tick });
+        alter({ target: from, amounts, factor: -1 });
     }
     if (to) {
-        alter({ target: to, amounts, factor: +1, tick });
+        alter({ target: to, amounts, factor: +1 });
     }
     return true;
 }
 
-export function transferAsMuchAsPossible({ from, to, amounts, tick }: TransferOptions): Record<string, number> {
+export function transferAsMuchAsPossible({ from, to, amounts }: TransferOptions): Record<string, number> {
     const effectiveAmounts = { ...amounts };
     if (from) {
         cropByLimits(effectiveAmounts, from.contents);
@@ -34,10 +33,10 @@ export function transferAsMuchAsPossible({ from, to, amounts, tick }: TransferOp
     }
 
     if (from) {
-        alter({ target: from, amounts: effectiveAmounts, factor: -1, tick });
+        alter({ target: from, amounts: effectiveAmounts, factor: -1 });
     }
     if (to) {
-        alter({ target: to, amounts: effectiveAmounts, factor: +1, tick });
+        alter({ target: to, amounts: effectiveAmounts, factor: +1 });
     }
     return effectiveAmounts;
 }
@@ -73,18 +72,15 @@ type AlterOptions = {
     target: InventoryData;
     amounts: Record<string, number>;
     factor: number;
-    tick: number;
 };
 
-export function alter({ target, amounts, factor, tick }: AlterOptions) {
+export function alter({ target, amounts, factor }: AlterOptions) {
     for (const resource of Object.keys(amounts)) {
         target.contents[resource] ??= 0;
         const delta = amounts[resource] * factor;
         target.contents[resource] += delta;
         target.size += delta;
     }
-
-    target.lastUpdated = tick;
 }
 
 export function cropBySize(amounts: Record<string, number>, maxSize: number) {

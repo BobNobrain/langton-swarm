@@ -16,6 +16,4 @@ export type CPUData = {
         system: string;
         ignoreResult: boolean;
     };
-
-    lastUpdated: number;
 };

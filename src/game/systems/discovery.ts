@@ -32,7 +32,7 @@ export function createDiscoverySystem(
         },
 
         // TODO: events-based discovery?
-        tick(ctx, env) {
+        tick(ctx) {
             const discovery = ctx.systemData;
             const pos = positions.getEffectivePosition(ctx.unitId);
 

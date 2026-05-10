@@ -1,0 +1,20 @@
+.wrapper {
+    display: flex;
+
+    & > * {
+        flex: 1 1 auto;
+        /* overflow: auto; */
+    }
+
+    &.doubleSectioned > :first-child {
+        --container-padding-r: 0;
+    }
+
+    height: 100%;
+}
+
+.targetsList {
+    --container-padding-l: 0;
+    width: 50%;
+    border-left: 3px double var(--c-gray-m);
+}

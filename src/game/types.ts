@@ -12,11 +12,6 @@ export type SurfaceNode = {
     elevation: number;
 };
 
-// TODO: maybe just move it to tick context?
-export type UnitEnvironment = {
-    currentTick: number;
-};
-
 export type UnitCommand = {
     name: string;
     args: UnitCommandArg[];

@@ -14,25 +14,25 @@ type BatteryCharacteristics = CommonCharacteristics & {
 export const BATTERY_CHARACTERISTICS: Record<BatteryConfiguration, BatteryCharacteristics> = {
     [BatteryConfiguration.Tier1Small]: {
         constructionCosts: { electrical: 1, structural: 1, energetical: 5 },
-        constructionTime: 1,
+        constructionPoints: 10,
         mass: 2,
         capacity: 5_000,
     },
     [BatteryConfiguration.Tier1Regular]: {
         constructionCosts: { electrical: 2, structural: 1, energetical: 10 },
-        constructionTime: 2,
+        constructionPoints: 20,
         mass: 5,
         capacity: 10_000,
     },
     [BatteryConfiguration.Tier1Big]: {
         constructionCosts: { electrical: 4, structural: 2, energetical: 20 },
-        constructionTime: 5,
+        constructionPoints: 50,
         mass: 50,
         capacity: 20_000,
     },
     [BatteryConfiguration.Tier2]: {
         constructionCosts: { electrical: 20, structural: 15, energetical: 100, special: 1 },
-        constructionTime: 50,
+        constructionPoints: 500,
         mass: 5000,
         capacity: 100_000,
     },

@@ -22,14 +22,14 @@ export const CommandPanel: Component<{
     onExecute: (cmd: UnitCommand, targets: Set<UnitId>, args?: BsmlValue[]) => void;
     setHoveredCommandTargets: (value: Set<UnitId> | null) => void;
 }> = (props) => {
-    const { ui, units, deck } = useGame();
+    const { ui, units, playerDeck } = useGame();
 
     const availableCommands = createMemo(() => {
         const selectedUnitIds = ui.rSelectedUnits();
         const allCommands: Record<string, CommandData> = {};
 
         for (const unitId of selectedUnitIds) {
-            const found = deck.findByUnitId(unitId);
+            const found = playerDeck.findByUnitId(unitId);
             if (!found) {
                 continue;
             }

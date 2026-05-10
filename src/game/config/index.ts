@@ -7,7 +7,7 @@ export {
     createDefaultUnitConfig,
 } from './presets';
 export type { UnitConfiguration } from './types';
-export { getConstructionCosts, getConstructionTime, getUnitMass } from './characteristics';
+export { getConstructionCosts, getConstructionPoints, getUnitMass } from './characteristics';
 export * from './utils';
 
 export { AssemblerConfiguration, ASSEMBLER_CHARACTERISTICS, getAssemblerSpeed } from './assembler';

@@ -4,12 +4,12 @@ import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
 import { Heading } from '../Header/Header';
-import { SelectedUnitsList } from '../SelectedUnitsList/SelectedUnitsList';
 import { CommandForm } from './CommandForm/CommandForm';
 import { CommandPanel } from './CommandPanel/CommandPanel';
-import { UnitDisplay } from './UnitDisplay/UnitDisplay';
-import styles from './SelectedUnitsPanel.module.css';
 import { StatusBar } from './StatusBar/StatusBar';
+import { UnitDisplay } from './UnitDisplay/UnitDisplay';
+import { UnitList } from '../UnitList/UnitList';
+import styles from './SelectedUnitsPanel.module.css';
 
 type ActiveCommand = {
     cmd: UnitCommand;
@@ -17,7 +17,7 @@ type ActiveCommand = {
 };
 
 export const SelectedUnitsPanel: Component = () => {
-    const { ui, units, deck } = useGame();
+    const { ui, units } = useGame();
     const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<UnitId> | null>(null);
     const [activeCommand, setActiveCommand] = createSignal<ActiveCommand | null>(null);
 
@@ -55,7 +55,11 @@ export const SelectedUnitsPanel: Component = () => {
                 />
             </FloatingPanelHeader>
             <section class={styles.content}>
-                <SelectedUnitsList hoveredCommandTargets={hoveredCommandTargets()} />
+                <UnitList
+                    unitIds={ui.rSelectedUnits()}
+                    hoveredCommandTargets={hoveredCommandTargets()}
+                    showSelectionActions
+                />
                 <UnitDisplay unitId={selectedUnitId()} />
             </section>
             <footer class={styles.actionsFooter}>
