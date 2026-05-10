@@ -6,7 +6,34 @@
     height: var(--top-bar-height);
 
     display: flex;
+    align-items: stretch;
+    gap: 4px;
+    padding: 0 8px;
 
     border-bottom: 1px solid var(--c-gray-l);
     background-color: rgba(from var(--c-gray-d) r g b / 70%);
+}
+
+.badge {
+    min-width: 80px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px 2px;
+    border-top: 2px solid rgba(from var(--tbb-color, var(--c-white)) r g b / 50%);
+    background-color: rgba(from var(--tbb-color, var(--c-white)) r g b / 5%);
+
+    & .icon {
+        margin-right: auto;
+        color: var(--tbb-color, var(--c-white));
+    }
+
+    &.padRight {
+        margin-right: 8px;
+    }
+}
+
+.spacer {
+    flex: 1 1 auto;
 }

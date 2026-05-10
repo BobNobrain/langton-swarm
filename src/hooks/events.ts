@@ -33,3 +33,19 @@ export function createUnitEventListener<P>({
         });
     });
 }
+
+export function createUnitEventAllListener<P>({
+    ev,
+    listener,
+}: {
+    ev: UnitEvent<P>;
+    listener: (ev: UnitEventData<P>) => void;
+}) {
+    createEffect(() => {
+        ev.subToAll(listener);
+
+        onCleanup(() => {
+            ev.unsubToAll(listener);
+        });
+    });
+}

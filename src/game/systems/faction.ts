@@ -8,12 +8,18 @@ type FactionSystemData = FactionId;
 export type FactionSystemController = {
     getFaction(unitId: UnitId): FactionId;
     getFactionData(unitId: UnitId): Faction | null;
+
+    getAllUnits(fid: FactionId): Set<UnitId>;
 };
 
 export function createFactionsSystem(opts: CreateUnitSystemCommonOptions, factions: GameFactions) {
+    const unitsByFaction = new Map<FactionId, Set<UnitId>>();
+
     const system = createUnitSystem(opts, {
         name: 'factions',
-        initialData(options) {
+        initialData(options, unitId) {
+            const units = unitsByFaction.getOrInsertComputed(options.faction, () => new Set());
+            units.add(unitId);
             return options.faction;
         },
     });
@@ -23,6 +29,10 @@ export function createFactionsSystem(opts: CreateUnitSystemCommonOptions, factio
         getFactionData(unitId) {
             const fid = system.getData(unitId)!;
             return factions.getFaction(fid);
+        },
+
+        getAllUnits(fid) {
+            return unitsByFaction.getOrInsertComputed(fid, () => new Set());
         },
     };
 

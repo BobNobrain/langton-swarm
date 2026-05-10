@@ -37,10 +37,10 @@ export const GameUI: ParentComponent = (props) => {
             });
 
             // cheats
-            g.units.inventory.add({
-                to: coreId,
-                amounts: { structural: 1000, electrical: 1000, energetical: 1000 },
-            });
+            // g.units.inventory.add({
+            //     to: coreId,
+            //     amounts: { structural: 1000, electrical: 1000, energetical: 1000 },
+            // });
 
             const { yaw, pitch } = getCameraOrbitForCoords(g.world.surface[spawnLocation].position);
             g.camera.setInstant({ yaw, pitch });

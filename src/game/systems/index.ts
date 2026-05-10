@@ -10,7 +10,7 @@ import { createDiscoverySystem } from './discovery';
 import { createDrillSystem } from './drill';
 import { createEnergySystem, type EnergySystemController } from './energy';
 import { createEngineSystem } from './engine';
-import { createUnitEvent, type UnitEventController } from './events';
+import { createUnitEvent, type UnitEvent, type UnitEventController } from './events';
 import { createInventorySystem, type InventoryController } from './inventory';
 import { createNavigatorSystem, type NavigatorSystemData } from './navigator';
 import { createPositionalSystem, type PositionalSystemController } from './positions';
@@ -36,6 +36,9 @@ import type { CPUSystemController } from './cpu/system';
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
 
+    readonly spawned: UnitEvent<SpawnOptions>;
+    readonly despawned: UnitEvent<unknown>;
+
     readonly energy: EnergySystemController;
     readonly positions: PositionalSystemController;
     readonly stationaries: StationariesSystemController;
@@ -56,7 +59,6 @@ export type GameUnitSystems = {
     queryCommands(unitId: UnitId): UnitCommand[];
     executeCommand(unitId: UnitId, call: UnitCommandCall): void;
     executeCommandMany(unitIds: UnitId[], call: UnitCommandCall): void;
-    getLastUpdatedTime(id: UnitId): number;
     getConfig(id: UnitId): UnitConfiguration | null;
     getSpawnTime(id: UnitId): number;
 };
@@ -68,10 +70,11 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
 
     const spawnedEvent = createUnitEvent<SpawnOptions>();
     events.push(spawnedEvent);
+    const despawnedEvent = createUnitEvent<null>();
+    events.push(despawnedEvent);
 
     const unitId = sequentialId<UnitId>();
     const unitSpawnTimes: Record<UnitId, number> = {};
-    const unitUpdateTimes: Record<UnitId, number> = {};
     const unitConfigs: Record<UnitId, UnitConfiguration> = {};
 
     const sendMessage: SendMessage = (to, message, delay) => {
@@ -83,7 +86,6 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
         console.log('[DEBUG] spawn:', at.toString(16), config);
         const id = unitId.aquire();
 
-        unitUpdateTimes[id] = -1;
         unitConfigs[id] = config;
         unitSpawnTimes[id] = logicTick.getCurrentTick();
 
@@ -102,13 +104,14 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
             system.remove(unitId);
         }
 
-        delete unitUpdateTimes[unitId];
         delete unitConfigs[unitId];
         delete unitSpawnTimes[unitId];
 
         for (const ev of events) {
             ev.clear(unitId);
         }
+
+        despawnedEvent.pub({ unitId, payload: null });
     };
 
     const opts: CreateUnitSystemCommonOptions = {
@@ -188,6 +191,8 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
     return {
         signals,
         debug: { systems, messageQueue },
+        spawned: spawnedEvent,
+        despawned: despawnedEvent,
 
         spawn,
         despawn,
@@ -220,10 +225,6 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
             for (const unitId of unitIds) {
                 cpu.system.handleCommand(unitId, call);
             }
-        },
-
-        getLastUpdatedTime(id) {
-            return unitUpdateTimes[id] ?? -1;
         },
 
         getConfig(id) {

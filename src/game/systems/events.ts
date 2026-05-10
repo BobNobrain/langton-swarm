@@ -10,6 +10,7 @@ export type UnitEvent<Payload> = {
     sub(unitId: UnitId, listener: (ev: UnitEventData<Payload>) => void): void;
     unsub(unitId: UnitId, listener: (ev: UnitEventData<Payload>) => void): void;
     subToAll(listener: (ev: UnitEventData<Payload>) => void): void;
+    unsubToAll(listener: (ev: UnitEventData<Payload>) => void): void;
 };
 
 export type UnitEventWithArgs<Payload, Args> = {
@@ -66,6 +67,12 @@ export function createUnitEvent<Payload>(): UnitEvent<Payload> & UnitEventContro
 
         subToAll(listener) {
             subsToAll.push(listener);
+        },
+        unsubToAll(listener) {
+            const idx = subsToAll.indexOf(listener);
+            if (idx !== -1) {
+                subsToAll.splice(idx, 1);
+            }
         },
 
         clear(unitId) {

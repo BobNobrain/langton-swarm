@@ -6,6 +6,7 @@ export type GameTimeState = {
 
     togglePause(): void;
     getGameMonotonicTime(): number;
+    advanceOneTick(): void;
 };
 
 export function createGameTime(gameLoop: GameLoop): GameTimeState {
@@ -26,6 +27,13 @@ export function createGameTime(gameLoop: GameLoop): GameTimeState {
                 }
                 return !wasPaused;
             });
+        },
+        advanceOneTick() {
+            if (!gameLoop.isPaused()) {
+                return;
+            }
+
+            gameLoop.advanceOneTick();
         },
 
         // TODO: more precision for animating stuff?

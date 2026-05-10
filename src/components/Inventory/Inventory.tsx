@@ -5,7 +5,7 @@ import { getStaticDropzones, InventoryTransfer } from './dragndrop';
 import { DropZoneDynamic, DropZoneStatic } from './dropzones';
 import styles from './Inventory.module.css';
 
-const RESOURCE_COLORS: Record<KnownResourceName, string> = {
+export const RESOURCE_COLORS: Record<KnownResourceName, string> = {
     electrical: '#ef943f',
     structural: '#94b9df',
     energetical: '#bcc0aa',
@@ -13,12 +13,20 @@ const RESOURCE_COLORS: Record<KnownResourceName, string> = {
     special: '#7dd0da',
 };
 
-const RESOURCE_NAMES: Record<KnownResourceName, string> = {
+export const RESOURCE_NAMES: Record<KnownResourceName, string> = {
     electrical: 'Copper',
     structural: 'Titanium',
     energetical: 'Lithium',
     combat: 'Crystals',
     special: 'Diamonds',
+};
+
+export const RESOURCE_ICONS: Record<KnownResourceName, string> = {
+    electrical: Symbols.ParallelogramOutline,
+    structural: Symbols.ParallelogramOutline,
+    energetical: Symbols.ParallelogramOutline,
+    combat: Symbols.CircleDoubleOutline,
+    special: Symbols.RhombusOutline,
 };
 
 const DEFAULT_COLOR = '#bfbfbf';
@@ -55,7 +63,9 @@ const InventoryItem: Component<{ resource: string; amount: number; cost: number 
                     <span class={styles.cost}>{props.cost}</span>/{props.amount}
                 </Show>
             </div>
-            <div class={styles.icon}>{Symbols.ParallelogramOutline}</div>
+            <div class={styles.icon}>
+                {RESOURCE_ICONS[props.resource as KnownResourceName] ?? Symbols.ParallelogramOutline}
+            </div>
             <div class={styles.label}>{RESOURCE_NAMES[props.resource as KnownResourceName] ?? props.resource}</div>
         </div>
     );
