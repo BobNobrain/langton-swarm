@@ -32,7 +32,7 @@ export const PlanetResources: Component = () => {
                 continue;
             }
 
-            byResource[deposit.resource][location] = { location };
+            byResource[deposit.resource][location] = { location, positioning: { rotation: Math.random() * Math.PI } };
         }
     }
 
@@ -62,7 +62,10 @@ export const PlanetResources: Component = () => {
                 if (amt <= 0) {
                     delete objects[tileId];
                 } else if (!objects[tileId]) {
-                    objects[tileId] = { location: tileId };
+                    objects[tileId] = {
+                        location: tileId,
+                        positioning: { rotation: Math.random() * Math.PI },
+                    };
                 }
             }
         });
@@ -79,7 +82,6 @@ export const PlanetResources: Component = () => {
                         hiddenNodes={world.terraIncognita}
                         objects={objects}
                         maxCount={maxCount}
-                        positioning={{ elevation: 0.1 }}
                     />
                 );
             }}

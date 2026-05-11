@@ -1,6 +1,7 @@
 import { createMemo, type Component } from 'solid-js';
 import {
     DynamicDrawUsage,
+    Euler,
     InstancedMesh,
     Matrix4,
     Object3D,
@@ -224,7 +225,8 @@ export const GridObjects: Component<{
                     rotation.copy(groundOrientation);
                 }
             } else if (typeof positioning.rotation === 'number') {
-                // TODO
+                rotation.copy(groundOrientation);
+                rotation.multiply(new Quaternion().setFromEuler(new Euler(0, positioning.rotation, 0)));
             } else {
                 rotation.copy(groundOrientation);
             }
