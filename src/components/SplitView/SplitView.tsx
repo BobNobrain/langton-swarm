@@ -47,7 +47,13 @@ export const SplitView: Component<{
     });
 
     return (
-        <div class={styles.wrapper} ref={wrapper}>
+        <div
+            class={styles.wrapper}
+            classList={{
+                [styles.notSingle]: Boolean(props.bottom && props.top),
+            }}
+            ref={wrapper}
+        >
             <Show when={props.top}>
                 <section
                     class={styles.section}

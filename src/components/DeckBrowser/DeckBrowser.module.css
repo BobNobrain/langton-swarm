@@ -30,14 +30,7 @@
 }
 
 .editorDebugger {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
     height: calc(100% - 69px - 8px);
-
-    &.hasDebugger {
-        grid-template-rows: 1fr 1fr;
-    }
 }
 
 .deckItemProperties {

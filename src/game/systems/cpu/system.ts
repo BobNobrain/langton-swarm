@@ -61,25 +61,18 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
         },
 
         initialData({ config }) {
-            const source = config.cpu;
-            if (typeof source !== 'string') {
+            const program = config.program;
+            if (!program) {
                 return null;
             }
 
-            // TODO: compilation cache
-            const parsed = parseProgram(source, parser.parse(source));
-            const compiled = compile(parsed.program);
-            if (!compiled) {
-                throw new Error('TODO');
-            }
-
             return {
-                program: compiled,
-                commands: extractCommands(parsed.program),
+                program: program.compiled,
+                commands: extractCommands(program.parsed),
                 energyConsumption: getProcessorEnergyConsumption(config),
                 tickRate: getProcessorTickRate(config),
 
-                state: compiled.defaultState,
+                state: program.compiled.defaultState,
                 ptr: 0,
                 stack: [],
                 variables: {},

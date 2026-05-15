@@ -5,15 +5,18 @@ import { SolarConfiguration } from './solar';
 import { StorageConfiguration } from './storage';
 import { AssemblerConfiguration } from './assembler';
 import { DrillConfiguration } from './drill';
+import { parseProgram } from '../program/parser';
+import { parser } from '../program/bsml';
+import { compile } from '../program/compile';
 
 export const MOTHER_PRESET: UnitConfiguration = {
-    cpu: `# This script handles unit assembly process for Cores
+    program: compileOrDie(`# This script handles unit assembly process for Cores
 command spawn(blueprint target) {
     assembler.queue(target)
     state :assembling
 }
 
-command kick() {
+command kick {
     state :assembling
 }
 
@@ -32,7 +35,7 @@ state assembling {
         state :idle
     }
 }
-`,
+`),
     assembler: AssemblerConfiguration.Tier2,
     battery: BatteryConfiguration.Tier2,
     solar: SolarConfiguration.Tier2Mobile,
@@ -45,7 +48,7 @@ export const DEFAULT_SCOUT_PRESET: UnitConfiguration = {
     solar: SolarConfiguration.Tier1Cheap,
     navigator: true,
     scanner: false,
-    cpu: `# this is a simple program for a scouting drone
+    program: compileOrDie(`# this is a simple program for a scouting drone
 command move(position to) {
     navigator.find_route(to)
     state :navigating
@@ -79,11 +82,11 @@ state navigating {
     }
     engine.move(navigator.next_step)
 }
-`,
+`),
 };
 
 export const TEST_PRESET: UnitConfiguration = {
-    cpu: `# Unit's program is a state machine
+    program: compileOrDie(`# Unit's program is a state machine
 
 command move(position to) {
     navigator.find_route(to)
@@ -142,7 +145,7 @@ state full {
     navigator.find_route(navigator.home)
     state :navigating
 }
-`,
+`),
 
     battery: BatteryConfiguration.Tier1Regular,
     drill: DrillConfiguration.Tier1,
@@ -155,7 +158,7 @@ state full {
 
 export function createDefaultUnitConfig(): UnitConfiguration {
     return {
-        cpu: `# Unit's program is a state machine
+        program: compileOrDie(`# Unit's program is a state machine
 when spawned {
     engine.move(navigator.random) # move away 1 cell in random direction
     state :idle
@@ -210,7 +213,7 @@ state returning {
 
     engine.move(navigator.next_step)
 }
-`,
+`),
         battery: BatteryConfiguration.Tier1Small,
         drill: DrillConfiguration.Tier1,
         engine: EngineConfiguration.Tier1Cheap,
@@ -221,7 +224,7 @@ state returning {
 }
 
 export const AUTO_MINER_PRESET: UnitConfiguration = {
-    cpu: `# This is a program for an automatic mining unit.
+    program: compileOrDie(`# This is a program for an automatic mining unit.
 # It will roam until found a resource vein,
 # then mine it until its storage is full,
 # and return all the resources home
@@ -285,7 +288,7 @@ state returning {
 
     engine.move(navigator.next_step)
 }
-`,
+`),
     battery: BatteryConfiguration.Tier1Big,
     drill: DrillConfiguration.Tier1,
     engine: EngineConfiguration.Tier1Cheap,
@@ -296,7 +299,7 @@ state returning {
 };
 
 export const SIMPLE_BUILDER_PRESET: UnitConfiguration = {
-    cpu: `# This is a program for a simple manual construction unit
+    program: compileOrDie(`# This is a program for a simple manual construction unit
 
 when spawned {
     engine.move(navigator.random)
@@ -341,7 +344,7 @@ state constructing {
     engine.move(navigator.random) # and then move 1 tile away
     state :idle
 }
-`,
+`),
     battery: BatteryConfiguration.Tier1Regular,
     engine: EngineConfiguration.Tier1Cheap,
     navigator: true,
@@ -351,7 +354,7 @@ state constructing {
 };
 
 export const MINING_RIG_PRESET: UnitConfiguration = {
-    cpu: `
+    program: compileOrDie(`
 command mine {
     state :mining
 }
@@ -360,7 +363,7 @@ command halt {}
 state mining {
     drill.mine
 }
-`,
+`),
     drill: DrillConfiguration.Tier2,
     storage: StorageConfiguration.Tier1Big,
     solar: SolarConfiguration.Tier1Regular,
@@ -376,5 +379,26 @@ export function constructionSitePreset(target: UnitConfiguration): UnitConfigura
     return {
         construction: target,
         storage: StorageConfiguration.Infinite,
+    };
+}
+
+function compileOrDie(source: string): NonNullable<UnitConfiguration['program']> {
+    const parsed = parseProgram(source, parser.parse(source));
+    if (parsed.errors.length) {
+        console.error(source);
+        console.error(parsed);
+        for (const error of parsed.errors) {
+            console.error(error.message);
+            console.error(source.substring(error.pos.from, error.pos.to));
+        }
+        throw new Error('failed to parse built-in program');
+    }
+
+    const compiled = compile(parsed.program);
+
+    return {
+        source,
+        parsed: parsed.program,
+        compiled,
     };
 }

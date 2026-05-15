@@ -8,6 +8,7 @@ import {
     foldGutter,
     foldKeymap,
     indentUnit,
+    syntaxTree,
 } from '@codemirror/language';
 import { highlightSelectionMatches } from '@codemirror/search';
 import { Compartment, EditorState } from '@codemirror/state';
@@ -23,19 +24,23 @@ import {
     highlightActiveLineGutter,
 } from '@codemirror/view';
 import type { UnitConfiguration } from '@/game';
+import type { CodePosition } from '@/game/program';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
+import { highlightField, highlightMark, setHighlight } from './highlight';
 import { bsml, bsmlHighlight } from './language';
 import { bsmlLinter } from './linter';
 import styles from './ProgramEditor.module.css';
 
 export type ProgramEditorController = {
     getProgramText: () => string;
+    getSyntaxTree: () => ReturnType<typeof syntaxTree> | null;
     reset: () => void;
 };
 
 export const ProgramEditor: Component<{
     config: UnitConfiguration | null;
     readonly: boolean;
+    highlightedPosition: CodePosition | null;
     controllerRef: ControllerRef<ProgramEditorController>;
     onChanged: (hasChanges: boolean) => void;
 }> = (props) => {
@@ -46,7 +51,7 @@ export const ProgramEditor: Component<{
 
     onMount(() => {
         view = new EditorView({
-            doc: props.config?.cpu ?? '',
+            doc: props.config?.program?.source ?? '',
             parent: editorWrapper,
             extensions: [
                 lineNumbers(),
@@ -81,6 +86,7 @@ export const ProgramEditor: Component<{
                     ...completionKeymap,
                     indentWithTab,
                 ]),
+                highlightField,
 
                 readonlyCompartment.of(EditorState.readOnly.of(props.readonly)),
                 EditorView.updateListener.of((update) => {
@@ -100,18 +106,18 @@ export const ProgramEditor: Component<{
     });
 
     createEffect(() => {
-        const program = props.config?.cpu ?? '';
+        const program = props.config?.program;
         if (!view || !program) {
             return;
         }
 
-        if (view.state.doc.toString() !== program) {
+        if (view.state.doc.toString() !== program.source) {
             view.dispatch({
                 changes: [
                     {
                         from: 0,
                         to: view.state.doc.length,
-                        insert: program,
+                        insert: program.source,
                     },
                 ],
             });
@@ -135,9 +141,21 @@ export const ProgramEditor: Component<{
         });
     });
 
+    createEffect(() => {
+        const codePos = props.highlightedPosition;
+        if (!view) {
+            return;
+        }
+
+        view.dispatch({
+            effects: setHighlight.of(codePos ? highlightMark.range(codePos.from, codePos.to) : null),
+        });
+    });
+
     provideController<ProgramEditorController>(
         {
             getProgramText: () => view?.state.doc.toString() ?? '',
+            getSyntaxTree: () => (view ? syntaxTree(view.state) : null),
             reset() {
                 if (!view) {
                     return;
@@ -165,6 +183,7 @@ export const ProgramEditor: Component<{
 export function useProgramEditorController() {
     return createControllerRef<ProgramEditorController>({
         getProgramText: () => '',
+        getSyntaxTree: () => null,
         reset: () => {},
     });
 }

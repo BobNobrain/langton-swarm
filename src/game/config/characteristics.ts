@@ -17,7 +17,7 @@ type AllCharacteristics = {
 const ALL: AllCharacteristics = {
     battery: BATTERY_CHARACTERISTICS,
     construction: null,
-    cpu: null,
+    program: null,
     drill: DRILL_CHARACTERISTICS,
     engine: ENGINE_CHARACTERISTICS,
     navigator: {

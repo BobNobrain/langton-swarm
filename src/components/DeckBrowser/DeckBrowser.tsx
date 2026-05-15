@@ -12,6 +12,9 @@ import { List, ListEmptyContent, ListItem } from '../List/List';
 import { TimeLabel } from '../TimeLabel/TimeLabel';
 import { DeckHeader } from './DeckHeader';
 import styles from './DeckBrowser.module.css';
+import { createCPUStateTracker } from '@/hooks/trackers';
+import type { CodePosition } from '@/game/program';
+import { SplitView } from '../SplitView/SplitView';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -124,12 +127,24 @@ export const DeckBrowser: Component = () => {
             return null;
         }
 
-        if (!found.bp.rVersions()[found.v]?.config.cpu) {
+        if (!found.bp.rVersions()[found.v]?.config.program) {
             return null;
         }
 
         return selectedIds[0];
     });
+
+    const { rCpuIsWaiting, rCpuProgram, rCpuPtr, rCpuStack, rStateName } = createCPUStateTracker(debuggingUnitId);
+    const editorCurrentPosition = (): CodePosition | null => {
+        const program = rCpuProgram();
+        const ptr = rCpuPtr();
+        const state = rStateName();
+        if (!program || !ptr || !state) {
+            return null;
+        }
+
+        return program.sourcemap[state][ptr] ?? null;
+    };
 
     return (
         <FloatingPanel pinRight pinBottom pinTop expandedWidth={ui.rDeckSelectedBlueprint() !== null}>
@@ -161,16 +176,29 @@ export const DeckBrowser: Component = () => {
             <Show
                 when={ui.rDeckSelectedBlueprint() === null}
                 fallback={
-                    <div
-                        class={styles.editorDebugger}
-                        classList={{
-                            [styles.hasDebugger]: debuggingUnitId() !== null,
-                        }}
-                    >
-                        <BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />
-                        <Show when={debuggingUnitId() !== null}>
-                            <Debugger unitId={debuggingUnitId()} />
-                        </Show>
+                    <div class={styles.editorDebugger}>
+                        <SplitView
+                            top={
+                                <BlueprintEditor
+                                    blueprint={selectedBlueprint()}
+                                    controllerRef={editor.ref}
+                                    highlightedPosition={editorCurrentPosition()}
+                                />
+                            }
+                            bottom={
+                                debuggingUnitId() !== null ? (
+                                    <Debugger
+                                        unitId={debuggingUnitId()}
+                                        program={rCpuProgram()}
+                                        stateName={rStateName()}
+                                        ptr={rCpuPtr()}
+                                        stack={rCpuStack()}
+                                        waitingFor={rCpuIsWaiting()}
+                                    />
+                                ) : null
+                            }
+                            initialTopHeight={0.7}
+                        />
                     </div>
                 }
             >

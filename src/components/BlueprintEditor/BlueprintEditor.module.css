@@ -8,3 +8,23 @@
     text-align: center;
     padding: 32px 16px;
 }
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--c-primary);
+    background-color: var(--c-black);
+    padding: 4px 16px 0;
+
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.tabSection {
+    display: none;
+    padding-top: 4px;
+
+    &.visible {
+        display: block;
+    }
+}

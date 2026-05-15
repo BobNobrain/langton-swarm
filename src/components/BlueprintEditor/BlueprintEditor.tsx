@@ -6,6 +6,10 @@ import { Configurator } from '../Configurator/Configurator';
 import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
 import styles from './BlueprintEditor.module.css';
 import { SplitView } from '../SplitView/SplitView';
+import { compile } from '@/game/program/compile';
+import { parseProgram } from '@/game/program/parser';
+import type { CodePosition } from '@/game/program';
+import { Button } from '../Button/Button';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
@@ -15,8 +19,11 @@ export type BlueprintEditorController = {
     reset: () => void;
 };
 
+type Tab = 'configurator' | 'program';
+
 export const BlueprintEditor: Component<{
     blueprint: BlueprintController | null;
+    highlightedPosition: CodePosition | null;
     controllerRef?: ControllerRef<BlueprintEditorController>;
 }> = (props) => {
     const { ui } = useGame();
@@ -82,8 +89,15 @@ export const BlueprintEditor: Component<{
                 }
 
                 const program = programEditor.rGet().getProgramText();
+                const tree = programEditor.rGet().getSyntaxTree()!;
+                const parsed = parseProgram(program, tree);
+                const compiled = compile(parsed.program);
+
                 const config = configuratorValue();
-                const newConfig: UnitConfiguration = { ...config, cpu: program };
+                const newConfig: UnitConfiguration = {
+                    ...config,
+                    program: { source: program, parsed: parsed.program, compiled },
+                };
                 return newConfig;
             },
             rCanSave: createMemo(() => {
@@ -108,34 +122,58 @@ export const BlueprintEditor: Component<{
         () => props.controllerRef,
     );
 
+    const [selectedTab, setSelectedTab] = createSignal<Tab>('configurator');
+
     return (
         <div class={styles.editor}>
-            <SplitView
-                initialTopHeight={0.3}
-                top={
-                    <Configurator
-                        value={configuratorValue()}
+            <header class={styles.tabs}>
+                <Button
+                    style={selectedTab() === 'configurator' ? 'primary' : 'secondary'}
+                    onClick={() => setSelectedTab('configurator')}
+                >
+                    Configuration
+                </Button>
+                <Button
+                    style={selectedTab() === 'program' ? 'primary' : 'secondary'}
+                    onClick={() => setSelectedTab('program')}
+                >
+                    Program
+                </Button>
+            </header>
+            <section
+                class={styles.tabSection}
+                classList={{
+                    [styles.visible]: selectedTab() === 'configurator',
+                }}
+            >
+                <Configurator
+                    value={configuratorValue()}
+                    readonly={isReadonly()}
+                    onUpdate={(patch) => {
+                        setConfiguratorValue((old) => ({ ...old, ...patch }));
+                        setConfigChanged(true);
+                    }}
+                />
+            </section>
+            <section
+                class={styles.tabSection}
+                classList={{
+                    [styles.visible]: selectedTab() === 'program',
+                }}
+            >
+                <Show
+                    when={configuratorValue().program}
+                    fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
+                >
+                    <ProgramEditor
+                        config={configuratorValue()}
                         readonly={isReadonly()}
-                        onUpdate={(patch) => {
-                            setConfiguratorValue((old) => ({ ...old, ...patch }));
-                            setConfigChanged(true);
-                        }}
+                        highlightedPosition={props.highlightedPosition}
+                        controllerRef={programEditor.ref}
+                        onChanged={setProgramChanged}
                     />
-                }
-                bottom={
-                    <Show
-                        when={typeof configuratorValue().cpu === 'string'}
-                        fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
-                    >
-                        <ProgramEditor
-                            config={configuratorValue()}
-                            readonly={isReadonly()}
-                            controllerRef={programEditor.ref}
-                            onChanged={setProgramChanged}
-                        />
-                    </Show>
-                }
-            />
+                </Show>
+            </section>
         </div>
     );
 };

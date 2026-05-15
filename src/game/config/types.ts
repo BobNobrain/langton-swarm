@@ -1,3 +1,5 @@
+import type { CompiledProgram } from '../program/compile';
+import type { BsmlProgram } from '../program/program';
 import type { KnownResourceName } from '../resources';
 import type { AssemblerConfiguration } from './assembler';
 import type { BatteryConfiguration } from './battery';
@@ -8,7 +10,11 @@ import type { StorageConfiguration } from './storage';
 
 export type UnitConfiguration = {
     /** BSML program for unit's CPU */
-    cpu?: string;
+    program?: {
+        source: string;
+        parsed: BsmlProgram;
+        compiled: CompiledProgram;
+    };
     /** Unit's movement characteristics */
     engine?: EngineConfiguration;
     /** If unit has navigation & movement capabilities */
