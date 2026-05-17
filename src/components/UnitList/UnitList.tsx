@@ -66,12 +66,15 @@ const UnitListItem: Component<{
 
 export const UnitList: Component<{
     unitIds: UnitId[];
-    showSelectionActions?: boolean;
     hoveredCommandTargets?: Set<UnitId> | null;
     onItemClick?: (data: UnitItemData) => void;
+    onUnitBlueprintClick?: (bpId: BlueprintId) => void;
+    onUnitBlueprintVersionClick?: (bpId: BlueprintId, version: number) => void;
+    unitActions?: (unitData: UnitItemData) => JSX.Element;
+    hideUnitActions?: boolean;
     empty?: JSX.Element;
 }> = (props) => {
-    const { ui, playerDeck, units } = useGame();
+    const { playerDeck, units } = useGame();
 
     const selectedUnits = createMemo(() => {
         const ids = props.unitIds;
@@ -99,33 +102,16 @@ export const UnitList: Component<{
         return result;
     });
 
-    const selectUnitsByBlueprint = (bpId: BlueprintId) => {
-        ui.selectUnits(playerDeck.getBlueprint(bpId)!.rUnitIdsFlat());
-    };
-    const selectUnitsByBlueprintAndVersion = (bpId: BlueprintId, version: number) => {
-        ui.selectUnits(playerDeck.getBlueprint(bpId)!.rUnitIds()[version] ?? []);
-    };
-
     return (
         <List insetH>
-            <For
-                each={selectedUnits()}
-                fallback={<ListEmptyContent>{props.empty ?? 'Nothing is selected'}</ListEmptyContent>}
-            >
+            <For each={selectedUnits()} fallback={<ListEmptyContent>{props.empty ?? 'No units'}</ListEmptyContent>}>
                 {(unitData) => {
                     return (
                         <ListItem
                             class={(props.hoveredCommandTargets?.has(unitData.id) ?? true) ? '' : styles.nonTargetUnit}
                             right={
-                                <Show when={selectedUnits().length !== 1 && props.showSelectionActions}>
-                                    <div class={styles.unitActions}>
-                                        <Button style="text" onClick={() => ui.selectUnits([unitData.id])}>
-                                            SEL
-                                        </Button>
-                                        <Button style="text" onClick={() => ui.removeSelectedUnit(unitData.id)}>
-                                            RM
-                                        </Button>
-                                    </div>
+                                <Show when={props.unitActions && !props.hideUnitActions}>
+                                    <div class={styles.unitActions}>{props.unitActions!(unitData)}</div>
                                 </Show>
                             }
                             onClick={props.onItemClick ? () => props.onItemClick!(unitData) : undefined}
@@ -133,10 +119,8 @@ export const UnitList: Component<{
                             <UnitListItem
                                 data={unitData}
                                 ownFaction={playerDeck.owner}
-                                onBlueprintNameClick={props.showSelectionActions ? selectUnitsByBlueprint : undefined}
-                                onBlueprintVersionClick={
-                                    props.showSelectionActions ? selectUnitsByBlueprintAndVersion : undefined
-                                }
+                                onBlueprintNameClick={props.onUnitBlueprintClick}
+                                onBlueprintVersionClick={props.onUnitBlueprintVersionClick}
                             />
                         </ListItem>
                     );

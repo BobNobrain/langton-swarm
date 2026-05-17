@@ -92,27 +92,33 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
     const { units } = useGame();
 
     const [rCpuStack, setCpuStack] = createSignal<BsmlValue[]>([]);
+    const [rCpuStackSources, setCpuStackSources] = createSignal<string[]>([]);
     const [rCpuPtr, setCpuPtr] = createSignal(0);
     const [rStateName, setStateName] = createSignal<string | null>(null);
     const [rCpuIsWaiting, setCpuIsWaiting] = createSignal('--');
+    const [rCpuVars, setCpuVars] = createSignal<Record<string, BsmlValue>>({});
 
     const [rCpuProgram, setCpuProgram] = createSignal<CompiledProgram | null>(null);
 
     const update = (cpu: CPUData | null) => {
         if (!cpu) {
             setCpuStack([]);
+            setCpuStackSources([]);
             setCpuPtr(0);
             setStateName(null);
             setCpuProgram(null);
             setCpuIsWaiting('--');
+            setCpuVars({});
             return;
         }
 
         setCpuProgram(cpu.program);
         setCpuStack(cpu.stack.slice());
+        setCpuStackSources(cpu.stackSources.slice());
         setCpuPtr(cpu.ptr >= cpu.program.stateInstructions[cpu.state].length ? 0 : cpu.ptr);
         setStateName(cpu.state);
         setCpuIsWaiting(cpu.waitingForReturn?.system ?? '--');
+        setCpuVars({ ...cpu.variables });
     };
 
     createEffect(() => {
@@ -135,10 +141,12 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
 
     return {
         rCpuStack,
+        rCpuStackSources,
         rCpuPtr,
         rStateName,
         rCpuIsWaiting,
         rCpuProgram,
+        rCpuVars,
     };
 }
 

@@ -24,6 +24,7 @@ export const ListItem: ParentComponent<{
     selected?: boolean;
     right?: JSX.Element;
     bottom?: JSX.Element;
+    ellipsis?: boolean;
     class?: string;
     onClick?: (ev: MouseEvent) => void;
     onMainClick?: () => void;
@@ -32,7 +33,13 @@ export const ListItem: ParentComponent<{
     const content = () => {
         return (
             <>
-                <div class={styles.main} onClick={props.onMainClick}>
+                <div
+                    class={styles.main}
+                    classList={{
+                        [styles.ellipsis]: props.ellipsis,
+                    }}
+                    onClick={props.onMainClick}
+                >
                     {props.children}
                 </div>
                 <Show when={props.right}>

@@ -47,10 +47,17 @@
     &.padded {
         padding: 0 4px;
     }
+
+    &.withMargin:not(:first-child) {
+        margin-top: 16px;
+    }
+    &.withMargin:not(:last-child) {
+        margin-bottom: 8px;
+    }
 }
 
 .headerActions {
     margin-left: auto;
     display: flex;
-    gap: 8px;
+    gap: 4px;
 }

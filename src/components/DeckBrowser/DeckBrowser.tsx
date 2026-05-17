@@ -1,20 +1,16 @@
 import { createMemo, For, Show, type Component } from 'solid-js';
-import { type BlueprintController, type BlueprintId, type UnitId } from '@/game';
+import { type BlueprintController, type BlueprintId } from '@/game';
 import { getConstructionCosts, getConstructionPoints } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { BlueprintEditor, useBlueprintEditorController } from '../BlueprintEditor/BlueprintEditor';
 import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
 import { Button } from '../Button/Button';
-import { Debugger } from '../Debugger/Debugger';
 import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
 import { InventoryContent } from '../Inventory/Inventory';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import { TimeLabel } from '../TimeLabel/TimeLabel';
 import { DeckHeader } from './DeckHeader';
 import styles from './DeckBrowser.module.css';
-import { createCPUStateTracker } from '@/hooks/trackers';
-import type { CodePosition } from '@/game/program';
-import { SplitView } from '../SplitView/SplitView';
 
 const DeckListItem: Component<{
     item: BlueprintController;
@@ -107,45 +103,6 @@ export const DeckBrowser: Component = () => {
 
     const editor = useBlueprintEditorController();
 
-    const debuggingUnitId = createMemo((): UnitId | null => {
-        const openBlueprint = ui.rDeckSelectedBlueprint();
-        if (openBlueprint === null) {
-            return null;
-        }
-
-        const selectedIds = ui.rSelectedUnits();
-        if (selectedIds.length !== 1) {
-            return null;
-        }
-
-        const found = playerDeck.findByUnitId(selectedIds[0]);
-        if (!found) {
-            return null;
-        }
-
-        if (found.bp.id !== openBlueprint || found.v !== ui.rDeckSelectedVersion()) {
-            return null;
-        }
-
-        if (!found.bp.rVersions()[found.v]?.config.program) {
-            return null;
-        }
-
-        return selectedIds[0];
-    });
-
-    const { rCpuIsWaiting, rCpuProgram, rCpuPtr, rCpuStack, rStateName } = createCPUStateTracker(debuggingUnitId);
-    const editorCurrentPosition = (): CodePosition | null => {
-        const program = rCpuProgram();
-        const ptr = rCpuPtr();
-        const state = rStateName();
-        if (!program || !ptr || !state) {
-            return null;
-        }
-
-        return program.sourcemap[state][ptr] ?? null;
-    };
-
     return (
         <FloatingPanel pinRight pinBottom pinTop expandedWidth={ui.rDeckSelectedBlueprint() !== null}>
             <DeckHeader
@@ -177,28 +134,7 @@ export const DeckBrowser: Component = () => {
                 when={ui.rDeckSelectedBlueprint() === null}
                 fallback={
                     <div class={styles.editorDebugger}>
-                        <SplitView
-                            top={
-                                <BlueprintEditor
-                                    blueprint={selectedBlueprint()}
-                                    controllerRef={editor.ref}
-                                    highlightedPosition={editorCurrentPosition()}
-                                />
-                            }
-                            bottom={
-                                debuggingUnitId() !== null ? (
-                                    <Debugger
-                                        unitId={debuggingUnitId()}
-                                        program={rCpuProgram()}
-                                        stateName={rStateName()}
-                                        ptr={rCpuPtr()}
-                                        stack={rCpuStack()}
-                                        waitingFor={rCpuIsWaiting()}
-                                    />
-                                ) : null
-                            }
-                            initialTopHeight={0.7}
-                        />
+                        <BlueprintEditor blueprint={selectedBlueprint()} controllerRef={editor.ref} />
                     </div>
                 }
             >

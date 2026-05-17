@@ -74,6 +74,12 @@
         --button-bg-hover: var(--c-white);
         --button-text-hover: var(--c-primary);
     }
+    &.btnSecondaryDanger {
+        --button-bg: var(--c-gray-d);
+        --button-text: var(--c-red);
+        --button-bg-hover: var(--c-red);
+        --button-text-hover: var(--c-white);
+    }
 
     &.btnPrimary {
         --button-bg: var(--c-primary);

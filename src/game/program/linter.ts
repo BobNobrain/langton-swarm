@@ -1,5 +1,5 @@
 import { type Diagnostic } from '@codemirror/lint';
-import type { UnitConfiguration } from '../types';
+import type { UnitConfiguration } from '../config';
 import type { BsmlProgram } from './program';
 import { typecheck } from './typecheck';
 

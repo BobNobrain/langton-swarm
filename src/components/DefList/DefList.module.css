@@ -20,7 +20,7 @@
 .ddKey {
     flex: 0 0 120px;
 
-    padding-left: calc(var(--container-padding-l, 0));
+    padding-left: max(var(--container-padding-l, 0px), 8px);
 
     background-color: rgba(from var(--c-white) r g b / 15%);
     font-weight: 400;
@@ -32,7 +32,7 @@
 .ddValue {
     flex: 1 1 auto;
 
-    padding-right: calc(var(--container-padding-r, 0));
+    padding-right: max(var(--container-padding-r, 0px), 8px);
 
     background-color: rgba(from var(--c-white) r g b / 5%);
 }

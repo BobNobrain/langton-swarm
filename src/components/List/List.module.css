@@ -2,6 +2,7 @@
     list-style-type: none;
     margin: 0;
     padding: 0;
+    width: 100%;
 
     &.hasBorder {
         border: 3px double var(--c-gray-l);
@@ -92,6 +93,7 @@
 .main {
     flex: 1 1 auto;
     align-content: center;
+    max-width: 100%;
 
     .item > & {
         padding: 4px 0;
@@ -99,6 +101,11 @@
 
     .item.clickable:hover & {
         color: var(--c-white);
+    }
+
+    &.ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
 

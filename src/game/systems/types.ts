@@ -54,7 +54,7 @@ export type UnitSystemPublic<Data> = {
 export type UnitSystem<Data> = UnitSystemPublic<Data> & {
     tick(): void;
     create(unitId: UnitId, options: SpawnOptions): void;
-    activate(unitId: UnitId): void;
+    activate(unitId: UnitId, delayTicks?: number): void;
     deactivate(unitId: UnitId): void;
     remove(unitId: UnitId): void;
 

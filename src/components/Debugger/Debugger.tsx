@@ -1,12 +1,17 @@
-import { createMemo, For, type Component } from 'solid-js';
+import { createMemo, For, Show, type Component } from 'solid-js';
 import type { BsmlValue, UnitId } from '@/game';
 import { type CompiledProgram, renderStateName } from '@/game/program';
 import { BsmlValueLabel } from '../BsmlValueLabel/BsmlValueLabel';
 import { DefList, DefListItem } from '../DefList/DefList';
-import { Heading } from '../Header/Header';
+import { Header, Heading } from '../Header/Header';
 import { List, ListEmptyContent, ListItem } from '../List/List';
 import { DebuggerInstruction } from './DebuggerInstruction';
 import styles from './Debugger.module.css';
+
+type EnrichedStackItem = {
+    value: BsmlValue;
+    source?: string;
+};
 
 export const Debugger: Component<{
     unitId: UnitId | null;
@@ -15,6 +20,8 @@ export const Debugger: Component<{
     waitingFor: string;
     ptr: number;
     stack: BsmlValue[];
+    stackSources: string[];
+    vars: Record<string, BsmlValue>;
 }> = (props) => {
     const currentInstructionsSet = createMemo(() => {
         const program = props.program;
@@ -31,16 +38,25 @@ export const Debugger: Component<{
         return instructions;
     });
 
+    const enrichedStack = () => {
+        const stack = props.stack;
+        const sources = props.stackSources;
+        const result: EnrichedStackItem[] = stack.map((value, i) => ({ value, source: sources[i] }));
+        return result;
+    };
+
     return (
         <section class={styles.debugPanel}>
-            <header class={styles.debuggerHeader}>
-                <Heading size="sm">Debugger</Heading>
+            <div class={styles.debuggerHeader}>
+                <Header>
+                    <Heading size="sm">Debugger</Heading>
+                </Header>
                 <DefList>
                     <DefListItem name="State">{renderStateName(props.stateName)}</DefListItem>
                     <DefListItem name="Waiting for">{props.waitingFor}</DefListItem>
                 </DefList>
-            </header>
-            <List class={styles.instructions} hasBorder>
+            </div>
+            <List class={styles.instructions}>
                 <For each={currentInstructionsSet()} fallback={<ListEmptyContent>(no instructions)</ListEmptyContent>}>
                     {(instruction, index) => {
                         return (
@@ -51,11 +67,27 @@ export const Debugger: Component<{
                     }}
                 </For>
             </List>
-            <List class={styles.stack} hasBorder>
-                <For each={props.stack} fallback={<ListEmptyContent>(stack is empty)</ListEmptyContent>}>
-                    {(value) => (
+            <List class={styles.vars}>
+                <For each={Object.entries(props.vars)} fallback={<ListEmptyContent>(no variables)</ListEmptyContent>}>
+                    {([name, value]) => (
                         <ListItem>
+                            <span class={styles.varListName}>{name}</span>
+                            <span class={styles.varListEq}>=</span>
                             <BsmlValueLabel value={value} />
+                        </ListItem>
+                    )}
+                </For>
+            </List>
+            <List class={styles.stack}>
+                <For each={enrichedStack()} fallback={<ListEmptyContent>(stack is empty)</ListEmptyContent>}>
+                    {({ value, source }) => (
+                        <ListItem ellipsis>
+                            <BsmlValueLabel value={value} />
+                            <Show when={source}>
+                                <span class={styles.stackSource} title={source}>
+                                    {source}
+                                </span>
+                            </Show>
                         </ListItem>
                     )}
                 </For>

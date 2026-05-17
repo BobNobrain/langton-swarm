@@ -32,6 +32,7 @@ export const DeckHeader: Component<{
             return [];
         }
 
+        console.log('MEMO: rVersions updated!!!', bp.rVersions());
         return Object.values(bp.rVersions())
             .map(
                 (version): SelectOption<number> => ({

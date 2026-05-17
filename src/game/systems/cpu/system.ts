@@ -1,26 +1,27 @@
 import { getProcessorEnergyConsumption, getProcessorTickRate } from '@/game/config';
-import { compile, type CompiledInstruction } from '@/game/program/compile';
-import { parseProgram } from '@/game/program/parser';
-import { extractCommands, getCommandStateName, isTruthy, namedArguments, renderValue } from '@/game/program/utils';
-import type { BsmlValue } from '@/game/program/value';
-import type { UnitId } from '@/game/types';
+import {
+    type BsmlValue,
+    type CompiledInstruction,
+    extractCommands,
+    isTruthy,
+    namedArguments,
+    renderValue,
+    getCommandStateName,
+} from '@/game/program';
 import { absurd } from '@/lib/errors';
-import { parser } from '../../program/bsml';
 import type { EnergySystemController } from '../energy';
+import { createUnitEvent } from '../events';
 import { fcall } from '../func';
-import { createUnitEvent, type UnitEvent } from '../events';
 import { createUnitSystem } from '../systems';
 import type { CreateUnitSystemCommonOptions, UnitSystemTickContext } from '../types';
 import { binop } from './binop';
 import { CPU_FNS } from './fns';
-import type { CPUData } from './types';
+import type { CPUData, CPUSystemController } from './types';
 import { unop } from './unop';
-import { popStack, setState, toErrorState } from './utils';
+import { popStack, pushToStack, setState, toErrorState } from './utils';
 
-export type CPUSystemController = {
-    updated: UnitEvent<CPUData>;
-    getData: (unitId: UnitId) => CPUData | null;
-};
+const CPU_SYSTEM_NAME = 'cpu';
+const UPGRADE_DELAY_TICKS = 50;
 
 export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: EnergySystemController) {
     const updated = createUnitEvent<CPUData>();
@@ -28,16 +29,37 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
 
     const controller: CPUSystemController = {
         updated,
-        getData: null as never,
+        getData: null as never, // to be assigned later
+        upgrade(unitIds, { program }) {
+            const commands = extractCommands(program.parsed);
+            const defaultState = program.compiled.defaultState;
+
+            for (const unitId of unitIds) {
+                const cpu = system.getData(unitId);
+                if (!cpu) {
+                    continue;
+                }
+
+                system.activate(unitId, UPGRADE_DELAY_TICKS);
+                cpu.isUpgrading = true;
+                cpu.program = program.compiled;
+                cpu.commands = commands;
+                setState(cpu, defaultState);
+            }
+        },
+        triggerEvent(unitId, event) {
+            opts.sendMessage(CPU_SYSTEM_NAME, { event: 'event', payload: { name: event }, unitId });
+        },
     };
 
     const system = createUnitSystem<
         CPUData,
         {
             return: { value: BsmlValue | null };
+            event: { name: string };
         }
     >(opts, {
-        name: 'cpu',
+        name: CPU_SYSTEM_NAME,
 
         messages: {
             return: {
@@ -50,7 +72,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                     updated.pub({ unitId: ctx.unitId, payload: cpu });
 
                     if (payload.value && !cpu.waitingForReturn.ignoreResult) {
-                        cpu.stack.push(payload.value);
+                        pushToStack(cpu, payload.value, cpu.waitingForReturn.fname);
                     }
 
                     cpu.waitingForReturn = null;
@@ -58,13 +80,24 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                     return true;
                 },
             },
+            event: {
+                handler(payload, ctx) {
+                    // const cpu = ctx.systemData;
+                    // TODO
+                    // return true
+
+                    return false;
+                },
+            },
         },
 
-        initialData({ config }) {
+        initialData({ config }, unitId) {
             const program = config.program;
             if (!program) {
                 return null;
             }
+
+            controller.triggerEvent(unitId, 'spawned');
 
             return {
                 program: program.compiled,
@@ -75,8 +108,10 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
                 state: program.compiled.defaultState,
                 ptr: 0,
                 stack: [],
+                stackSources: [],
                 variables: {},
                 waitingForReturn: null,
+                isUpgrading: false,
             };
         },
 
@@ -84,8 +119,10 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
             const cpu = ctx.systemData;
             const instructions = cpu.program.stateInstructions[cpu.state];
 
-            if (cpu.state === 'error') {
-                console.error(ctx.unitId, cpu.variables);
+            if (cpu.isUpgrading) {
+                controller.triggerEvent(ctx.unitId, 'upgraded');
+                cpu.isUpgrading = false;
+                return;
             }
 
             if (!instructions || !instructions.length) {
@@ -168,12 +205,12 @@ function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instr
             }
 
             if (CPU_FNS[instruction.fname]) {
-                cpu.stack.push(CPU_FNS[instruction.fname].call(...argv));
+                pushToStack(cpu, CPU_FNS[instruction.fname].call(...argv), instruction.fname);
                 break;
             }
 
             const [system, fn] = instruction.fname.split('.');
-            cpu.waitingForReturn = { system, ignoreResult: false };
+            cpu.waitingForReturn = { system, fname: instruction.fname, ignoreResult: false };
             ctx.sleep();
             fcall(ctx, system, { fname: fn, argv });
             break;
@@ -192,17 +229,17 @@ function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instr
             break;
 
         case 'push':
-            cpu.stack.push(instruction.value);
+            pushToStack(cpu, instruction.value, '(constant)');
             break;
 
         case 'pop':
-            cpu.stack.pop();
+            popStack(cpu, 1);
             break;
 
         case 'read': {
             const value = cpu.variables[instruction.name];
             if (value) {
-                cpu.stack.push(value);
+                pushToStack(cpu, value, instruction.name);
             }
             break;
         }
@@ -238,7 +275,7 @@ function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instr
                 break;
             }
 
-            cpu.stack.push(result);
+            pushToStack(cpu, result, `(calculation result`);
             break;
         }
 
@@ -251,7 +288,7 @@ function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instr
                 break;
             }
 
-            cpu.stack.push(result);
+            pushToStack(cpu, result, `(calculation result)`);
             break;
 
         default:

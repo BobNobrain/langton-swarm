@@ -1,5 +1,5 @@
 import { createEffect, createSignal, Show, type Component } from 'solid-js';
-import type { UnitCommand, UnitId } from '@/game';
+import type { BlueprintId, UnitCommand, UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { Button } from '../Button/Button';
 import { FloatingPanel, FloatingPanelHeader, FloatingPanelOverlay } from '../FloatingPanel/FloatingPanel';
@@ -17,7 +17,7 @@ type ActiveCommand = {
 };
 
 export const SelectedUnitsPanel: Component = () => {
-    const { ui, units } = useGame();
+    const { ui, units, playerDeck } = useGame();
     const [hoveredCommandTargets, setHoveredCommandTargets] = createSignal<Set<UnitId> | null>(null);
     const [activeCommand, setActiveCommand] = createSignal<ActiveCommand | null>(null);
 
@@ -58,7 +58,26 @@ export const SelectedUnitsPanel: Component = () => {
                 <UnitList
                     unitIds={ui.rSelectedUnits()}
                     hoveredCommandTargets={hoveredCommandTargets()}
-                    showSelectionActions
+                    onUnitBlueprintClick={(bpId) => {
+                        ui.selectUnits(playerDeck.getBlueprint(bpId)!.rUnitIdsFlat());
+                    }}
+                    onUnitBlueprintVersionClick={(bpId, version) => {
+                        ui.selectUnits(playerDeck.getBlueprint(bpId)!.rUnitIds()[version] ?? []);
+                    }}
+                    unitActions={({ id }) => {
+                        return (
+                            <>
+                                <Button style="text" onClick={() => ui.selectUnits([id])}>
+                                    SEL
+                                </Button>
+                                <Button style="text" onClick={() => ui.removeSelectedUnit(id)}>
+                                    RM
+                                </Button>
+                            </>
+                        );
+                    }}
+                    hideUnitActions={ui.rSelectedUnits().length === 1}
+                    empty="Nothing selected"
                 />
                 <UnitDisplay unitId={selectedUnitId()} />
             </section>

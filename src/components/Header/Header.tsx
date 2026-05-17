@@ -16,9 +16,12 @@ export const Heading: ParentComponent<{ size?: 'md' | 'sm' | 'lg'; withMargin?: 
     );
 };
 
-export const Header: ParentComponent<{ actions?: JSX.Element; padded?: boolean }> = (props) => {
+export const Header: ParentComponent<{ actions?: JSX.Element; padded?: boolean; withMargin?: boolean }> = (props) => {
     return (
-        <header class={styles.header} classList={{ [styles.padded]: props.padded }}>
+        <header
+            class={styles.header}
+            classList={{ [styles.padded]: props.padded, [styles.withMargin]: props.withMargin }}
+        >
             {props.children}
             <Show when={props.actions}>
                 <div class={styles.headerActions}>{props.actions}</div>

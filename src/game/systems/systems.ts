@@ -92,14 +92,26 @@ export function createUnitSystem<Data, MessagePayloads extends Record<string, un
             });
         },
 
-        activate(unitId) {
-            const entry = inactiveData.get(unitId);
+        activate(unitId, delayTicks) {
+            let entry = inactiveData.get(unitId);
+            if (!entry && delayTicks === undefined) {
+                return;
+            }
+
+            if (!entry) {
+                entry = data.get(unitId);
+            } else {
+                inactiveData.delete(unitId);
+            }
+
             if (!entry) {
                 return;
             }
 
-            inactiveData.delete(unitId);
             data.set(unitId, entry);
+            if (delayTicks !== undefined) {
+                entry.sleepUntil = logicTick.getCurrentTick() + delayTicks;
+            }
         },
         deactivate(unitId) {
             const entry = data.get(unitId);

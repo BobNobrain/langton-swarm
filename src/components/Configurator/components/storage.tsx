@@ -1,12 +1,14 @@
 import type { Component } from 'solid-js';
+import { Badge } from '@/components/Badge/Badge';
+import { ListItem } from '@/components/List/List';
+import { Select, type SelectCustomOptionProps, type SelectOption } from '@/components/Select/Select';
 import { getStorageCapacity, StorageConfiguration } from '@/game/config';
 import { Symbols } from '@/lib/ascii';
-import { Badge } from '../Badge/Badge';
-import { ListItem } from '../List/List';
-import type { SelectCustomOptionProps, SelectOption } from '../Select/Select';
-import styles from './Configurator.module.css';
+import type { UnitComponent } from './types';
+import { findValue } from './utils';
+import styles from '../Configurator.module.css';
 
-export const STORAGE_OPTIONS: SelectOption<StorageConfiguration | null>[] = [
+const STORAGE_OPTIONS: SelectOption<StorageConfiguration | null>[] = [
     { text: 'No storage', value: null },
     { text: 'Tiny compartment', value: StorageConfiguration.Tier1Small },
     { text: 'Small storage', value: StorageConfiguration.Tier1Regular },
@@ -39,7 +41,18 @@ const BADGE_CLS: Record<StorageConfiguration | '', string> = {
     [StorageConfiguration.Infinite]: styles.badgeTier0,
 };
 
-export const CustomStorageOption: Component<SelectCustomOptionProps<StorageConfiguration | null>> = (props) => {
+const STORAGE_TIERS: Record<StorageConfiguration, 0 | 1 | 2> = {
+    [StorageConfiguration.Tier1Small]: 1,
+    [StorageConfiguration.Tier1Regular]: 1,
+    [StorageConfiguration.Tier1Big]: 1,
+    [StorageConfiguration.Tier2Small]: 2,
+    [StorageConfiguration.Tier2Regular]: 2,
+    [StorageConfiguration.Tier2Big]: 2,
+
+    [StorageConfiguration.Infinite]: 0,
+};
+
+const CustomStorageOption: Component<SelectCustomOptionProps<StorageConfiguration | null>> = (props) => {
     return (
         <ListItem
             selected={props.selected}
@@ -58,4 +71,32 @@ export const CustomStorageOption: Component<SelectCustomOptionProps<StorageConfi
             <span class={styles.optionName}>{props.text}</span>
         </ListItem>
     );
+};
+
+export const StorageUnitComponent: UnitComponent = {
+    cls: styles.componentStorage,
+    icon: Symbols.ParallelogramOutline,
+    name: 'Storage',
+    description: ({ storage }) => (storage ? STORAGE_DESCRIPTIONS[storage] : ''),
+    initial: { storage: StorageConfiguration.Tier1Small },
+    remove: { storage: undefined },
+    isolate: ({ storage }) => ({ storage }),
+    isPresent: ({ storage }) => Boolean(storage),
+    getTier: ({ storage }) => (storage ? STORAGE_TIERS[storage] : 0),
+    mode: 'persistent',
+    inputRenderer: (props) => {
+        return (
+            <Select
+                options={STORAGE_OPTIONS}
+                value={findValue(STORAGE_OPTIONS, props.config.storage)}
+                onUpdate={(option) => {
+                    props.onUpdate({ storage: option.value ?? undefined });
+                }}
+                popupOpening="manual"
+                dark
+                sidewaySwitchable
+                customOption={CustomStorageOption}
+            />
+        );
+    },
 };

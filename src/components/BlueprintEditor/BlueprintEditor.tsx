@@ -1,15 +1,17 @@
 import { createEffect, createMemo, createSignal, Show, type Component } from 'solid-js';
 import type { UnitConfiguration, BlueprintController } from '@/game';
-import { useGame } from '@/gameContext';
-import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
-import { Configurator } from '../Configurator/Configurator';
-import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
-import styles from './BlueprintEditor.module.css';
-import { SplitView } from '../SplitView/SplitView';
 import { compile } from '@/game/program/compile';
 import { parseProgram } from '@/game/program/parser';
-import type { CodePosition } from '@/game/program';
+import { useGame } from '@/gameContext';
+import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { Button } from '../Button/Button';
+import { Configurator } from '../Configurator/Configurator';
+import { Debugger } from '../Debugger/Debugger';
+import { ProgramEditor, useProgramEditorController } from '../ProgramEditor/ProgramEditor';
+import { SplitView } from '../SplitView/SplitView';
+import { BlueprintUnitsList } from './BlueprintUnitsList';
+import { useDebuggerData } from './debugger';
+import styles from './BlueprintEditor.module.css';
 
 export type BlueprintEditorController = {
     rHasChanges: () => boolean;
@@ -19,11 +21,8 @@ export type BlueprintEditorController = {
     reset: () => void;
 };
 
-type Tab = 'configurator' | 'program';
-
 export const BlueprintEditor: Component<{
     blueprint: BlueprintController | null;
-    highlightedPosition: CodePosition | null;
     controllerRef?: ControllerRef<BlueprintEditorController>;
 }> = (props) => {
     const { ui } = useGame();
@@ -62,11 +61,21 @@ export const BlueprintEditor: Component<{
         return blueprint.rVersions()[v] ?? null;
     });
 
-    const isReadonly = createMemo(() => {
+    const isLastVersion = createMemo(() => {
         if (!props.blueprint) {
+            return false;
+        }
+
+        return selectedVersionNumber() === props.blueprint.rLastVersion().version;
+    });
+
+    const isProgramEditable = isLastVersion;
+    const isConfigReadonly = createMemo(() => {
+        if (!isLastVersion()) {
             return true;
         }
-        return selectedVersionNumber() !== props.blueprint.rLastVersion().version;
+
+        return (props.blueprint?.rUnitIds()[selectedVersionNumber()]?.length ?? 0) > 0;
     });
 
     const programEditor = useProgramEditorController();
@@ -84,7 +93,7 @@ export const BlueprintEditor: Component<{
     provideController(
         {
             getCurrentState() {
-                if (isReadonly()) {
+                if (!isProgramEditable()) {
                     return null;
                 }
 
@@ -101,7 +110,7 @@ export const BlueprintEditor: Component<{
                 return newConfig;
             },
             rCanSave: createMemo(() => {
-                return !isReadonly();
+                return isProgramEditable();
             }),
             rHasChanges: createMemo(() => rProgramChanged() || rConfigChanged()),
             markSaved() {
@@ -122,34 +131,73 @@ export const BlueprintEditor: Component<{
         () => props.controllerRef,
     );
 
-    const [selectedTab, setSelectedTab] = createSignal<Tab>('configurator');
+    const unitCounts = createMemo(() => {
+        const bp = props.blueprint;
+        if (!bp) {
+            return [];
+        }
+
+        const idsByVersion = bp.rUnitIds();
+        const lastVersion = bp.rLastVersion().version;
+        const lastVersionCount = idsByVersion[lastVersion]?.length ?? 0;
+
+        let totalCount = 0;
+        for (const ids of Object.values(idsByVersion)) {
+            totalCount += ids.length;
+        }
+        totalCount -= lastVersionCount;
+
+        return `${lastVersionCount}+${totalCount}`;
+    });
+
+    const {
+        debuggerCurrentPosition,
+        debuggingUnitId,
+        rCpuProgram,
+        rCpuIsWaiting,
+        rCpuPtr,
+        rCpuStack,
+        rCpuStackSources,
+        rStateName,
+        rCpuVars,
+    } = useDebuggerData();
 
     return (
         <div class={styles.editor}>
             <header class={styles.tabs}>
                 <Button
-                    style={selectedTab() === 'configurator' ? 'primary' : 'secondary'}
-                    onClick={() => setSelectedTab('configurator')}
+                    style={ui.rEditorCurrentTab() === 'configurator' ? 'primary' : 'secondary'}
+                    onClick={() => ui.setEditorCurrentTab('configurator')}
                 >
                     Configuration
                 </Button>
                 <Button
-                    style={selectedTab() === 'program' ? 'primary' : 'secondary'}
-                    onClick={() => setSelectedTab('program')}
+                    style={ui.rEditorCurrentTab() === 'program' ? 'primary' : 'secondary'}
+                    onClick={() => ui.setEditorCurrentTab('program')}
                 >
                     Program
+                </Button>
+                <Button
+                    style={ui.rEditorCurrentTab() === 'units' ? 'primary' : 'secondary'}
+                    onClick={() => ui.setEditorCurrentTab('units')}
+                >
+                    Units ({unitCounts()})
                 </Button>
             </header>
             <section
                 class={styles.tabSection}
                 classList={{
-                    [styles.visible]: selectedTab() === 'configurator',
+                    [styles.visible]: ui.rEditorCurrentTab() === 'configurator',
                 }}
             >
                 <Configurator
                     value={configuratorValue()}
-                    readonly={isReadonly()}
+                    readonly={isConfigReadonly()}
                     onUpdate={(patch) => {
+                        if (isConfigReadonly()) {
+                            return;
+                        }
+
                         setConfiguratorValue((old) => ({ ...old, ...patch }));
                         setConfigChanged(true);
                     }}
@@ -158,21 +206,48 @@ export const BlueprintEditor: Component<{
             <section
                 class={styles.tabSection}
                 classList={{
-                    [styles.visible]: selectedTab() === 'program',
+                    [styles.visible]: ui.rEditorCurrentTab() === 'program',
                 }}
             >
                 <Show
-                    when={configuratorValue().program}
+                    when={configuratorValue().program !== undefined}
                     fallback={<div class={styles.noProgramMessage}>This blueprint has no program.</div>}
                 >
-                    <ProgramEditor
-                        config={configuratorValue()}
-                        readonly={isReadonly()}
-                        highlightedPosition={props.highlightedPosition}
-                        controllerRef={programEditor.ref}
-                        onChanged={setProgramChanged}
+                    <SplitView
+                        initialTopHeight={0.7}
+                        top={
+                            <ProgramEditor
+                                config={configuratorValue()}
+                                readonly={!isProgramEditable()}
+                                highlightedPosition={debuggerCurrentPosition()}
+                                controllerRef={programEditor.ref}
+                                onChanged={setProgramChanged}
+                            />
+                        }
+                        bottom={
+                            debuggingUnitId() !== null ? (
+                                <Debugger
+                                    unitId={debuggingUnitId()}
+                                    program={rCpuProgram()}
+                                    stateName={rStateName()}
+                                    ptr={rCpuPtr()}
+                                    stack={rCpuStack()}
+                                    stackSources={rCpuStackSources()}
+                                    waitingFor={rCpuIsWaiting()}
+                                    vars={rCpuVars()}
+                                />
+                            ) : null
+                        }
                     />
                 </Show>
+            </section>
+            <section
+                class={styles.tabSection}
+                classList={{
+                    [styles.visible]: ui.rEditorCurrentTab() === 'units',
+                }}
+            >
+                <BlueprintUnitsList blueprint={props.blueprint} />
             </section>
         </div>
     );

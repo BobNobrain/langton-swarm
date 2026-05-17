@@ -1,4 +1,3 @@
-import { InventoryDelta } from '../inventory';
 import type { UnitCommand } from '../types';
 import type { BsmlProgram } from './program';
 import type { BsmlValue, BsmlValueType } from './value';
@@ -47,7 +46,7 @@ export function renderValue(val: BsmlValue | null | undefined): string {
             return JSON.stringify(val.value);
 
         case 'position':
-            return `<position:${val.value.toString()}>`;
+            return `<pos:${val.value.toString()}>`;
 
         case 'state':
             return `:${val.value}`;

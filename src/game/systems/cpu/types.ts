@@ -1,6 +1,14 @@
-import type { CompiledProgram } from '@/game/program/compile';
-import type { BsmlValue } from '@/game/program/value';
-import type { UnitCommand } from '@/game/types';
+import type { UnitCommand, UnitConfiguration, UnitId } from '@/game';
+import type { CompiledProgram, BsmlValue, CompiledInstruction } from '@/game/program';
+import type { UnitEvent } from '../events';
+
+export type CPUFrameData = {
+    readonly code: readonly CompiledInstruction[];
+    ptr: number;
+    stack: BsmlValue[];
+    stackSources: string[];
+    locals: Record<string, BsmlValue>;
+};
 
 export type CPUData = {
     program: CompiledProgram;
@@ -11,9 +19,20 @@ export type CPUData = {
     state: string;
     ptr: number;
     stack: BsmlValue[];
+    /** For unit debugging – a human-readable explanation of what have spawned a particular stack value */
+    stackSources: string[];
     variables: Record<string, BsmlValue>;
     waitingForReturn: null | {
         system: string;
+        fname: string;
         ignoreResult: boolean;
     };
+    isUpgrading: boolean;
+};
+
+export type CPUSystemController = {
+    updated: UnitEvent<CPUData>;
+    getData: (unitId: UnitId) => CPUData | null;
+    upgrade(unitIds: UnitId[], upgrade: Required<Pick<UnitConfiguration, 'program'>>): void;
+    triggerEvent(unitId: UnitId, event: string): void;
 };

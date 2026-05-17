@@ -9,6 +9,8 @@ export type HighlightedTile = {
     color: 'primary' | 'white';
 };
 
+export type EditorTab = 'configurator' | 'program' | 'units';
+
 export type GameUIState = {
     rSelectedTile(): NodeId | null;
     selectTile(value: NodeId | null, opts?: { selectUnits?: boolean }): void;
@@ -31,6 +33,9 @@ export type GameUIState = {
     deckSelectBlueprint(id: BlueprintId, version?: number): void;
     deckSelectVersion(version: number | null): void;
     deckUnselectBlueprint(): void;
+
+    rEditorCurrentTab: () => EditorTab;
+    setEditorCurrentTab(value: EditorTab): void;
 };
 
 export function createGameUIState(units: GameUnitSystems): GameUIState {
@@ -43,6 +48,8 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
 
     const [rDeckSelectedBlueprint, rSetDeckSelectedBlueprint] = createSignal<BlueprintId | null>(null);
     const [rDeckSelectedVersion, rSetDeckSelectedVersion] = createSignal<number | null>(null);
+
+    const [rEditorCurrentTab, setEditorCurrentTab] = createSignal<EditorTab>('configurator');
 
     return {
         rSelectedTile,
@@ -114,6 +121,9 @@ export function createGameUIState(units: GameUnitSystems): GameUIState {
             rSetDeckSelectedBlueprint(null);
             rSetDeckSelectedVersion(null);
         },
+
+        rEditorCurrentTab,
+        setEditorCurrentTab,
 
         tileRightClick: createEvent(),
     };

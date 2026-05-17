@@ -2,6 +2,9 @@
     margin-top: calc(-1 * var(--container-padding-t, 0));
     margin-left: calc(-1 * var(--container-padding-l, 0));
     margin-right: calc(-1 * var(--container-padding-r, 0));
+    height: 100%;
+    display: flex;
+    flex-flow: column;
 }
 
 .noProgramMessage {
@@ -18,6 +21,7 @@
     position: sticky;
     top: 0;
     z-index: 1;
+    flex: 0 0 auto;
 }
 
 .tabSection {
@@ -26,5 +30,13 @@
 
     &.visible {
         display: block;
+        flex: 1 1 auto;
+        min-height: 0;
     }
+}
+
+.unitListActions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
 }

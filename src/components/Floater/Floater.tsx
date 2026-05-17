@@ -1,4 +1,4 @@
-import { createMemo, type JSX, type ParentProps } from 'solid-js';
+import { createMemo, onCleanup, onMount, type JSX, type ParentProps } from 'solid-js';
 import { type BoundsTracker } from '@/lib/BoundsTracker';
 import styles from './Floater.module.css';
 
@@ -14,6 +14,8 @@ export type FloaterProps<El extends HTMLElement> = ParentProps<{
     offsetX?: number;
     useTargetWidth?: boolean;
     useTargetHeight?: boolean;
+
+    onClickOutside?: (ev: MouseEvent) => void;
 }>;
 
 export function Floater<El extends HTMLElement>(props: FloaterProps<El>): JSX.Element {
@@ -71,6 +73,30 @@ export function Floater<El extends HTMLElement>(props: FloaterProps<El>): JSX.El
         return result;
     });
 
+    const handleClick = (ev: MouseEvent) => {
+        const handler = props.onClickOutside;
+        if (!handler) {
+            return;
+        }
+
+        const target = props.target.getBounds();
+        if (
+            target.left <= ev.screenX &&
+            ev.screenX <= target.right &&
+            target.top <= ev.screenY &&
+            ev.screenY <= target.bottom
+        ) {
+            return;
+        }
+
+        handler(ev);
+    };
+
+    onMount(() => {
+        document.addEventListener('click', handleClick);
+        onCleanup(() => document.removeEventListener('click', handleClick));
+    });
+
     return (
         <div
             class={styles.floater}
@@ -79,6 +105,7 @@ export function Floater<El extends HTMLElement>(props: FloaterProps<El>): JSX.El
                 [styles.useTargetHeight]: props.useTargetHeight,
             }}
             style={floaterStyles()}
+            onClick={(ev) => ev.stopPropagation()}
         >
             {props.children}
         </div>

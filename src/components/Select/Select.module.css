@@ -51,7 +51,7 @@
 
 .optionsWrapper {
     position: fixed;
-    z-index: 1;
+    z-index: 2;
     left: var(--select-anchor-left, 0px);
     top: var(--select-anchor-top, 0px);
 

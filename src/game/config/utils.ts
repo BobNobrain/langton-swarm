@@ -1,4 +1,5 @@
-import { getUnitMass } from './characteristics';
+import { getAssemblerSpeed } from './assembler';
+import { getConstructionPoints, getUnitMass } from './characteristics';
 import { ENGINE_CHARACTERISTICS } from './engine';
 import { getStorageCapacity } from './storage';
 import type { UnitConfiguration } from './types';
@@ -42,6 +43,18 @@ export function getTicksPerMove(config: UnitConfiguration): number {
     const power = chars.power;
 
     return Math.ceil((mass / power) * 0.1) * 3;
+}
+
+export function getConstructionTimeTicks({
+    target,
+    assembler,
+}: {
+    target: UnitConfiguration;
+    assembler: UnitConfiguration;
+}): number {
+    const pointsPerTick = getAssemblerSpeed(assembler);
+    const pointsTotal = getConstructionPoints(target);
+    return Math.ceil(pointsTotal / pointsPerTick);
 }
 
 function isConfigEmpty(config: UnitConfiguration): boolean {

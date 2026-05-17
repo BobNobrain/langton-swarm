@@ -15,6 +15,7 @@ export function setState(cpu: CPUData, state: string) {
     cpu.state = state;
     cpu.variables = {};
     cpu.stack = [];
+    cpu.stackSources = [];
     cpu.ptr = 0;
     if (cpu.waitingForReturn) {
         cpu.waitingForReturn.ignoreResult = true;
@@ -33,5 +34,11 @@ export function popStack(cpu: CPUData, n = 1): BsmlValue[] {
 
     const result = cpu.stack.slice(-n);
     cpu.stack.length -= n;
+    cpu.stackSources.length -= n;
     return result;
+}
+
+export function pushToStack(cpu: CPUData, value: BsmlValue, debugSource: string) {
+    cpu.stack.push(value);
+    cpu.stackSources.push(debugSource);
 }

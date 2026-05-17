@@ -5,7 +5,7 @@ import type { GameLoop } from '../loop';
 import type { UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { GameWorld } from '../world';
 import { createAssemblerSystem, type AssemblerSystemController } from './assembler';
-import { createCPUSystem, type CPUData } from './cpu';
+import { createCPUSystem, type CPUData, type CPUSystemController } from './cpu';
 import { createDiscoverySystem } from './discovery';
 import { createDrillSystem } from './drill';
 import { createEnergySystem, type EnergySystemController } from './energy';
@@ -31,7 +31,6 @@ import type {
 import { createMarkers, type MarkersSystemController } from './markers';
 import { createFactionsSystem, type FactionSystemController } from './faction';
 import { createConstructionSitesSystem, type ConstructionSitesController } from './sites';
-import type { CPUSystemController } from './cpu/system';
 
 export type GameUnitSystems = {
     readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;

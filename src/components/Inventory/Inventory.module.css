@@ -33,6 +33,7 @@
 
     &.concise {
         flex-flow: row wrap;
+        padding: 0;
     }
 }
 

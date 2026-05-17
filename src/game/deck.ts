@@ -24,6 +24,8 @@ export type BlueprintController = {
     updateConfiguration(patch: UnitConfiguration): void;
     registerUnit(unitId: UnitId, v: number): void;
     findUnitIdVersion(unitId: UnitId): number | null;
+
+    upgradeToLatest(unitIds: UnitId[]): BlueprintVersion;
 };
 
 type BlueprintControllerFull = BlueprintController & {
@@ -108,7 +110,7 @@ function createBlueprintController(id: BlueprintId, name: string, config: UnitCo
         locked: false,
     };
 
-    const [rVersions, setRVersions] = createSignal<Record<number, BlueprintVersion>>({
+    const [rVersions, setRVersions] = createSignal<Readonly<Record<number, BlueprintVersion>>>({
         [lastVersion]: firstVersion,
     });
 
@@ -176,6 +178,28 @@ function createBlueprintController(id: BlueprintId, name: string, config: UnitCo
 
         findUnitIdVersion(unitId) {
             return versionNumbersByUnitId[unitId] ?? null;
+        },
+
+        upgradeToLatest(unitIds) {
+            // warning: this function trusts the caller that these unitIds belong to the blueprint
+            const last = rLastVersion();
+
+            rSetUnitIds((old) => {
+                const copy = { ...old };
+
+                for (const [vStr, ids] of Object.entries(copy)) {
+                    copy[vStr as never] = ids.filter((id) => !unitIds.includes(id));
+                }
+
+                copy[last.version] = copy[last.version] ? copy[last.version].concat(unitIds) : unitIds;
+                return copy;
+            });
+
+            for (const id of unitIds) {
+                versionNumbersByUnitId[id] = last.version;
+            }
+
+            return last;
         },
     };
 }

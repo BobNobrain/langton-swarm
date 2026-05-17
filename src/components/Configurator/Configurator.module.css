@@ -3,44 +3,127 @@
     overflow: auto;
 }
 
+.componentList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 16px;
+}
+
 .field {
+    --configurator-component-color: var(--c-gray-l);
+    border: 1px solid var(--configurator-component-color);
+    border-left-width: 2px;
+
+    &.tier0 {
+        --configurator-tier-color: var(--c-gray-d);
+    }
+    &.tier1 {
+        --configurator-tier-color: #ddc798;
+    }
+    &.tier2 {
+        --configurator-tier-color: #8b59f8;
+    }
+}
+
+.componentEngine {
+    --configurator-component-color: #d2a500;
+}
+.componentNavigator {
+    --configurator-component-color: #00a8d2;
+}
+.componentDrill {
+    --configurator-component-color: #d25b00;
+}
+.componentScanner {
+    --configurator-component-color: #7bc15f;
+}
+.componentSolar {
+    --configurator-component-color: #4d9dff;
+}
+.componentBattery {
+    --configurator-component-color: #dfd823;
+}
+.componentStorage {
+    --configurator-component-color: #ceb19c;
+}
+.componentAssembler {
+    --configurator-component-color: #b15cf2;
+}
+
+.fieldTop {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--configurator-component-color);
+}
+
+.fieldIcon {
+    background-color: var(--configurator-component-color);
+    color: var(--c-black);
+    width: 32px;
+    text-align: center;
+    align-content: center;
+}
+
+.fieldName {
+    flex: 0 0 auto;
+    width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    background-color: rgba(from var(--configurator-component-color) r g b / 25%);
+    color: var(--configurator-component-color);
+    font-weight: 500;
+    text-transform: uppercase;
+
+    padding: 4px 8px;
+
+    .tier0 & {
+        text-decoration: line-through;
+    }
+}
+
+.fieldInput {
+    flex: 1 1 auto;
+}
+
+.fieldRemove {
+    & > * {
+        height: 100%;
+    }
+}
+
+.fieldValueDescription {
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+.fieldTierBadge {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background-color: var(--configurator-tier-color);
+}
+
+.fieldWarningsList:has(*) {
+    padding: 8px 0;
+}
+
+.badgeList {
+    flex: 1 1 auto;
+    display: flex;
+    flex-flow: row wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.fieldCosts {
+    flex: 0 0 auto;
     display: flex;
 
-    &:nth-child(2n) {
-        background-color: rgba(from var(--c-white) r g b / 10%);
-    }
-
-    .fieldName {
-        flex: 0 0 auto;
-        width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-
-        padding: 4px 8px 4px 16px;
-    }
-
-    .fieldInput {
-        flex: 1 1 auto;
-    }
-
-    .fieldBadges {
-        flex: 1 1 auto;
-        display: flex;
-        flex-flow: row wrap;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .fieldCosts {
-        flex: 0 0 auto;
-        width: 250px;
-        display: flex;
-
-        padding-left: 8px;
-        padding-right: 16px;
-        gap: 8px;
-    }
+    padding: 4px 8px;
+    gap: 8px;
 }
 
 .costLabel {
@@ -49,8 +132,6 @@
 }
 
 .timeCost {
-    padding: 4px 0;
-
     & > * {
         display: block;
     }
@@ -72,4 +153,64 @@
 }
 .badgeTier2 {
     --badge-color: #8e80eb;
+}
+
+.componentActions {
+    display: flex;
+    padding: 8px 16px 16px;
+
+    & > :last-child {
+        margin-left: auto;
+    }
+}
+
+.warning {
+    background-color: rgba(from var(--configurator-warning-color) r g b / 15%);
+    color: var(--configurator-warning-color);
+    border: solid var(--configurator-warning-color);
+    border-width: 1px 0;
+
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 48px 1fr;
+    padding: 4px 8px;
+
+    &.warningWarn {
+        --configurator-warning-color: #fdbb05;
+    }
+    &.warningError {
+        --configurator-warning-color: var(--c-red);
+    }
+    &.warningInfo {
+        --configurator-warning-color: #3c9bd1;
+    }
+
+    .warningIcon {
+        font-weight: 500;
+        font-size: 1.2em;
+        text-align: center;
+    }
+
+    .warningActions {
+        grid-column: span 2;
+
+        display: flex;
+        justify-content: center;
+    }
+}
+
+.addListItemIcon {
+    margin-right: 8px;
+    color: var(--configurator-component-color);
+}
+
+.readonlyBanner {
+    margin: 8px 16px 16px;
+    padding: 4px 8px;
+    border: 1px solid var(--c-red);
+    background-color: var(--c-gray-d);
+
+    & > button {
+        margin: 8px auto 0;
+    }
 }

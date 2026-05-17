@@ -1,28 +1,23 @@
 import { createMemo, Show, type ParentComponent } from 'solid-js';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
-import { createHotkey, renderHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
+import { createHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
 import styles from './Button.module.css';
 import { HotkeyDisplay } from '../HotkeyDisplay/HotkeyDisplay';
 import { Floater, type FloaterProps } from '../Floater/Floater';
-import { createBoundsTracker } from '@/lib/BoundsTracker';
+import { createBoundsTracker, type BoundsTracker } from '@/lib/BoundsTracker';
 
-type ButtonStyle = 'primary' | 'secondary' | 'text';
-type HotkeyPosition = 'none' | 'top-right' | 'middle-left';
+type ButtonStyle = 'primary' | 'secondary' | 'secondary-danger' | 'text';
 
 const cls: Record<ButtonStyle, string> = {
     primary: styles.btnPrimary,
     secondary: styles.btnSecondary,
+    'secondary-danger': styles.btnSecondaryDanger,
     text: styles.btnText,
-};
-
-const hotkeyCls: Record<HotkeyPosition, string> = {
-    none: styles.hposNone,
-    'top-right': styles.hposTR,
-    'middle-left': styles.hposML,
 };
 
 export type ButtonController = {
     focus(): void;
+    bounds(): BoundsTracker<HTMLButtonElement>;
 };
 
 export const Button: ParentComponent<{
@@ -56,6 +51,7 @@ export const Button: ParentComponent<{
             focus() {
                 boundsTracker.getElement()?.focus();
             },
+            bounds: () => boundsTracker,
         },
         () => props.controllerRef,
     );
@@ -132,5 +128,13 @@ export const Button: ParentComponent<{
 export function createButtonController() {
     return createControllerRef<ButtonController>({
         focus() {},
+        bounds() {
+            return {
+                getBounds: () => new DOMRect(),
+                getElement: () => null,
+                getScroll: () => ({ scrollHeight: 0, scrollLeft: 0, scrollTop: 0, scrollWidth: 0 }),
+                ref(el) {},
+            };
+        },
     });
 }

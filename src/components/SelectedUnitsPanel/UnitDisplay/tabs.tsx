@@ -49,6 +49,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
                         }
 
                         ui.deckSelectBlueprint(found.bp.id, found.v);
+                        ui.setEditorCurrentTab('program');
                     }}
                 >
                     Debug
