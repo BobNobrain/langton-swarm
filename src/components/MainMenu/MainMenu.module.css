@@ -1,0 +1,23 @@
+.wrapper {
+    height: 100%;
+    position: relative;
+}
+
+.menuContentWrapper {
+    height: 100%;
+    padding-top: 15dvh;
+}
+
+.menuList {
+    margin-top: 32px;
+}
+
+.menuItem {
+    text-align: center;
+    font-size: 1.2em;
+    padding: 8px;
+}
+
+.submenuWrapper {
+    margin-top: 16px;
+}

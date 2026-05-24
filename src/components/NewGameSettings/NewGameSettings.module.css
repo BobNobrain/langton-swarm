@@ -1,0 +1,14 @@
+.section {
+    border: 0px solid var(--c-gray-l);
+    border-width: 1px 0;
+    padding: 8px 0;
+    background-color: var(--c-gray-d);
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+
+    font-size: 1.5em;
+}

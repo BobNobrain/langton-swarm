@@ -16,6 +16,7 @@ import { GameTopBar } from '../GameTopBar/GameTopBar';
 import { SelectedTilePanel } from '../SelectedTilePanel/SelectedTilePanel';
 import { SelectedUnitsPanel } from '../SelectedUnitsPanel/SelectedUnitsPanel';
 import styles from './GameUI.module.css';
+import { getGameOptions } from '@/gameOptions';
 
 export const GameUI: ParentComponent = (props) => {
     const [game, setGame] = createSignal<Game | null>(null);
@@ -23,9 +24,7 @@ export const GameUI: ParentComponent = (props) => {
 
     onMount(() => {
         createGame({
-            worldgen: {
-                seed: 'test1',
-            },
+            ...getGameOptions(),
             onProgress: ({ progress, stage }) => setLoadingProgress(`${(progress * 100).toFixed(0)}% ${stage}...`),
         }).then((g) => {
             const coreBp = g.playerDeck.create('Core_Module', MOTHER_PRESET);

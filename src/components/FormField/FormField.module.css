@@ -23,6 +23,12 @@
             font-weight: 600;
         }
     }
+
+    &.insetH {
+        margin-left: calc(-1 * var(--container-padding-l, 0px));
+        margin-right: calc(-1 * var(--container-padding-r, 0px));
+        width: calc(100% + var(--container-padding-l, 0px) + var(--container-padding-r, 0px));
+    }
 }
 
 .label {
@@ -37,6 +43,7 @@
 
     padding: 4px 8px;
     padding-right: 0;
+    padding-left: max(8px, var(--container-padding-l, 0px));
 
     background-color: var(--c-gray-m);
     color: var(--c-white);

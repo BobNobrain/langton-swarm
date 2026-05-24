@@ -5,6 +5,7 @@ export const FormField: ParentComponent<{
     label?: string;
     done?: boolean;
     error?: boolean;
+    insetH?: boolean;
 }> = (props) => {
     return (
         <label
@@ -12,7 +13,9 @@ export const FormField: ParentComponent<{
             classList={{
                 [styles.done]: props.done,
                 [styles.error]: props.error,
+                [styles.insetH]: props.insetH,
             }}
+            title={props.label}
         >
             <Show when={props.label}>
                 <div class={styles.label}>{props.label}</div>

@@ -38,7 +38,7 @@
         border-left-width: 3px;
     }
     &.pinTop {
-        top: calc(var(--panel-margin) + var(--top-bar-height, 0));
+        top: calc(var(--panel-margin) + var(--top-bar-height, 0px));
     }
     &.pinBottom {
         bottom: var(--panel-margin);
@@ -50,9 +50,9 @@
 }
 
 .header {
-    margin-top: calc(-1 * var(--container-padding-t, 0));
-    margin-left: calc(-1 * var(--container-padding-l, 0));
-    margin-right: calc(-1 * var(--container-padding-r, 0));
+    margin-top: calc(-1 * var(--container-padding-t, 0px));
+    margin-left: calc(-1 * var(--container-padding-l, 0px));
+    margin-right: calc(-1 * var(--container-padding-r, 0px));
 
     padding: 4px;
     border-bottom: 1px solid var(--c-gray-m);
@@ -68,7 +68,7 @@
 
     &.sticky {
         position: sticky;
-        top: calc(-1 * var(--container-padding-t, 0));
+        top: calc(-1 * var(--container-padding-t, 0px));
         z-index: 1;
     }
 }

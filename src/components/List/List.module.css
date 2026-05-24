@@ -9,8 +9,9 @@
     }
 
     &.insetH {
-        margin-left: calc(-1 * var(--container-padding-l, 0));
-        margin-right: calc(-1 * var(--container-padding-r, 0));
+        margin-left: calc(-1 * var(--container-padding-l, 0px));
+        margin-right: calc(-1 * var(--container-padding-r, 0px));
+        width: calc(100% + var(--container-padding-l, 0px) + var(--container-padding-r, 0px));
     }
 }
 

@@ -24,12 +24,20 @@ export type Game = GameState & {
 export type GameParams = {
     tickTime?: number;
     worldgen?: WorldgenOptionsInput;
+    enableTutorial?: boolean;
+    initiallyPaused?: boolean;
     onProgress?: CreateGameProgressListener;
 };
 
 export const DEFAULT_TICK_TIME = 50;
 
-export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onProgress }: GameParams): Promise<Game> {
+export async function createGame({
+    tickTime = DEFAULT_TICK_TIME,
+    enableTutorial,
+    initiallyPaused,
+    worldgen,
+    onProgress,
+}: GameParams): Promise<Game> {
     const gameTick = createGameLoop(tickTime);
     const nots = createGameNots(gameTick);
     const state = await createGameState({ gameTick, nots, worldgen: fillDefaults(worldgen), onProgress });
@@ -41,6 +49,10 @@ export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onPro
 
         start: () => {
             gameTick.start();
+            if (initiallyPaused) {
+                state.time.togglePause();
+                gameTick.advanceOneTick();
+            }
         },
         stop: () => {
             gameTick.stop();

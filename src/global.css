@@ -30,3 +30,7 @@ html, body {
     --c-primary: #67b740;
     --c-red: #f35f2e;
 }
+
+a {
+    color: var(--c-primary);
+}

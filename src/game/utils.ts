@@ -1,5 +1,4 @@
 import type { BlueprintDeck, BlueprintId } from './deck';
-import type { createGameSystems } from './systems';
 import type { SpawnFn } from './systems/types';
 import type { NodeId, UnitId } from './types';
 
