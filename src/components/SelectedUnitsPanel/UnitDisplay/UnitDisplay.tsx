@@ -98,6 +98,7 @@ export const UnitDisplay: Component<{
                                                 : undefined
                                         }
                                         hotkeyPosition="middle-left"
+                                        useHotkeyPortal
                                         onClick={() => setSelectedTab(tab)}
                                     >
                                         {TAB_NAMES[tab]}

@@ -1,4 +1,5 @@
 import { createMemo, onCleanup, onMount, type JSX, type ParentProps } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { type BoundsTracker } from '@/lib/BoundsTracker';
 import styles from './Floater.module.css';
 
@@ -15,6 +16,7 @@ export type FloaterProps<El extends HTMLElement> = ParentProps<{
     useTargetWidth?: boolean;
     useTargetHeight?: boolean;
 
+    usePortal?: boolean;
     onClickOutside?: (ev: MouseEvent) => void;
 }>;
 
@@ -98,16 +100,24 @@ export function Floater<El extends HTMLElement>(props: FloaterProps<El>): JSX.El
     });
 
     return (
-        <div
-            class={styles.floater}
-            classList={{
-                [styles.useTargetWidth]: props.useTargetWidth,
-                [styles.useTargetHeight]: props.useTargetHeight,
-            }}
-            style={floaterStyles()}
-            onClick={(ev) => ev.stopPropagation()}
-        >
-            {props.children}
-        </div>
+        <>
+            {(() => {
+                const children = (
+                    <div
+                        class={styles.floater}
+                        classList={{
+                            [styles.useTargetWidth]: props.useTargetWidth,
+                            [styles.useTargetHeight]: props.useTargetHeight,
+                        }}
+                        style={floaterStyles()}
+                        onClick={(ev) => ev.stopPropagation()}
+                    >
+                        {props.children}
+                    </div>
+                );
+
+                return props.usePortal ? <Portal>{children}</Portal> : children;
+            })()}
+        </>
     );
 }

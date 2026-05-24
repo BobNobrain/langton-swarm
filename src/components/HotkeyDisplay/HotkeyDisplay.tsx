@@ -4,14 +4,14 @@ import styles from './HotkeyDisplay.module.css';
 
 export const HotkeyDisplay: Component<{
     hotkey: HotkeyDescriptor | 'rmb';
-    class?: string;
+    classList?: Record<string, boolean | undefined>;
 }> = (props) => {
     return (
         <span
             class={styles.hotkey}
             classList={{
                 [styles.mouseButton]: typeof props.hotkey === 'string',
-                [props.class ?? '']: Boolean(props.class),
+                ...(props.classList ?? {}),
             }}
         >
             {typeof props.hotkey === 'string' ? (

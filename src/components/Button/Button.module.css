@@ -43,15 +43,6 @@
         }
     }
 
-    .hotkey {
-        --hotkey-text: var(--button-text);
-        --hotkey-bg: var(--button-bg);
-    }
-
-    &:hover .hotkey {
-        opacity: 0.2;
-    }
-
     &:active {
         transform: scale(0.95);
     }
@@ -68,28 +59,8 @@
         }
     }
 
-    &.btnSecondary {
-        --button-bg: var(--c-gray-d);
-        --button-text: var(--c-primary);
-        --button-bg-hover: var(--c-white);
-        --button-text-hover: var(--c-primary);
-    }
-    &.btnSecondaryDanger {
-        --button-bg: var(--c-gray-d);
-        --button-text: var(--c-red);
-        --button-bg-hover: var(--c-red);
-        --button-text-hover: var(--c-white);
-    }
-
-    &.btnPrimary {
-        --button-bg: var(--c-primary);
-        --button-text: var(--c-gray-d);
-        --button-bg-hover: var(--c-white);
-        --button-text-hover: var(--c-primary);
-
-        &:focus {
-            outline-color: var(--c-white);
-        }
+    &.btnPrimary:focus {
+        outline-color: var(--c-white);
     }
 
     &.btnText {
@@ -114,6 +85,26 @@
     }
 }
 
+.btnSecondary {
+    --button-bg: var(--c-gray-d);
+    --button-text: var(--c-primary);
+    --button-bg-hover: var(--c-white);
+    --button-text-hover: var(--c-primary);
+}
+.btnSecondaryDanger {
+    --button-bg: var(--c-gray-d);
+    --button-text: var(--c-red);
+    --button-bg-hover: var(--c-red);
+    --button-text-hover: var(--c-white);
+}
+
+.btnPrimary {
+    --button-bg: var(--c-primary);
+    --button-text: var(--c-gray-d);
+    --button-bg-hover: var(--c-white);
+    --button-text-hover: var(--c-primary);
+}
+
 @keyframes focusedButton {
     0% {
         background-color: var(--button-bg);
@@ -130,4 +121,9 @@
     100% {
         color: var(--button-text-hover, var(--button-text));
     }
+}
+
+.hotkey {
+    --hotkey-text: var(--button-text);
+    --hotkey-bg: var(--button-bg);
 }

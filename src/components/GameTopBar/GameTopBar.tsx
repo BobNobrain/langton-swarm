@@ -1,38 +1,17 @@
-import { createSignal, For, Show, type Component, type Signal } from 'solid-js';
+import { createSignal, For, Show, type Component, type ParentComponent, type Signal } from 'solid-js';
 import type { KnownResourceName, UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { createUnitEventAllListener } from '@/hooks/events';
+import { onTick } from '@/hooks/onTick';
 import { Symbols } from '@/lib/ascii';
 import { KeyCode } from '@/lib/input';
 import { formatInteger } from '@/lib/strings';
+import { BlueprintLabel } from '../BlueprintLabel/BlueprintLabel';
 import { Button } from '../Button/Button';
 import { RESOURCE_COLORS, RESOURCE_ICONS, RESOURCE_NAMES } from '../Inventory/Inventory';
+import { TopBarBadge } from './TopBarBadge';
 import styles from './GameTopBar.module.css';
-import { onTick } from '@/hooks/onTick';
-
-const TopBarBadge: Component<{
-    icon: string;
-    text: string;
-    title?: string;
-    color?: string;
-    padRight?: boolean;
-}> = (props) => {
-    return (
-        <div
-            class={styles.badge}
-            classList={{
-                [styles.padRight]: props.padRight,
-            }}
-            title={props.title}
-            style={{
-                '--tbb-color': props.color,
-            }}
-        >
-            <span class={styles.icon}>{props.icon}</span>
-            <span class={styles.text}>{props.text}</span>
-        </div>
-    );
-};
+import { Nots } from './Nots';
 
 export const GameTopBar: Component = () => {
     const { time, units, factions, gameTick } = useGame();
@@ -66,13 +45,13 @@ export const GameTopBar: Component = () => {
     });
 
     return (
-        <div class={styles.topBar}>
+        <div class={styles.topBar} classList={{ [styles.paused]: time.rIsPaused() }}>
             <TopBarBadge
                 icon={Symbols.DiamondOutlined}
                 text={formatInteger(totalUnits())}
                 title={`Total units: ${totalUnits()}`}
-                padRight
             />
+            <Nots padRight />
             <For each={Object.keys(inventory.totals) as Array<KnownResourceName>}>
                 {(resource) => {
                     const rAmount = inventory.totals[resource];
@@ -124,6 +103,10 @@ export const GameTopBar: Component = () => {
             >
                 ▼
             </Button>
+
+            <Show when={time.rIsPaused()}>
+                <div class={styles.pausedBanner}>Game Is Paused</div>
+            </Show>
         </div>
     );
 };

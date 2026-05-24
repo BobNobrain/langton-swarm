@@ -1,6 +1,7 @@
 import type { UnitCommand, UnitConfiguration, UnitId } from '@/game';
 import type { CompiledProgram, BsmlValue, CompiledInstruction } from '@/game/program';
 import type { UnitEvent } from '../events';
+import type { GameNots } from '@/game/nots';
 
 export type CPUFrameData = {
     readonly code: readonly CompiledInstruction[];
@@ -35,4 +36,8 @@ export type CPUSystemController = {
     getData: (unitId: UnitId) => CPUData | null;
     upgrade(unitIds: UnitId[], upgrade: Required<Pick<UnitConfiguration, 'program'>>): void;
     triggerEvent(unitId: UnitId, event: string): void;
+};
+
+export type CPUFunctionsDeps = {
+    nots: Pick<GameNots, 'post'>;
 };

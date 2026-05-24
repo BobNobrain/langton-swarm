@@ -1,4 +1,5 @@
 import { createGameLoop, GameLoop, Ticker } from './loop';
+import { createGameNots, type GameNots } from './nots';
 import { createGameState, GameState } from './state';
 import type { CreateGameProgressListener, WorldgenOptionsInput } from './types';
 import { fillDefaults } from './worldgen/options';
@@ -17,6 +18,7 @@ export type Game = GameState & {
         | 'isPaused'
         | 'tickDurationMs'
     >;
+    nots: GameNots;
 };
 
 export type GameParams = {
@@ -29,11 +31,13 @@ export const DEFAULT_TICK_TIME = 50;
 
 export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onProgress }: GameParams): Promise<Game> {
     const gameTick = createGameLoop(tickTime);
-    const state = await createGameState({ gameTick, worldgen: fillDefaults(worldgen), onProgress });
+    const nots = createGameNots(gameTick);
+    const state = await createGameState({ gameTick, nots, worldgen: fillDefaults(worldgen), onProgress });
 
     const game: Game = {
         ...state,
         gameTick,
+        nots,
 
         start: () => {
             gameTick.start();
@@ -50,10 +54,11 @@ export async function createGame({ tickTime = DEFAULT_TICK_TIME, worldgen, onPro
 }
 
 export type { GameState };
-export type { GameLoop as Engine, Ticker };
+export type { GameLoop, Ticker };
 
 export { getProcessorTickRate, type UnitConfiguration } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
+export type { GameNots, NotificationData } from './nots';
 export {
     type KnownResourceName,
     type PlanetaryResources,

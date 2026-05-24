@@ -11,6 +11,7 @@ export default defineConfig({
     build: {
         target: 'esnext',
     },
+    base: 'swarm',
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),

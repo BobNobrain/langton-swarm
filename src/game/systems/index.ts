@@ -2,6 +2,7 @@ import { sequentialId } from '@/lib/ids';
 import type { UnitConfiguration } from '../config';
 import type { GameFactions } from '../factions';
 import type { GameLoop } from '../loop';
+import type { GameNots } from '../nots';
 import type { UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { GameWorld } from '../world';
 import { createAssemblerSystem, type AssemblerSystemController } from './assembler';
@@ -62,7 +63,12 @@ export type GameUnitSystems = {
     getSpawnTime(id: UnitId): number;
 };
 
-export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFactions: GameFactions): GameUnitSystems {
+export function createGameSystems(
+    world: GameWorld,
+    logicTick: GameLoop,
+    gameFactions: GameFactions,
+    nots: GameNots,
+): GameUnitSystems {
     const systems: Record<string, UnitSystem<unknown>> = {};
     const messageQueue: { to: string; message: UnitSystemMessage; notUntil?: number }[] = [];
     const events: UnitEventController[] = [];
@@ -124,7 +130,7 @@ export function createGameSystems(world: GameWorld, logicTick: GameLoop, gameFac
     const positions = createPositionalSystem(opts, logicTick);
     const factions = createFactionsSystem(opts, gameFactions);
     const markers = createMarkers(opts, positions.controller, world.nav);
-    const cpu = createCPUSystem(opts, energy.controller);
+    const cpu = createCPUSystem(opts, energy.controller, nots);
     const engine = createEngineSystem(opts, { world, battery: energy.controller, positions: positions.controller });
     const stationaries = createStationariesSystem(opts, { despawn });
     const inventory = createInventorySystem(opts, stationaries.controller, positions.controller, spawn, despawn);

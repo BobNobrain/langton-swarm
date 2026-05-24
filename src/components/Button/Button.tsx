@@ -1,10 +1,10 @@
 import { createMemo, Show, type ParentComponent } from 'solid-js';
+import { createBoundsTracker, type BoundsTracker } from '@/lib/BoundsTracker';
 import { createControllerRef, provideController, type ControllerRef } from '@/lib/controller';
 import { createHotkey, type HotkeyDescriptor } from '@/lib/hotkey';
-import styles from './Button.module.css';
-import { HotkeyDisplay } from '../HotkeyDisplay/HotkeyDisplay';
 import { Floater, type FloaterProps } from '../Floater/Floater';
-import { createBoundsTracker, type BoundsTracker } from '@/lib/BoundsTracker';
+import { HotkeyDisplay } from '../HotkeyDisplay/HotkeyDisplay';
+import styles from './Button.module.css';
 
 type ButtonStyle = 'primary' | 'secondary' | 'secondary-danger' | 'text';
 
@@ -28,6 +28,7 @@ export const Button: ParentComponent<{
     vibrantFocus?: boolean;
     hotkey?: HotkeyDescriptor;
     hotkeyPosition?: 'none' | 'top-right' | 'middle-left';
+    useHotkeyPortal?: boolean;
     rmbHotkey?: boolean;
     onClick?: (ev: MouseEvent | KeyboardEvent) => void;
     onMouseEnter?: (ev: MouseEvent) => void;
@@ -108,17 +109,11 @@ export const Button: ParentComponent<{
         >
             <span class={styles.label}>{props.children}</span>
             <Show when={(props.hotkey || props.rmbHotkey) && props.hotkeyPosition !== 'none'}>
-                {/* <span
-                    class={styles.hotkey}
-                    classList={{
-                        [styles.mouseButton]: props.rmbHotkey && !props.hotkey,
-                        [hotkeyCls[props.hotkeyPosition ?? 'top-right']]: true,
-                    }}
-                >
-                    {props.hotkey ? renderHotkey(props.hotkey) : <span class={styles.mouseButtonFill}></span>}
-                </span> */}
-                <Floater target={boundsTracker} {...hotkeyPosition()}>
-                    <HotkeyDisplay hotkey={props.rmbHotkey ? 'rmb' : props.hotkey!} class={styles.hotkey} />
+                <Floater target={boundsTracker} usePortal={props.useHotkeyPortal} {...hotkeyPosition()}>
+                    <HotkeyDisplay
+                        hotkey={props.rmbHotkey ? 'rmb' : props.hotkey!}
+                        classList={{ [styles.hotkey]: true, [cls[props.style ?? 'secondary']]: true }}
+                    />
                 </Floater>
             </Show>
         </button>

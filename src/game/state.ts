@@ -2,6 +2,7 @@ import { createGameCamera, type GameCamera } from './camera';
 import { createBlueprintDeck, type BlueprintDeck } from './deck';
 import { createFactions, type GameFactions } from './factions';
 import type { GameLoop } from './loop';
+import type { GameNots } from './nots';
 import { createGameSystems, GameUnitSystems } from './systems';
 import { createGameTime, type GameTimeState } from './time';
 import type { CreateGameProgressListener, WorldgenOptions } from './types';
@@ -21,10 +22,11 @@ export type GameState = {
 type Options = {
     worldgen: WorldgenOptions;
     gameTick: GameLoop;
+    nots: GameNots;
     onProgress: CreateGameProgressListener | undefined;
 };
 
-export async function createGameState({ gameTick, onProgress, worldgen }: Options): Promise<GameState> {
+export async function createGameState({ gameTick, nots, onProgress, worldgen }: Options): Promise<GameState> {
     const time = createGameTime(gameTick);
     const world = await createGameWorld(gameTick, worldgen, onProgress);
 
@@ -32,7 +34,7 @@ export async function createGameState({ gameTick, onProgress, worldgen }: Option
     const playerDeck = createBlueprintDeck(factions.player.id);
     factions.player.deck = playerDeck;
 
-    const units = createGameSystems(world, gameTick, factions);
+    const units = createGameSystems(world, gameTick, factions, nots);
     const ui = createGameUIState(units);
     const camera = createGameCamera(world.radius);
 

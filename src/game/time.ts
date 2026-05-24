@@ -3,6 +3,7 @@ import type { GameLoop } from './loop';
 
 export type GameTimeState = {
     rIsPaused: () => boolean;
+    rCurrentTick: () => number;
 
     togglePause(): void;
     getGameMonotonicTime(): number;
@@ -11,13 +12,17 @@ export type GameTimeState = {
 
 export function createGameTime(gameLoop: GameLoop): GameTimeState {
     const [rIsPaused, rSetIsPaused] = createSignal(false);
+    const [rCurrentTick, rSetCurrentTick] = createSignal(0);
+
     let monotonicTime = 0;
     gameLoop.addGameTask((tick) => {
         monotonicTime = tick * gameLoop.tickDurationMs;
+        rSetCurrentTick(tick);
     });
 
     return {
         rIsPaused,
+        rCurrentTick,
         togglePause() {
             rSetIsPaused((wasPaused) => {
                 if (wasPaused) {

@@ -23,6 +23,7 @@ command kick {
 state assembling {
     if not assembler.is_assembling {
         if assembler.queue_length == 0 {
+            send_notification("Assembler queue finished")
             state :idle
         }
 

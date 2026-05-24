@@ -1,4 +1,5 @@
 import { getProcessorEnergyConsumption, getProcessorTickRate } from '@/game/config';
+import type { GameNots } from '@/game/nots';
 import {
     type BsmlValue,
     type CompiledInstruction,
@@ -16,16 +17,20 @@ import { createUnitSystem } from '../systems';
 import type { CreateUnitSystemCommonOptions, UnitSystemTickContext } from '../types';
 import { binop } from './binop';
 import { CPU_FNS } from './fns';
-import type { CPUData, CPUSystemController } from './types';
+import type { CPUData, CPUFunctionsDeps, CPUSystemController } from './types';
 import { unop } from './unop';
 import { popStack, pushToStack, setState, toErrorState } from './utils';
 
 const CPU_SYSTEM_NAME = 'cpu';
 const UPGRADE_DELAY_TICKS = 50;
 
-export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: EnergySystemController) {
+export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: EnergySystemController, nots: GameNots) {
     const updated = createUnitEvent<CPUData>();
     opts.events.push(updated);
+
+    const deps: CPUFunctionsDeps = {
+        nots,
+    };
 
     const controller: CPUSystemController = {
         updated,
@@ -145,7 +150,7 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
 
             const instruction = instructions[cpu.ptr];
             ++cpu.ptr;
-            runInstruction(ctx, cpu, instruction);
+            runInstruction(ctx, cpu, instruction, deps);
         },
 
         queryCommands(ctx) {
@@ -186,7 +191,12 @@ export function createCPUSystem(opts: CreateUnitSystemCommonOptions, battery: En
     return { system, controller };
 }
 
-function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instruction: CompiledInstruction) {
+function runInstruction(
+    ctx: UnitSystemTickContext<CPUData>,
+    cpu: CPUData,
+    instruction: CompiledInstruction,
+    deps: CPUFunctionsDeps,
+) {
     switch (instruction.type) {
         case 'assign': {
             const [value] = popStack(cpu, 1);
@@ -205,7 +215,7 @@ function runInstruction(ctx: UnitSystemTickContext<CPUData>, cpu: CPUData, instr
             }
 
             if (CPU_FNS[instruction.fname]) {
-                pushToStack(cpu, CPU_FNS[instruction.fname].call(...argv), instruction.fname);
+                pushToStack(cpu, CPU_FNS[instruction.fname].call(argv, ctx, deps), instruction.fname);
                 break;
             }
 

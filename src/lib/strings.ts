@@ -98,3 +98,28 @@ export function formatPercentage(
 
     return formatScalar(unitValue, { digits, noShortenings: true });
 }
+
+export function formatTimePeriod(ms: number): string {
+    let unit = 's';
+    let result = ms / 1000;
+    let prec = result < 2 ? 1 : 0;
+
+    if (result > 60) {
+        result /= 60;
+        unit = 'm';
+        prec = 0;
+
+        if (result > 60) {
+            result /= 60;
+            unit = 'h';
+
+            if (result > 24) {
+                result /= 24;
+                unit = 'd';
+                prec = 1;
+            }
+        }
+    }
+
+    return [result.toFixed(prec), unit].join(NBSP);
+}
