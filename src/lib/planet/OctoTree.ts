@@ -27,6 +27,13 @@ export class OctoTree<T> {
     private unbalancedInserts = 0;
     private unbanancedInsertsLimit = MAX_ITEMS;
 
+    static buildFrom<T>(values: readonly T[], coords: readonly RawVertex[]): OctoTree<T> {
+        const result = new OctoTree<T>();
+        result.root.items!.push(...values.map((value, i) => ({ value, coords: coords[i] })));
+        result.root = rebalance(result.root);
+        return result;
+    }
+
     constructor() {
         this.root = { items: [] };
     }

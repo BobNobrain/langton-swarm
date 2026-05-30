@@ -1,5 +1,5 @@
 import type { NodeId } from '@/game';
-import type { PlanetSurface } from '@/lib/planet/PlanetMesh';
+import type { PlanetSurface } from '@/lib/planet/PlanetSurface';
 import { RawMesh } from '@/lib/planet/RawMesh';
 import { BufferGeometry, Mesh, MeshBasicMaterial, type Object3D } from 'three';
 import { onBeforeRepaint } from '../hooks/handlers';

@@ -1,13 +1,10 @@
 import { createEffect, createMemo, onCleanup, onMount, type Component } from 'solid-js';
 import {
-    BufferAttribute,
     BufferGeometry,
     DoubleSide,
     Line,
     LineBasicMaterial,
-    LineSegments,
     Mesh,
-    MeshBasicMaterial,
     MeshStandardMaterial,
     SphereGeometry,
     type Material,
@@ -17,7 +14,7 @@ import type { GameWorld, HighlightedTile, NodeId } from '@/game';
 import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
 import { MouseButton } from '@/lib/input';
-import { PlanetSurface } from '@/lib/planet/PlanetMesh';
+import { PlanetSurface } from '@/lib/planet/PlanetSurface';
 import { RawMesh } from '@/lib/planet/RawMesh';
 import { useSceneRenderer } from '../context';
 import { useClickableMesh } from '../hooks/handlers';
@@ -59,13 +56,18 @@ export const GamePlanet: Component<{
 
     const { surface, meshData } = setup(world);
     const surfaceMesh = tileMesh(meshData);
-    const borders = new TileBorders(meshData, surface.nRealVerticies());
+    const borders = new TileBorders(
+        meshData,
+        surface.getVertexIndex(),
+        surface.getCliffEdges(),
+        surface.nRealVerticies(),
+    );
     const ti = terraIncognita(world);
     const hoverPoly = new HoverPoly(surfaceMesh, surface, meshData, (tid) => props.onTileHover(tid));
 
     createEffect(() => {
         const s = scene();
-        const objects = [surfaceMesh, borders.obj(), ti, hoverPoly.obj()];
+        const objects = [surfaceMesh, ...borders.obj(), ti, hoverPoly.obj()];
         for (const obj of objects) {
             s.add(obj);
         }
@@ -126,6 +128,7 @@ export const GamePlanet: Component<{
 function setup(world: GameWorld) {
     const surface = PlanetSurface.fromGraph<NodeId>(world.graph, world.radius);
     surface.applyLandscape(world.landscape);
+    surface.fillVertexIndex();
 
     const meshData = new RawMesh<NodeId>();
     surface.renderVerticies(meshData, PALETTE);

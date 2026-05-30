@@ -1,6 +1,7 @@
 import { avgSize, calcCenter, fullAngle, normz, project, scale, size, type RawVertex, type RawColor } from '../3d';
 import type { ID } from '../ids';
 import type { Landscape } from './Landscape';
+import { OctoTree } from './OctoTree';
 import type { PlanetGraph } from './PlanetGraph';
 import { RawMesh } from './RawMesh';
 
@@ -41,7 +42,10 @@ export class PlanetSurface<NId extends number> {
     private verticies: Vertex<NId>[] = [];
     /** ProjectionId -> VertexId[] */
     private projectionInstances: VertexId[][] = [];
+    private cliffWalls = new Map<NId, CliffWall[]>();
     private radius = 0;
+
+    private vertexIndex: OctoTree<number> | null = null;
 
     static fromGraph<NId extends number>(graph: PlanetGraph, radius: number): PlanetSurface<NId> {
         const result = new PlanetSurface<NId>();
@@ -154,7 +158,7 @@ export class PlanetSurface<NId extends number> {
                 continue;
             }
 
-            const walls = this.getWalls(tileId);
+            const walls = this.cliffWalls.get(tileId) ?? [];
             for (const { top, bottom } of walls) {
                 // TODO: figure out proper normals? (double sided rendering works for now)
                 mesh.addTriangle([top[0], top[1], bottom[0]], tileId);
@@ -182,6 +186,35 @@ export class PlanetSurface<NId extends number> {
         }
 
         this.cleanUnusedVerticies();
+        this.calculateAllWalls();
+    }
+
+    fillVertexIndex() {
+        this.vertexIndex = OctoTree.buildFrom(
+            this.verticies.map((_, i) => i),
+            this.verticies.map((_, i) => this.getVertexCoords(i as VertexId)),
+        );
+    }
+    getVertexIndex() {
+        if (!this.vertexIndex) {
+            throw new Error('vertex index not filled');
+        }
+        return this.vertexIndex;
+    }
+
+    getCliffEdges(): Map<VertexId, Set<VertexId>> {
+        const result = new Map<VertexId, Set<VertexId>>();
+
+        for (let vi = 0 as NId; vi < this.tiles.length; vi++) {
+            const walls = this.cliffWalls.get(vi) ?? [];
+            for (const { top } of walls) {
+                const min = Math.min(...top) as VertexId;
+                const max = Math.max(...top) as VertexId;
+                result.getOrInsertComputed(min, emptySet).add(max);
+            }
+        }
+
+        return result;
     }
 
     private buildFlatTiles(originalFaces: [NId, NId, NId][] = []) {
@@ -308,6 +341,13 @@ export class PlanetSurface<NId extends number> {
         // TODO
     }
 
+    private calculateAllWalls() {
+        for (let tileId = 0 as NId; tileId < this.tiles.length; tileId++) {
+            const walls = this.calcWalls(tileId);
+            this.cliffWalls.set(tileId, walls);
+        }
+    }
+
     private addTile(tileId: NId, vis: VertexId[]) {
         this.tiles[tileId] = { node: tileId, vs: vis, materialIndex: 0, elevation: 0 };
         for (const vi of vis) {
@@ -381,7 +421,7 @@ export class PlanetSurface<NId extends number> {
         return [nx * factor, ny * factor, nz * factor];
     }
 
-    private getWalls(ti: NId) {
+    private calcWalls(ti: NId) {
         const tile = this.tiles[ti];
         const tilePIs = new Map<ProjectionId, VertexId>();
 
@@ -408,14 +448,6 @@ export class PlanetSurface<NId extends number> {
             }
 
             if (ntPIs.size !== 2) {
-                // console.error('expected to have 2 common verticies', {
-                //     ntPIs,
-                //     tilePIs,
-                //     ti,
-                //     nti,
-                //     ntilevs: tile.vs.length,
-                // });
-                // throw new Error('expected to have 2 common verticies, got ' + ntPIs.size + ' ' + nti + ' ' + ti);
                 continue;
             }
 
@@ -428,4 +460,8 @@ export class PlanetSurface<NId extends number> {
 
         return walls;
     }
+}
+
+function emptySet<T>() {
+    return new Set<T>();
 }
