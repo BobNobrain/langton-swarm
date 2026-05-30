@@ -12,6 +12,7 @@ import { RESOURCE_COLORS, RESOURCE_ICONS, RESOURCE_NAMES } from '../Inventory/In
 import { TopBarBadge } from './TopBarBadge';
 import styles from './GameTopBar.module.css';
 import { Nots } from './Nots';
+import { GameMenu } from './GameMenu';
 
 export const GameTopBar: Component = () => {
     const { time, units, factions, gameTick } = useGame();
@@ -91,18 +92,11 @@ export const GameTopBar: Component = () => {
             </Button>
             <Button
                 style="primary"
-                disabled={!time.rIsPaused()}
                 // onClick={time.togglePause}
             >
                 ▶▶
             </Button>
-            <Button
-                style="text"
-                disabled={!time.rIsPaused()}
-                // onClick={time.togglePause}
-            >
-                ▼
-            </Button>
+            <GameMenu />
 
             <Show when={time.rIsPaused()}>
                 <div class={styles.pausedBanner}>Game Is Paused</div>

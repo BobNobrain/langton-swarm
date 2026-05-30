@@ -5,6 +5,7 @@ import { SceneRenderer } from '@/three/SceneRenderer/SceneRenderer';
 import { GameUI } from '../GameUI/GameUI';
 import { setGameOptions } from '@/gameOptions';
 import { MainMenu } from '../MainMenu/MainMenu';
+import { AppContextProvider, createAppState } from '@/appContext';
 
 type Scene = 'menu' | 'game';
 
@@ -38,7 +39,6 @@ const App: Component = () => {
         return n;
     };
 
-    const [scene, setScene] = createSignal<Scene>(searchParams.get('scene') === 'game' ? 'game' : 'menu');
     setGameOptions({
         tickTime: getInt('ticktime'),
         worldgen: {
@@ -49,14 +49,20 @@ const App: Component = () => {
         },
     });
 
+    const appState = createAppState({
+        defaultScene: searchParams.get('scene') === 'game' ? 'game' : 'menu',
+    });
+
     return (
-        <Show when={scene() === 'game'} fallback={<MainMenu onChangeToGame={() => setScene('game')} />}>
-            <GameUI>
-                <SceneRenderer clearColor="#000000">
-                    <GameScene />
-                </SceneRenderer>
-            </GameUI>
-        </Show>
+        <AppContextProvider value={appState}>
+            <Show when={appState.rScene() === 'game'} fallback={<MainMenu />}>
+                <GameUI>
+                    <SceneRenderer clearColor="#000000">
+                        <GameScene />
+                    </SceneRenderer>
+                </GameUI>
+            </Show>
+        </AppContextProvider>
     );
 };
 

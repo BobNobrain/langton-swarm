@@ -16,8 +16,35 @@
     text-align: center;
     font-size: 1.2em;
     padding: 8px;
+
+    .menuItemLabel {
+        &::before, &::after {
+            content: '█';
+            margin: 0 4px;
+            color: transparent;
+            transition: color ease-in-out 200ms;
+        }
+    }
+
+    &:hover {
+        background-color: rgba(from var(--c-primary) r g b / 15%);
+    }
+
+    &:hover .menuItemLabel,
+    &:hover .menuItemLabel::before,
+    &:hover .menuItemLabel::after,
+    &:focus-visible .menuItemLabel,
+    &:focus-visible .menuItemLabel::before,
+    &:focus-visible .menuItemLabel::after {
+        color: var(--c-primary);
+    }
 }
 
 .submenuWrapper {
     margin-top: 16px;
+}
+
+.footnote {
+    color: var(--c-gray-m);
+    margin-top: 32px;
 }

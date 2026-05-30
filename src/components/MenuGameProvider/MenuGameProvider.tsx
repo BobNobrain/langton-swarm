@@ -19,7 +19,7 @@ export const MenuGameProvider: ParentComponent = (props) => {
 
     onMount(() => {
         createGame({
-            worldgen: { seed: 'langton' },
+            worldgen: { seed: 'langton-swarm' },
         }).then((g) => {
             const coreBp = g.playerDeck.create('Core_Module', MOTHER_PRESET);
             const spawnLocation = g.world.spawnLocation;

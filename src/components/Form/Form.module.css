@@ -1,0 +1,25 @@
+.form {}
+
+.section {
+    border: 0px solid var(--c-gray-l);
+    border-width: 1px 0;
+    padding: 8px 0;
+    background-color: var(--c-gray-d);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    .section + & {
+        margin-top: 8px;
+    }
+
+    &.alignCenter {
+        justify-content: center;
+    }
+    &.alignLeft {
+        justify-content: flex-start;
+    }
+}

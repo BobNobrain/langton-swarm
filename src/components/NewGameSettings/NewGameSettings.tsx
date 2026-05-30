@@ -1,6 +1,8 @@
 import { createSignal, type Component } from 'solid-js';
 import { setGameOptions } from '@/gameOptions';
+import { KeyCode } from '@/lib/input';
 import { Button } from '../Button/Button';
+import { Form, FormActions, FormSection } from '../Form/Form';
 import { FormField } from '../FormField/FormField';
 import { Header, Heading } from '../Header/Header';
 import { NumberInput } from '../NumberInput/NumberInput';
@@ -40,11 +42,9 @@ export const NewGameSettings: Component<{
     const [isInitiallyPaused, setInitiallyPaused] = createSignal(false);
 
     return (
-        <form
-            class={styles.settings}
-            onSubmit={(ev) => {
-                ev.preventDefault();
-
+        <Form
+            preventImplicitSubmit
+            onSubmit={() => {
                 if (!isMaxElevationValid() || !isMinSplatsValid() || !isMaxSplatsValid() || !isTicksPerSecondValid()) {
                     return;
                 }
@@ -68,26 +68,36 @@ export const NewGameSettings: Component<{
                     Generation Settings
                 </Heading>
             </Header>
-            <section class={styles.section}>
+            <FormSection>
                 <FormField label="World seed" insetH>
-                    <TextInput value={seed()} onUpdate={setSeed} placeholder="Leave empty for random" />
+                    <TextInput
+                        value={seed()}
+                        onUpdate={setSeed}
+                        placeholder="Leave empty for random"
+                        allowsReturnHotkey
+                    />
                 </FormField>
                 <FormField label="Max Elevation" insetH error={!isMaxElevationValid()}>
-                    <NumberInput value={maxElevation()} onUpdate={setMaxElevation} placeholder="0-5" />
+                    <NumberInput
+                        value={maxElevation()}
+                        onUpdate={setMaxElevation}
+                        placeholder="0-5"
+                        allowsReturnHotkey
+                    />
                 </FormField>
                 <FormField label="Min Splats" insetH error={!isMinSplatsValid()}>
-                    <NumberInput value={minSplats()} onUpdate={setMinSplats} placeholder="0-10" />
+                    <NumberInput value={minSplats()} onUpdate={setMinSplats} placeholder="0-10" allowsReturnHotkey />
                 </FormField>
                 <FormField label="Max Splats" insetH error={!isMaxSplatsValid()}>
-                    <NumberInput value={maxSplats()} onUpdate={setMaxSplats} placeholder="0-30" />
+                    <NumberInput value={maxSplats()} onUpdate={setMaxSplats} placeholder="0-30" allowsReturnHotkey />
                 </FormField>
-            </section>
+            </FormSection>
             <Header padded withMargin>
                 <Heading size="sm" withMargin>
                     Game Rules
                 </Heading>
             </Header>
-            <section class={styles.section}>
+            <FormSection>
                 <FormField label="Tutorial" insetH>
                     <Toggle
                         label={isTutorialEnabled() ? 'Enabled (but not implemented :D)' : 'Disabled'}
@@ -107,6 +117,7 @@ export const NewGameSettings: Component<{
                         value={ticksPerSecond()}
                         onUpdate={setTicksPerSecond}
                         placeholder="10-50"
+                        allowsReturnHotkey
                         onBlur={() => {
                             setTicksPerSecond((value) => {
                                 const effectiveTickLength = Math.floor(1000 / value);
@@ -122,13 +133,13 @@ export const NewGameSettings: Component<{
                         }}
                     />
                 </FormField>
-            </section>
-            <footer class={styles.actions}>
-                <Button type="submit" style="primary">
+            </FormSection>
+            <FormActions classList={{ [styles.actions]: true }} align="center">
+                <Button type="submit" style="primary" hotkey={{ key: KeyCode.Enter, ctrl: true }}>
                     Start
                 </Button>
-            </footer>
-        </form>
+            </FormActions>
+        </Form>
     );
 };
 

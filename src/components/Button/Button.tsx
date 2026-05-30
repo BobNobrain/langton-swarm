@@ -41,7 +41,10 @@ export const Button: ParentComponent<{
                 ...props.hotkey,
                 isEnabled: () => !props.disabled && (props.hotkey?.isEnabled?.() ?? true),
             },
-            (ev) => props.onClick?.(ev),
+            (ev) => {
+                console.log('HOTKEY', ev);
+                boundsTracker.getElement()?.click();
+            },
         );
     }
 
@@ -103,7 +106,10 @@ export const Button: ParentComponent<{
                 [styles.vibrantFocus]: props.vibrantFocus,
             }}
             disabled={props.disabled}
-            onClick={props.onClick}
+            onClick={(ev) => {
+                console.log('CLICK', ev);
+                props.onClick?.(ev);
+            }}
             onMouseEnter={props.onMouseEnter}
             onMouseLeave={props.onMouseLeave}
         >

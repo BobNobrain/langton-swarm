@@ -17,7 +17,7 @@ export type SelectCustomOptionProps<T> = {
     value: T;
     text: string;
     selected: boolean;
-    onClick: (ev: MouseEvent) => void;
+    onClick: (ev: MouseEvent | KeyboardEvent) => void;
 };
 
 type SelectProps<T> = {

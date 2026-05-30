@@ -15,6 +15,7 @@ import { MultiplayerNotice } from '../MultiplayerNotice/MultiplayerNotice';
 import { SceneRenderer } from '@/three/SceneRenderer/SceneRenderer';
 import { MenuGameProvider } from '../MenuGameProvider/MenuGameProvider';
 import { GameScene } from '@/three/GameScene/GameScene';
+import { useAppState } from '@/appContext';
 
 type Submenu = 'newgame' | 'saves' | 'settings' | 'library' | 'credits' | 'multiplayer';
 
@@ -28,19 +29,19 @@ const MenuContent: Component<{
             </Header>
             <List insetH class={styles.menuList}>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('newgame')}>
-                    Create New Game
+                    <span class={styles.menuItemLabel}>Create New Game</span>
                 </ListItem>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('saves')}>
-                    Load
+                    <span class={styles.menuItemLabel}>Load</span>
                 </ListItem>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('multiplayer')}>
-                    Multiplayer
+                    <span class={styles.menuItemLabel}>Multiplayer</span>
                 </ListItem>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('settings')}>
-                    Settings
+                    <span class={styles.menuItemLabel}>Settings</span>
                 </ListItem>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('library')}>
-                    Library Management
+                    <span class={styles.menuItemLabel}>Library Management</span>
                 </ListItem>
                 <ListItem
                     class={styles.menuItem}
@@ -48,12 +49,13 @@ const MenuContent: Component<{
                         // TODO: open manual
                     }}
                 >
-                    Open Manual
+                    <span class={styles.menuItemLabel}>Open Manual</span>
                 </ListItem>
                 <ListItem class={styles.menuItem} onClick={() => props.onOpenSubmenu('credits')}>
-                    Credits
+                    <span class={styles.menuItemLabel}>Credits</span>
                 </ListItem>
             </List>
+            <footer class={styles.footnote}>langton-swarm v0.1.0, 2026-05-24</footer>
         </div>
     );
 };
@@ -79,9 +81,9 @@ const SubmenuWrapper: ParentComponent<{
     );
 };
 
-export const MainMenu: Component<{
-    onChangeToGame: () => void;
-}> = (props) => {
+export const MainMenu: Component = () => {
+    const { setScene } = useAppState();
+
     const [submenu, setSubmenu] = createSignal<Submenu | null>(null);
     const onBack = () => setSubmenu(null);
 
@@ -103,7 +105,7 @@ export const MainMenu: Component<{
                         case 'newgame':
                             return (
                                 <SubmenuWrapper title="New Game" onBack={onBack}>
-                                    <NewGameSettings onStart={props.onChangeToGame} />
+                                    <NewGameSettings onStart={() => setScene('game')} />
                                 </SubmenuWrapper>
                             );
 
