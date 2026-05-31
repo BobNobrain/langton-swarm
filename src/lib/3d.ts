@@ -1,4 +1,5 @@
 export type RawVertex = Readonly<[x: number, y: number, z: number]>;
+export type RawVertexMut = [x: number, y: number, z: number];
 export type RawFace = [number, number, number];
 export type RawColor = [number, number, number];
 
@@ -57,6 +58,9 @@ export function sum(...vs: RawVertex[]): RawVertex {
 }
 export function diff(v1: RawVertex, v2: RawVertex): RawVertex {
     return [v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]];
+}
+export function combine(f1: number, [x1, y1, z1]: RawVertex, f2: number, [x2, y2, z2]: RawVertex): RawVertex {
+    return [f1 * x1 + f2 * x2, f1 * y1 + f2 * y2, f1 * z1 + f2 * z2];
 }
 
 export function mul(v: RawVertex, m: number): RawVertex {

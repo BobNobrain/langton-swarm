@@ -1,6 +1,20 @@
-import { calcCenter, diff, mul, normz, size, sizeSquared, sum, ZERO, type RawVertex } from '../3d';
+import {
+    calcCenter,
+    combine,
+    diff,
+    mul,
+    normz,
+    size,
+    sizeSquared,
+    sum,
+    ZERO,
+    type RawVertex,
+    type RawVertexMut,
+} from '../3d';
 import { drawInteger, type RandomSequence } from '../random';
 import { OctoTree } from './OctoTree';
+
+const EPS = 1e-6;
 
 export class PlanetGraph {
     private vs: RawVertex[] = [];
@@ -81,36 +95,77 @@ export class PlanetGraph {
             existingVerticies.insert(vi, this.vs[vi]);
         }
 
-        for (let i = 0; i < subdivisions; i++) {
-            const oldFaces = this.faces.slice();
-            this.faces.length = 0;
+        if (subdivisions < 2) {
+            throw new Error('minimum subdivisions is 2');
+        }
 
-            for (const triangle of oldFaces) {
-                const coords = triangle.map((i) => this.vs[i]);
-                const middleCoords = [
-                    calcCenter([coords[0], coords[1]]),
-                    calcCenter([coords[1], coords[2]]),
-                    calcCenter([coords[2], coords[0]]),
-                ];
+        const oldFaces = this.faces.slice();
+        this.faces.length = 0;
+        const stepFactor = 1 / subdivisions;
 
-                const middles: number[] = [];
-                for (const coords of middleCoords) {
-                    let mvi = existingVerticies.getFirstCloseEnough(coords, 1e-9);
-                    if (mvi === null) {
-                        mvi = this.vs.length;
-                        this.vs.push(coords);
-                        existingVerticies.insert(mvi, coords);
-                    }
+        for (const triangle of oldFaces) {
+            const [ai, bi, ci] = triangle;
+            const ac = this.vs[ai],
+                bc = this.vs[bi],
+                cc = this.vs[ci];
+            const stepAB = combine(stepFactor, bc, -stepFactor, ac); // (b - a) / subdivisions
+            const stepAC = combine(stepFactor, cc, -stepFactor, ac); // (c - a) / subdivisions
+            const stepBC = combine(stepFactor, cc, -stepFactor, bc); // (c - b) / subdivisions
 
-                    middles.push(mvi);
+            const left: RawVertexMut = [...ac];
+            const right: RawVertexMut = [...ac];
+            const cursor: RawVertexMut = [...left];
+            const newVis: number[] = [ai];
+
+            for (let step = 1; step <= subdivisions; step++) {
+                for (let i = 0; i < 3; i++) {
+                    left[i] += stepAB[i];
+                    right[i] += stepAC[i];
+                    cursor[i] = left[i];
                 }
 
-                this.faces.push(
-                    [middles[2], triangle[0], middles[0]],
-                    [middles[0], triangle[1], middles[1]],
-                    [middles[1], triangle[2], middles[2]],
-                    middles,
+                for (let hstep = 0; hstep <= step; hstep++) {
+                    const coords: RawVertex = [...cursor];
+                    let vi = existingVerticies.getFirstCloseEnough(coords, EPS);
+                    if (vi === null) {
+                        vi = this.vs.length;
+                        this.vs.push(coords);
+                        existingVerticies.insert(vi, coords);
+                    }
+                    newVis.push(vi);
+
+                    for (let i = 0; i < 3; i++) {
+                        cursor[i] += stepBC[i];
+                    }
+                }
+            }
+
+            if (newVis.length !== ((subdivisions + 1) * (subdivisions + 2)) / 2) {
+                throw new Error(
+                    `bad vs count (${newVis.length} vs ${((subdivisions + 1) * (subdivisions + 2)) / 2} for ${subdivisions} sbds)`,
                 );
+            }
+
+            // up triangles
+            let lineStart = 0;
+            for (let lineN = 0; lineN < subdivisions; lineN++) {
+                lineStart += lineN;
+                const lineEnd = lineStart + lineN;
+
+                for (let j = lineStart; j <= lineEnd; j++) {
+                    this.faces.push([newVis[j], newVis[j + lineN + 2], newVis[j + lineN + 1]]);
+                }
+            }
+
+            // down triangles
+            lineStart = 1;
+            for (let lineN = 2; lineN <= subdivisions; lineN++) {
+                lineStart += lineN;
+                const lineEnd = lineStart + lineN;
+
+                for (let j = lineStart + 1; j < lineEnd; j++) {
+                    this.faces.push([newVis[j], newVis[j - lineN], newVis[j - lineN - 1]]);
+                }
             }
         }
     }
@@ -158,6 +213,11 @@ export class PlanetGraph {
             }
 
             const face2 = this.faces[face2Index];
+            if (!face2) {
+                console.error({ face1, face1Index, face2, face2Index, facesDone, nFaces });
+                // throw new Error('could not find a second face');
+                continue;
+            }
             if (face2.length !== 3) {
                 continue;
             }

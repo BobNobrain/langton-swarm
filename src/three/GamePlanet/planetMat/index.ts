@@ -1,4 +1,4 @@
-import { DoubleSide, ShaderChunk, ShaderLib, ShaderMaterial, Uniform, UniformsLib, UniformsUtils } from 'three';
+import { DoubleSide, ShaderLib, ShaderMaterial, Uniform, UniformsUtils } from 'three';
 import fragmentShader from './fragment.glsl?raw';
 import vertexShader from './vertex.glsl?raw';
 
@@ -13,8 +13,6 @@ export class PlanetMaterial extends ShaderMaterial {
                 uTime,
             },
         ]);
-
-        console.log(ShaderChunk.roughnessmap_fragment);
 
         super({
             vertexShader,

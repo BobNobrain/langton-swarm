@@ -106,10 +106,7 @@ export const Button: ParentComponent<{
                 [styles.vibrantFocus]: props.vibrantFocus,
             }}
             disabled={props.disabled}
-            onClick={(ev) => {
-                console.log('CLICK', ev);
-                props.onClick?.(ev);
-            }}
+            onClick={props.onClick}
             onMouseEnter={props.onMouseEnter}
             onMouseLeave={props.onMouseLeave}
         >

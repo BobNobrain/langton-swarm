@@ -1,4 +1,4 @@
-import { drawInteger, pick, randomElement, type RandomSequence } from '../random';
+import { drawInteger, pick, type RandomSequence } from '../random';
 import type { PlanetGraph } from './PlanetGraph';
 import { RiverGenerator } from './RiverGenerator';
 import { SplatGenerator } from './SplatGenerator';
@@ -28,6 +28,7 @@ export class Landscape {
     private biomes: Biome[] = [];
     private biomeResourceCoeffs: number[] = [];
     private bridges = new Map<number, number>();
+    private bridgesReverse = new Map<number, number>();
 
     constructor(private graph: PlanetGraph) {
         const size = graph.size();
@@ -57,16 +58,16 @@ export class Landscape {
         const allConnections = this.graph.getConnections();
 
         for (let ti = 0; ti < this.elevations.length; ti++) {
-            const ics = new Set<number>();
+            const connections = new Set<number>();
             const elev = this.elevations[ti];
 
             for (const nbor of allConnections[ti]) {
                 if (this.elevations[nbor] === elev || this.bridges.get(Math.min(nbor, ti)) === Math.max(nbor, ti)) {
-                    ics.add(nbor);
+                    connections.add(nbor);
                 }
             }
 
-            result[ti] = ics;
+            result[ti] = connections;
         }
 
         return result;
@@ -114,7 +115,7 @@ export class Landscape {
                 this.biomes[vi] = Biome.Basalt;
             }
 
-            const nBridges = Math.max(1, Math.floor(outline.size * 0.05));
+            const nBridges = Math.max(3, Math.floor(outline.size * 0.09));
             const outlineTiles = Array.from(outline.keys());
             const hasABridge = new Set<number>();
 
@@ -139,31 +140,41 @@ export class Landscape {
 
                 const tileB = pick(opts.seq, possibleBs);
                 hasABridge.add(tileB);
-                this.bridges.set(Math.min(tileA, tileB), Math.max(tileA, tileB));
+
+                this.addBridge(tileA, tileB);
             }
         }
     }
 
     private generateRivers({ seq }: LandscapeGenerateOptions) {
         const gen = new RiverGenerator(seq, this.graph, this.elevations);
-        const nRiversEstimate = (this.elevations.length / 50) * 0.2;
+        const worldTileCount = this.elevations.length;
+
+        const nRiversEstimate = (worldTileCount / 50) * 0.2;
         const nRivers = drawInteger(seq, { min: Math.floor(nRiversEstimate / 3), max: Math.floor(nRiversEstimate) });
 
         for (let i = 0; i < nRivers; i++) {
-            gen.generate({ minSize: 20, maxSize: 50 });
+            gen.generate({ minSize: Math.floor(worldTileCount / 100), maxSize: Math.ceil(worldTileCount / 20) });
         }
 
         for (const { river, banks } of gen.rivers) {
             for (const ti of river) {
+                if (this.biomes[ti] === Biome.Lava) {
+                    continue;
+                }
+
                 this.elevations[ti] -= 0.2;
                 this.biomes[ti] = Biome.Lava;
                 this.biomeResourceCoeffs[ti] = ResourceRichness.River;
+                this.removeBridgesTo(ti);
             }
             for (const ti of banks) {
-                if (this.biomes[ti] !== Biome.Lava) {
-                    this.biomes[ti] = Biome.Basalt;
-                    this.biomeResourceCoeffs[ti] = ResourceRichness.RiverBank;
+                if (this.biomes[ti] === Biome.Lava) {
+                    continue;
                 }
+
+                this.biomes[ti] = Biome.Basalt;
+                this.biomeResourceCoeffs[ti] = ResourceRichness.RiverBank;
             }
         }
     }
@@ -172,5 +183,17 @@ export class Landscape {
         for (let vi = 0; vi < this.elevations.length; vi++) {
             this.elevations[vi] = Math.min(this.elevations[vi], maxElevation);
         }
+    }
+
+    private addBridge(tileA: number, tileB: number) {
+        const min = Math.min(tileA, tileB);
+        const max = Math.max(tileA, tileB);
+
+        this.bridges.set(min, max);
+        this.bridgesReverse.set(max, min);
+    }
+    private removeBridgesTo(tile: number) {
+        this.bridges.delete(tile);
+        this.bridgesReverse.delete(tile);
     }
 }

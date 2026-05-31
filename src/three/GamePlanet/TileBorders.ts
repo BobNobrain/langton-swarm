@@ -4,7 +4,7 @@ import type { RawMesh } from '@/lib/planet/RawMesh';
 import type { OctoTree } from '@/lib/planet/OctoTree';
 
 const bordersMat = new LineBasicMaterial({ color: 0xffffff, opacity: 0.2, linewidth: 2, transparent: true });
-const cliffEdgesMat = new LineBasicMaterial({ color: 0xef5412, opacity: 0.4, linewidth: 2, transparent: true });
+const cliffEdgesMat = new LineBasicMaterial({ color: 0xef5412, opacity: 0.5, linewidth: 2, transparent: true });
 const SCALE_UP = 1.001;
 const EPS = 1e-6;
 
@@ -81,7 +81,7 @@ export class TileBorders {
                 const [minX, minY, minZ] = vs[min];
                 const [maxX, maxY, maxZ] = vs[max];
 
-                const isCliffEdge = this.cliffEdges.get(min)?.has(max);
+                const isCliffEdge = this.cliffEdges.get(Math.min(a, b))?.has(Math.max(a, b));
                 const coords = isCliffEdge ? cliffCoords : borderCoords;
                 coords.push(minX * SCALE_UP, minY * SCALE_UP, minZ * SCALE_UP);
                 coords.push(maxX * SCALE_UP, maxY * SCALE_UP, maxZ * SCALE_UP);

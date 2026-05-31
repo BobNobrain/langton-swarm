@@ -4,6 +4,7 @@ import {
     Line,
     LineBasicMaterial,
     Mesh,
+    MeshBasicMaterial,
     MeshStandardMaterial,
     SphereGeometry,
     type Material,
@@ -17,15 +18,16 @@ import { PlanetSurface } from '@/lib/planet/PlanetSurface';
 import { RawMesh } from '@/lib/planet/RawMesh';
 import { useSceneRenderer } from '../context';
 import { useClickableMesh } from '../hooks/handlers';
-import { useAllInScene } from '../hooks/useInScene';
+import { useAllInScene, useInScene } from '../hooks/useInScene';
 import { HoverPoly } from './HoverPoly';
 import { SurfaceMesh } from './SurfaceMesh';
 import { TileBorders } from './TileBorders';
+import { normz, scale } from '@/lib/3d';
 
 const SCALE_UP = 1.001;
 
 const terraIncognitaMat = new MeshStandardMaterial({
-    roughness: 0.7,
+    roughness: 0.9,
     color: '#444444',
 });
 
@@ -58,6 +60,9 @@ export const GamePlanet: Component<{
     const hoverPoly = new HoverPoly(surfaceMesh.obj(), surfaceMesh.surface, surfaceMesh.meshData, (tid) =>
         props.onTileHover(tid),
     );
+
+    // const debugGraphOverlay = graphOverlay(world);
+    // useInScene(() => debugGraphOverlay);
 
     createEffect(() => {
         const s = scene();
@@ -118,7 +123,7 @@ export const GamePlanet: Component<{
 };
 
 function terraIncognita(world: GameWorld) {
-    const terraIncognita = new Mesh(new SphereGeometry(world.radius * 0.97, 64, 64), terraIncognitaMat);
+    const terraIncognita = new Mesh(new SphereGeometry(world.radius - 0.3, 64, 64), terraIncognitaMat);
     terraIncognita.name = 'terraIncognita';
     return terraIncognita;
 }
@@ -140,4 +145,21 @@ function tileOutline(tileId: NodeId, mat: Material, surface: PlanetSurface<NodeI
     borderLine.name = `tileOutline_${tileId}`;
 
     return borderLine;
+}
+
+function graphOverlay(world: GameWorld) {
+    const mesh = new RawMesh();
+    const geom = new BufferGeometry();
+    const mat = new MeshBasicMaterial({ color: 0x908088, wireframe: true });
+
+    for (const coords of world.graph.coords()) {
+        mesh.addVertexUncolored(scale(world.radius + 1)(normz(coords)));
+    }
+    for (const face of world.graph.getFaces()) {
+        mesh.addTriangle(face as never, 0);
+    }
+
+    mesh.writePositions(geom);
+    mesh.writeTriangles(geom);
+    return new Mesh(geom, mat);
 }

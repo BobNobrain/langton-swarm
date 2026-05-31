@@ -15,6 +15,8 @@ export const NewGameSettings: Component<{
 }> = (props) => {
     const [seed, setSeed] = createSignal('');
 
+    const [worldSize, setWorldSize] = createSignal<10 | 15 | 20 | 30 | 40>(20);
+
     const [maxElevation, setMaxElevation] = createSignal(3);
     const isMaxElevationValid = () => {
         const value = maxElevation();
@@ -52,6 +54,7 @@ export const NewGameSettings: Component<{
                 setGameOptions({
                     worldgen: {
                         seed: seed() || randomSeed(),
+                        subdivisions: worldSize(),
                         maxElevation: maxElevation(),
                         minSplats: minSplats(),
                         maxSplats: maxSplats(),
@@ -76,6 +79,26 @@ export const NewGameSettings: Component<{
                         placeholder="Leave empty for random"
                         allowsReturnHotkey
                     />
+                </FormField>
+                <FormField label="World Size" insetH>
+                    <div class={styles.toggleGroup}>
+                        <button style="display:none" />
+                        <Button style={worldSize() === 10 ? 'primary' : 'secondary'} onClick={() => setWorldSize(10)}>
+                            Tiny
+                        </Button>
+                        <Button style={worldSize() === 15 ? 'primary' : 'secondary'} onClick={() => setWorldSize(15)}>
+                            Small
+                        </Button>
+                        <Button style={worldSize() === 20 ? 'primary' : 'secondary'} onClick={() => setWorldSize(20)}>
+                            Regular
+                        </Button>
+                        <Button style={worldSize() === 30 ? 'primary' : 'secondary'} onClick={() => setWorldSize(30)}>
+                            Large
+                        </Button>
+                        <Button style={worldSize() === 40 ? 'primary' : 'secondary'} onClick={() => setWorldSize(40)}>
+                            Vast
+                        </Button>
+                    </div>
                 </FormField>
                 <FormField label="Max Elevation" insetH error={!isMaxElevationValid()}>
                     <NumberInput

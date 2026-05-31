@@ -34,6 +34,7 @@ export type CreateGameProgressListener = (p: CreateGameProgress) => void;
 
 export type WorldgenOptions = {
     seed: string;
+    subdivisions: number;
     minSplats: number;
     maxSplats: number;
     maxElevation: number;

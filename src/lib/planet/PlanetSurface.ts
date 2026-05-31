@@ -25,12 +25,15 @@ type Vertex<NId extends number> = {
     materialIndex: number;
     elevation: number;
     tiles: Set<NId>;
+    walls: Set<CliffWall>;
 };
 
 type CliffWall = {
-    bottom: [VertexId, VertexId];
-    top: [VertexId, VertexId];
+    readonly bottom: [VertexId, VertexId];
+    readonly top: [VertexId, VertexId];
 };
+
+const EPS = 1e-6;
 
 export class PlanetSurface<NId extends number> {
     private graph: GraphNode<NId>[] = [];
@@ -85,41 +88,6 @@ export class PlanetSurface<NId extends number> {
         const r = size(base);
         const scale = (r + v.elevation) / r;
         return [x * scale, y * scale, z * scale];
-    }
-
-    buildRamp(from: NId, to: NId) {
-        const fromVs = new Map<ProjectionId, VertexId>();
-        const commonVs = new Map<ProjectionId, VertexId>();
-
-        for (const vi of this.tiles[from].vs) {
-            fromVs.set(this.verticies[vi].projection, vi);
-        }
-
-        for (const vi of this.tiles[to].vs) {
-            const pi = this.verticies[vi].projection;
-            if (!fromVs.has(pi)) {
-                continue;
-            }
-
-            commonVs.set(pi, vi);
-        }
-
-        if (commonVs.size !== 2) {
-            console.warn('[WARN] bad ramp:', { from, to, fromVs, commonVs });
-            return;
-        }
-
-        const tileFrom = this.tiles[from];
-        const tileTo = this.tiles[to];
-        const midElevation = (tileFrom.elevation + tileTo.elevation) / 2;
-
-        for (const pi of commonVs.keys()) {
-            const fromVi = fromVs.get(pi)!;
-            const toVi = commonVs.get(pi)!;
-
-            this.verticies[fromVi].elevation = midElevation;
-            this.verticies[toVi].elevation = midElevation;
-        }
     }
 
     renderVerticies<Material>(result: RawMesh<NId, Material>, palette: Material[]) {
@@ -185,8 +153,8 @@ export class PlanetSurface<NId extends number> {
             this.buildRamp(bridge[0] as NId, bridge[1] as NId);
         }
 
-        this.cleanUnusedVerticies();
         this.calculateAllWalls();
+        this.cleanUnusedVerticies();
     }
 
     fillVertexIndex() {
@@ -337,14 +305,145 @@ export class PlanetSurface<NId extends number> {
         }
     }
 
+    private buildRamp(from: NId, to: NId) {
+        const fromVs = new Map<ProjectionId, VertexId>();
+        const commonVs = new Map<ProjectionId, VertexId>();
+
+        for (const vi of this.tiles[from].vs) {
+            fromVs.set(this.verticies[vi].projection, vi);
+        }
+
+        for (const vi of this.tiles[to].vs) {
+            const pi = this.verticies[vi].projection;
+            if (!fromVs.has(pi)) {
+                continue;
+            }
+
+            commonVs.set(pi, vi);
+        }
+
+        if (commonVs.size !== 2) {
+            console.warn('[WARN] bad ramp:', { from, to, fromVs, commonVs });
+            return;
+        }
+
+        const tileFrom = this.tiles[from];
+        const tileTo = this.tiles[to];
+        const midElevation = (tileFrom.elevation + tileTo.elevation) / 2;
+
+        for (const pi of commonVs.keys()) {
+            const fromVi = fromVs.get(pi)!;
+            const toVi = commonVs.get(pi)!;
+
+            this.verticies[fromVi].elevation = midElevation;
+            this.verticies[toVi].elevation = midElevation;
+        }
+    }
+
     private cleanUnusedVerticies() {
-        // TODO
+        const usedVerticies = new Set<number>();
+        for (const tile of this.tiles) {
+            for (const vi of tile.vs) {
+                usedVerticies.add(vi);
+            }
+        }
+        for (const walls of this.cliffWalls.values()) {
+            for (const { top, bottom } of walls) {
+                usedVerticies.add(top[0]);
+                usedVerticies.add(top[1]);
+                usedVerticies.add(bottom[0]);
+                usedVerticies.add(bottom[1]);
+            }
+        }
+
+        console.log(
+            'Unused verticies:',
+            this.verticies.length - usedVerticies.size,
+            `(${(((this.verticies.length - usedVerticies.size) * 100) / this.verticies.length).toFixed(1)}%)`,
+        );
+
+        let metUnused = 0;
+
+        for (let vi = 0 as VertexId; vi < usedVerticies.size; vi++) {
+            if (usedVerticies.has(vi)) {
+                continue;
+            }
+
+            // vi is unused; to remove it, we swap the indicies of vi and verticies.length-metUnused,
+            // to later remove the tail of vertex array that only contains the unused ones
+            ++metUnused;
+            const unusedVi = vi;
+            const unusedData = this.verticies[unusedVi];
+            const replacementVi = (this.verticies.length - metUnused) as VertexId;
+            const replacementData = this.verticies[replacementVi];
+
+            usedVerticies.delete(replacementVi);
+            usedVerticies.add(vi);
+
+            // cleaning vertex data
+            this.verticies[unusedVi] = replacementData;
+
+            {
+                // cleaning it from projection instances list
+                const ps = this.projectionInstances[unusedData.projection];
+                const index = ps.indexOf(unusedVi);
+                if (index !== -1) {
+                    ps.splice(index, 1);
+                }
+            }
+
+            // "renaming" the replacement to vi:
+            {
+                // - in projection instances
+                const ps = this.projectionInstances[replacementData.projection];
+                const index = ps.indexOf(replacementVi);
+                if (index !== -1) {
+                    ps[index] = vi;
+                }
+            }
+            // - in tiles
+            for (const ti of replacementData.tiles) {
+                const tile = this.tiles[ti];
+                for (let i = 0; i < tile.vs.length; i++) {
+                    if (tile.vs[i] === replacementVi) {
+                        tile.vs[i] = vi;
+                    }
+                }
+            }
+            // - in cliff walls
+            for (const { top, bottom } of replacementData.walls) {
+                for (let i = 0; i < top.length; i++) {
+                    if (top[i] === replacementVi) {
+                        top[i] = vi;
+                    }
+                }
+                for (let i = 0; i < bottom.length; i++) {
+                    if (bottom[i] === replacementVi) {
+                        bottom[i] = vi;
+                    }
+                }
+            }
+
+            // no need to remove it from this.vertexIndex – the tree is not calculated yet
+
+            // this newly swapped in vertex will need to be checked too
+            --vi;
+        }
+
+        // this.verticies.length = usedVerticies.size;
+        this.verticies.length -= metUnused;
     }
 
     private calculateAllWalls() {
         for (let tileId = 0 as NId; tileId < this.tiles.length; tileId++) {
             const walls = this.calcWalls(tileId);
             this.cliffWalls.set(tileId, walls);
+            for (const wall of walls) {
+                this.verticies[wall.top[0]].walls.add(wall);
+                this.verticies[wall.top[1]].walls.add(wall);
+                this.verticies[wall.bottom[0]].walls.add(wall);
+                this.verticies[wall.bottom[1]].walls.add(wall);
+            }
         }
     }
 
@@ -370,7 +469,7 @@ export class PlanetSurface<NId extends number> {
 
     private instantiateVertex(base: ProjectionId, materialIndex: number, elevation: number): VertexId {
         const id = this.verticies.length as VertexId;
-        this.verticies.push({ projection: base, materialIndex, elevation, tiles: new Set() });
+        this.verticies.push({ projection: base, materialIndex, elevation, tiles: new Set(), walls: new Set() });
 
         if (!this.projectionInstances[base]) {
             this.projectionInstances[base] = [];
@@ -455,7 +554,32 @@ export class PlanetSurface<NId extends number> {
             const vit1 = tilePIs.get(pi1)!;
             const vit2 = tilePIs.get(pi2)!;
 
-            walls.push({ bottom: [vib1, vib2], top: [vit1, vit2] });
+            const vb1Elev = this.verticies[vib1].elevation;
+            const vb2Elev = this.verticies[vib2].elevation;
+            const vt1Elev = this.verticies[vit1].elevation;
+            const vt2Elev = this.verticies[vit2].elevation;
+            if (Math.abs(vb1Elev - vt1Elev) < EPS && Math.abs(vb2Elev - vt2Elev) < EPS) {
+                // these points have the same elevations, no wall is needed
+                continue;
+            }
+
+            let vib1m = vib1;
+            const vb1 = this.verticies[vib1];
+            if (vb1.materialIndex !== tile.materialIndex) {
+                vib1m =
+                    this.findVertex(pi1, tile.materialIndex, vb1.elevation) ??
+                    this.instantiateVertex(pi1, tile.materialIndex, vb1.elevation);
+            }
+
+            let vib2m = vib2;
+            const vb2 = this.verticies[vib2];
+            if (vb2.materialIndex !== tile.materialIndex) {
+                vib2m =
+                    this.findVertex(pi2, tile.materialIndex, vb2.elevation) ??
+                    this.instantiateVertex(pi2, tile.materialIndex, vb2.elevation);
+            }
+
+            walls.push({ bottom: [vib1m, vib2m], top: [vit1, vit2] });
         }
 
         return walls;

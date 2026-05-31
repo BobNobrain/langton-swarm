@@ -18,6 +18,9 @@ export class SurfaceMesh {
         surface.applyLandscape(world.landscape);
         surface.fillVertexIndex();
 
+        // @ts-expect-error For debugging
+        window.planetSurface = surface;
+
         const meshData = new RawMesh<NodeId, SurfaceTileMaterial>();
         surface.renderVerticies(meshData, PALETTE);
 

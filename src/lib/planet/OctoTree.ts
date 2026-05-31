@@ -61,14 +61,16 @@ export class OctoTree<T> {
     }
 
     getFirstCloseEnough(coords: RawVertex, eps = 0): T | null {
-        const items = findLeaf(this.root, coords).items;
-
+        const leafs = eps === 0 ? [findLeaf(this.root, coords)] : findLeafs(this.root, coords, eps);
         const [tx, ty, tz] = coords;
-        for (const item of items) {
-            const [x, y, z] = item.coords;
-            const mDist = Math.abs(tx - x) + Math.abs(ty - y) + Math.abs(tz - z);
-            if (mDist <= eps) {
-                return item.value;
+
+        for (const leaf of leafs) {
+            for (const item of leaf.items) {
+                const [x, y, z] = item.coords;
+                const mDist = Math.abs(tx - x) + Math.abs(ty - y) + Math.abs(tz - z);
+                if (mDist <= eps) {
+                    return item.value;
+                }
             }
         }
 
@@ -168,4 +170,38 @@ function findLeaf<T>(node: TreeNode<T>, coords: RawVertex): TreeLeaf<T> {
     }
 
     return cursor;
+}
+
+function findLeafs<T>(node: TreeNode<T>, coords: RawVertex, eps: number): TreeLeaf<T>[] {
+    if (node.items) {
+        return [node];
+    }
+
+    const result: TreeLeaf<T>[] = [];
+    const queue: TreeNode<T>[] = [node];
+    const [tx, ty, tz] = coords;
+
+    while (queue.length) {
+        const next = queue.shift()!;
+        if (next.items) {
+            result.push(next);
+            continue;
+        }
+
+        const quadrants = new Set<number>();
+        quadrants.add(getQuadrantIndex(next, [tx - eps, ty - eps, tz - eps]));
+        quadrants.add(getQuadrantIndex(next, [tx - eps, ty - eps, tz + eps]));
+        quadrants.add(getQuadrantIndex(next, [tx - eps, ty + eps, tz - eps]));
+        quadrants.add(getQuadrantIndex(next, [tx - eps, ty + eps, tz + eps]));
+        quadrants.add(getQuadrantIndex(next, [tx + eps, ty - eps, tz - eps]));
+        quadrants.add(getQuadrantIndex(next, [tx + eps, ty - eps, tz + eps]));
+        quadrants.add(getQuadrantIndex(next, [tx + eps, ty + eps, tz - eps]));
+        quadrants.add(getQuadrantIndex(next, [tx + eps, ty + eps, tz + eps]));
+
+        for (const qi of quadrants) {
+            queue.push(next.quadrants[qi]);
+        }
+    }
+
+    return result;
 }

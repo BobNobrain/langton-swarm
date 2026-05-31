@@ -1,12 +1,12 @@
+import { Landscape } from '@/lib/planet/Landscape';
 import { PlanetGraph } from '@/lib/planet/PlanetGraph';
 import { drawInteger, RandomNumberGenerator } from '@/lib/random';
 import { sleep } from '@/lib/timeouts';
+import { PlanetaryResources } from '../resources';
 import { type CreateGameProgressListener, type WorldgenOptions } from '../types';
 import { generateResourceDeposits } from './resources';
 import { generateSpawnPoint } from './spawn';
 import type { GeneratedPlanet } from './types';
-import { Landscape } from '@/lib/planet/Landscape';
-import { PlanetaryResources } from '../resources';
 
 export async function generatePlanet(
     opts: WorldgenOptions,
@@ -18,7 +18,7 @@ export async function generatePlanet(
     const SIZE = 1;
 
     const graph = new PlanetGraph(1);
-    graph.subdivide(4);
+    graph.subdivide(opts.subdivisions);
 
     const rng = new RandomNumberGenerator(opts.seed);
     const seq = rng.detached();
@@ -26,7 +26,13 @@ export async function generatePlanet(
     onProgress?.({ progress: 0.1, stage: 'Randomizing planet graph' });
     await sleep(0);
 
-    graph.rotateRandomEdges({ random: seq, n: drawInteger(seq, { min: 50, max: 100 }) });
+    graph.rotateRandomEdges({
+        random: seq,
+        n: drawInteger(seq, {
+            min: 3 * opts.subdivisions,
+            max: 6 * opts.subdivisions,
+        }),
+    });
 
     const idealFaceArea = (4 * Math.PI * SIZE * SIZE) / graph.nFaces();
     const idealEdgeLength = Math.sqrt((idealFaceArea * 4) / Math.sqrt(3));
