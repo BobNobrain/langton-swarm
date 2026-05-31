@@ -1,7 +1,6 @@
 import { createEffect, createMemo, onCleanup, onMount, type Component } from 'solid-js';
 import {
     BufferGeometry,
-    DoubleSide,
     Line,
     LineBasicMaterial,
     Mesh,
@@ -19,18 +18,11 @@ import { RawMesh } from '@/lib/planet/RawMesh';
 import { useSceneRenderer } from '../context';
 import { useClickableMesh } from '../hooks/handlers';
 import { useAllInScene } from '../hooks/useInScene';
-import { PALETTE } from './colors';
 import { HoverPoly } from './HoverPoly';
+import { SurfaceMesh } from './SurfaceMesh';
 import { TileBorders } from './TileBorders';
 
 const SCALE_UP = 1.001;
-
-const surfaceMat = new MeshStandardMaterial({
-    roughness: 0.9,
-    flatShading: true,
-    vertexColors: true,
-    side: DoubleSide, // tiles are pointing outwards, but cliff walls are not (yet?)
-});
 
 const terraIncognitaMat = new MeshStandardMaterial({
     roughness: 0.7,
@@ -54,20 +46,22 @@ export const GamePlanet: Component<{
     const { scene } = useSceneRenderer();
     const { world } = useGame();
 
-    const { surface, meshData } = setup(world);
-    const surfaceMesh = tileMesh(meshData);
+    const surfaceMesh = new SurfaceMesh(world);
+
     const borders = new TileBorders(
-        meshData,
-        surface.getVertexIndex(),
-        surface.getCliffEdges(),
-        surface.nRealVerticies(),
+        surfaceMesh.meshData,
+        surfaceMesh.surface.getVertexIndex(),
+        surfaceMesh.surface.getCliffEdges(),
+        surfaceMesh.surface.nRealVerticies(),
     );
     const ti = terraIncognita(world);
-    const hoverPoly = new HoverPoly(surfaceMesh, surface, meshData, (tid) => props.onTileHover(tid));
+    const hoverPoly = new HoverPoly(surfaceMesh.obj(), surfaceMesh.surface, surfaceMesh.meshData, (tid) =>
+        props.onTileHover(tid),
+    );
 
     createEffect(() => {
         const s = scene();
-        const objects = [surfaceMesh, ...borders.obj(), ti, hoverPoly.obj()];
+        const objects = [surfaceMesh.obj(), ...borders.obj(), ti, hoverPoly.obj()];
         for (const obj of objects) {
             s.add(obj);
         }
@@ -81,20 +75,18 @@ export const GamePlanet: Component<{
 
     onMount(() => {
         createEventListener(world.terraIncognitaUpdate, () => {
-            surface.renderTiles(meshData, world.terraIncognita);
-            meshData.writeToGeometry(surfaceMesh.geometry);
-
+            surfaceMesh.rerender(world);
             borders.rerender();
             // hoverPoly.rerender(); // does nothing yet
         });
     });
 
     useClickableMesh({
-        object: () => surfaceMesh,
+        object: () => surfaceMesh.obj(),
         button: [MouseButton.Left, MouseButton.Right],
         onClick: ({ intersection, source }) => {
             const triangleIndex = intersection.faceIndex ?? -1;
-            const tileId = triangleIndex < 0 ? -1 : meshData.getNodeByTriangleIndex(triangleIndex);
+            const tileId = triangleIndex < 0 ? -1 : surfaceMesh.meshData.getNodeByTriangleIndex(triangleIndex);
             if (tileId === -1) {
                 return;
             }
@@ -111,10 +103,10 @@ export const GamePlanet: Component<{
         const outlines: Object3D[] = [];
 
         if (typeof props.selectedTileId === 'number') {
-            outlines.push(tileOutline(props.selectedTileId, selectionMat, surface));
+            outlines.push(tileOutline(props.selectedTileId, selectionMat, surfaceMesh.surface));
         }
         for (const ht of props.hilightedTiles ?? []) {
-            outlines.push(tileOutline(ht.tileId, borderMatsByColor[ht.color], surface));
+            outlines.push(tileOutline(ht.tileId, borderMatsByColor[ht.color], surfaceMesh.surface));
         }
 
         return outlines;
@@ -124,27 +116,6 @@ export const GamePlanet: Component<{
 
     return null;
 };
-
-function setup(world: GameWorld) {
-    const surface = PlanetSurface.fromGraph<NodeId>(world.graph, world.radius);
-    surface.applyLandscape(world.landscape);
-    surface.fillVertexIndex();
-
-    const meshData = new RawMesh<NodeId>();
-    surface.renderVerticies(meshData, PALETTE);
-    surface.renderTiles(meshData, world.terraIncognita);
-
-    return { surface, meshData };
-}
-
-function tileMesh(meshData: RawMesh<NodeId>) {
-    const geom = new BufferGeometry();
-    meshData.writeToGeometry(geom);
-
-    const mesh = new Mesh(geom, surfaceMat);
-    mesh.name = 'planetMesh';
-    return mesh;
-}
 
 function terraIncognita(world: GameWorld) {
     const terraIncognita = new Mesh(new SphereGeometry(world.radius * 0.97, 64, 64), terraIncognitaMat);

@@ -122,20 +122,20 @@ export class PlanetSurface<NId extends number> {
         }
     }
 
-    renderVerticies(result: RawMesh<NId>, palette: RawColor[]) {
+    renderVerticies<Material>(result: RawMesh<NId, Material>, palette: Material[]) {
         for (let vi = 0 as VertexId; vi < this.verticies.length; vi++) {
             const v = this.verticies[vi];
-            result.addVertexColored(this.getVertexCoords(vi), palette[v.materialIndex]);
+            result.addVertexWithMaterial(this.getVertexCoords(vi), palette[v.materialIndex]);
         }
 
         for (let tileId = 0 as NId; tileId < this.tiles.length; tileId++) {
             const tile = this.tiles[tileId];
             const middleCoords = this.getMiddleCoords(tileId);
-            result.addVertexColored(middleCoords, palette[tile.materialIndex]);
+            result.addVertexWithMaterial(middleCoords, palette[tile.materialIndex]);
         }
     }
 
-    renderTiles(mesh: RawMesh<NId>, invisible: Set<NId>) {
+    renderTiles(mesh: RawMesh<NId, any>, invisible: Set<NId>) {
         mesh.resetTriangles();
 
         for (let tileId = 0 as NId; tileId < this.tiles.length; tileId++) {

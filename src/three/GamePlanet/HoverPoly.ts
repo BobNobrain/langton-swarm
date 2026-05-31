@@ -16,7 +16,7 @@ export class HoverPoly {
     constructor(
         surfaceMesh: Object3D,
         surface: PlanetSurface<NodeId>,
-        meshData: RawMesh<NodeId>,
+        meshData: RawMesh<NodeId, unknown>,
         onTileHover: (tile: null | NodeId) => void,
     ) {
         this.poly.renderOrder = -1;
@@ -62,6 +62,8 @@ export class HoverPoly {
             this.hoverMeshData.scale(SCALE_UP);
             this.hoverMeshData.writeToGeometry(this.geometry);
             this.renderedDataFor = tileIndex;
+
+            this.geometry.computeBoundingBox();
         });
     }
 

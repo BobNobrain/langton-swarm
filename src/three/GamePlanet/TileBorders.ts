@@ -16,7 +16,7 @@ export class TileBorders {
     private cliffBorders = new LineSegments(this.cliffEdgesGeometry, cliffEdgesMat);
 
     constructor(
-        private meshData: RawMesh<NodeId>,
+        private meshData: RawMesh<NodeId, unknown>,
         private vertexIndex: OctoTree<number>,
         private cliffEdges: Map<number, Set<number>>,
         private nRealVerticies: number,
