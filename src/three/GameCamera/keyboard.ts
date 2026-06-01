@@ -5,6 +5,7 @@ import { onBeforeRepaint } from '../hooks/handlers';
 
 const YAW_SPEED = Math.PI / 12000;
 const PITCH_SPEED = Math.PI / 11000;
+const DISTANCE_SCALING = 1.1;
 
 export function createCameraKeyboardControls(camera: GameCamera) {
     const pressedSince = {
@@ -12,6 +13,8 @@ export function createCameraKeyboardControls(camera: GameCamera) {
         right: -1,
         up: -1,
         down: -1,
+        back: -1,
+        forth: -1,
     };
 
     const onLeftPressed = (ev: KeyboardEvent) => {
@@ -25,6 +28,12 @@ export function createCameraKeyboardControls(camera: GameCamera) {
     };
     const onDownPressed = (ev: KeyboardEvent) => {
         pressedSince.down = performance.now();
+    };
+    const onBackPressed = (ev: KeyboardEvent) => {
+        pressedSince.back = performance.now();
+    };
+    const onForthPressed = (ev: KeyboardEvent) => {
+        pressedSince.forth = performance.now();
     };
 
     const onLeftReleased = (ev: KeyboardEvent) => {
@@ -59,6 +68,22 @@ export function createCameraKeyboardControls(camera: GameCamera) {
             camera.updateManual({ deltaPitch: dtMs * PITCH_SPEED });
         }
     };
+    const onBackReleased = (ev: KeyboardEvent) => {
+        const dtMs = pressedSince.back === -1 ? 0 : performance.now() - pressedSince.back;
+        pressedSince.back = -1;
+
+        if (dtMs >= 0) {
+            camera.updateManual({ distanceFactor: Math.pow(DISTANCE_SCALING, dtMs * 0.001) });
+        }
+    };
+    const onForthReleased = (ev: KeyboardEvent) => {
+        const dtMs = pressedSince.forth === -1 ? 0 : performance.now() - pressedSince.forth;
+        pressedSince.forth = -1;
+
+        if (dtMs >= 0) {
+            camera.updateManual({ distanceFactor: Math.pow(DISTANCE_SCALING, -dtMs * 0.001) });
+        }
+    };
 
     createHotkey({ key: KeyCode.ArrowLeft }, onLeftPressed, onLeftReleased);
     createHotkey({ key: KeyCode.KeyA }, onLeftPressed, onLeftReleased);
@@ -72,27 +97,43 @@ export function createCameraKeyboardControls(camera: GameCamera) {
     createHotkey({ key: KeyCode.ArrowDown }, onDownPressed, onDownReleased);
     createHotkey({ key: KeyCode.KeyS }, onDownPressed, onDownReleased);
 
+    createHotkey({ key: KeyCode.DigitRowMinus }, onBackPressed, onBackReleased);
+    createHotkey({ key: KeyCode.DigitRowEquals }, onForthPressed, onForthReleased);
+
     onBeforeRepaint(({ t }) => {
-        let h = 0;
-        let v = 0;
+        let hTime = 0;
+        let vTime = 0;
+        let zTime = 0;
 
         if (pressedSince.up !== -1) {
-            v -= t - pressedSince.up;
+            vTime -= t - pressedSince.up;
             pressedSince.up = t;
         }
         if (pressedSince.down !== -1) {
-            v += t - pressedSince.down;
+            vTime += t - pressedSince.down;
             pressedSince.down = t;
         }
         if (pressedSince.right !== -1) {
-            h += t - pressedSince.right;
+            hTime += t - pressedSince.right;
             pressedSince.right = t;
         }
         if (pressedSince.left !== -1) {
-            h -= t - pressedSince.left;
+            hTime -= t - pressedSince.left;
             pressedSince.left = t;
         }
+        if (pressedSince.back !== -1) {
+            zTime += t - pressedSince.back;
+            pressedSince.back = t;
+        }
+        if (pressedSince.forth !== -1) {
+            zTime -= t - pressedSince.forth;
+            pressedSince.forth = t;
+        }
 
-        camera.updateManual({ deltaPitch: v * PITCH_SPEED, deltaYaw: h * YAW_SPEED });
+        camera.updateManual({
+            deltaPitch: vTime * PITCH_SPEED,
+            deltaYaw: hTime * YAW_SPEED,
+            distanceFactor: Math.pow(DISTANCE_SCALING, zTime * 0.001),
+        });
     });
 }

@@ -3,7 +3,7 @@ import { SurfaceNode, UnitModelType, type UnitId } from '@/game';
 import { useGame } from '@/gameContext';
 import { GridObjects, type GridObjectData, type GridObjectPositioning } from '../GridObjects/GridObjects';
 import { onBeforeRepaint } from '../hooks/handlers';
-import { getUnitModel, selection, UnitModel } from '../models/units';
+import { getUnitModel, getUnitModelFactionless, selection, UnitModel } from '../models/units';
 
 const UNIT_POSITIONING: GridObjectPositioning = { rotation: 'auto' };
 const PILE_BOUNCE_PERIOD = 400;
@@ -70,28 +70,42 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
     );
 };
 
-const ALL_MODELS = [
-    UnitModelType.Mother,
-    UnitModelType.Rover,
-    UnitModelType.Pile,
-    UnitModelType.ConstructionSite,
-    UnitModelType.Unknown,
-];
+const FACTIONLESS_MODELS = [UnitModelType.Pile, UnitModelType.ConstructionSite, UnitModelType.Unknown];
+const FACTION_MODELS = [UnitModelType.Mother, UnitModelType.Rover, UnitModelType.MiningTower];
 
 export const GameSwarms: Component = () => {
-    const { world, units, ui } = useGame();
+    const { world, units, ui, factions } = useGame();
 
     return (
         <>
-            <For each={ALL_MODELS}>
+            <For each={FACTIONLESS_MODELS}>
                 {(modelType) => {
                     return (
                         <Swarm
                             grid={world.surface}
-                            model={getUnitModel(modelType)}
+                            model={getUnitModelFactionless(modelType)}
                             unitIds={units.signals.getUnitIdsSignal(modelType)()}
                             animation={modelType === UnitModelType.Pile ? 'pile' : undefined}
                         />
+                    );
+                }}
+            </For>
+            <For each={factions.rFactions()}>
+                {(faction) => {
+                    return (
+                        <For each={FACTION_MODELS}>
+                            {(modelType) => {
+                                return (
+                                    <Swarm
+                                        grid={world.surface}
+                                        model={getUnitModel(modelType, faction)}
+                                        // TODO: incorporate faction!
+                                        unitIds={units.signals.getUnitIdsSignal(modelType)()}
+                                        animation={modelType === UnitModelType.Pile ? 'pile' : undefined}
+                                    />
+                                );
+                            }}
+                        </For>
                     );
                 }}
             </For>

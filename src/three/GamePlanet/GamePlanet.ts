@@ -13,22 +13,31 @@ import {
 import type { GameWorld, HighlightedTile, NodeId } from '@/game';
 import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
+import { normz, scale } from '@/lib/3d';
 import { MouseButton } from '@/lib/input';
 import { PlanetSurface } from '@/lib/planet/PlanetSurface';
 import { RawMesh } from '@/lib/planet/RawMesh';
 import { useSceneRenderer } from '../context';
-import { useClickableMesh } from '../hooks/handlers';
-import { useAllInScene, useInScene } from '../hooks/useInScene';
+import { onBeforeRepaint, useClickableMesh } from '../hooks/handlers';
+import { useAllInScene } from '../hooks/useInScene';
+import { PolyMat } from '../PolyMat/PolyMat';
 import { HoverPoly } from './HoverPoly';
 import { SurfaceMesh } from './SurfaceMesh';
 import { TileBorders } from './TileBorders';
-import { normz, scale } from '@/lib/3d';
 
 const SCALE_UP = 1.001;
 
-const terraIncognitaMat = new MeshStandardMaterial({
-    roughness: 0.9,
-    color: '#444444',
+const terraIncognitaMat = new PolyMat({
+    palette: [
+        {
+            color: '#444444',
+            altColor: '#666666',
+            colorNoiseScale: 5,
+            animationSpeed: 1,
+            roughness: 0.9,
+            emission: 0.1,
+        },
+    ],
 });
 
 const selectionMat = new LineBasicMaterial({ color: 0x67b740, transparent: true, linewidth: 3 });
@@ -119,11 +128,19 @@ export const GamePlanet: Component<{
 
     useAllInScene(selectedTileOutlines);
 
+    onBeforeRepaint(() => terraIncognitaMat.animate());
+
     return null;
 };
 
 function terraIncognita(world: GameWorld) {
-    const terraIncognita = new Mesh(new SphereGeometry(world.radius - 0.3, 64, 64), terraIncognitaMat);
+    const sphere = new SphereGeometry(world.radius - 0.3, 64, 64);
+    for (const [name, attrib] of Object.entries(
+        PolyMat.createAttributes(new Array(sphere.getAttribute('position').count).fill(0)),
+    )) {
+        sphere.setAttribute(name, attrib);
+    }
+    const terraIncognita = new Mesh(sphere, terraIncognitaMat);
     terraIncognita.name = 'terraIncognita';
     return terraIncognita;
 }

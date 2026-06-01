@@ -1,40 +1,38 @@
 import {
     BoxGeometry,
+    type BufferGeometry,
     CylinderGeometry,
     DoubleSide,
     MeshStandardMaterial,
     SphereGeometry,
-    type BufferGeometry,
     type Material,
 } from 'three';
-import { UnitModelType } from '@/game';
+import { UnitModelType, Faction } from '@/game';
+import { miningTowerGeometry, miningTowerMaterial } from './miningTower';
+import { motherGeometry, motherMaterial } from './mother';
+import { roverGeometry, roverMaterial } from './rover';
 
 export type UnitModel = {
     geom: BufferGeometry;
     mat: Material;
 };
 
-const rover: UnitModel = {
-    geom: new BoxGeometry(0.2, 0.1, 0.3),
-    mat: new MeshStandardMaterial({
-        color: '#bbddff',
-        roughness: 0.1,
-        metalness: 0.7,
-        emissive: '#bbbbff',
-        emissiveIntensity: 0.2,
-    }),
-};
+type UnitModelConstructor = (faction: Faction) => UnitModel;
 
-const mother: UnitModel = {
-    geom: new BoxGeometry(0.7, 0.3, 0.7),
-    mat: new MeshStandardMaterial({
-        color: '#26496f',
-        roughness: 0.1,
-        metalness: 0.7,
-        emissive: '#ed862d',
-        emissiveIntensity: 0.2,
-    }),
-};
+const rover: UnitModelConstructor = (faction) => ({
+    geom: roverGeometry,
+    mat: roverMaterial(faction.color),
+});
+
+const mother: UnitModelConstructor = (faction) => ({
+    geom: motherGeometry,
+    mat: motherMaterial(faction.color),
+});
+
+const tower: UnitModelConstructor = (faction) => ({
+    geom: miningTowerGeometry,
+    mat: miningTowerMaterial(faction.color),
+});
 
 const pile: UnitModel = {
     geom: new SphereGeometry(0.3, 4, 4),
@@ -72,14 +70,8 @@ const unknown: UnitModel = {
     }),
 };
 
-export function getUnitModel(type: UnitModelType): UnitModel {
+export function getUnitModelFactionless(type: UnitModelType): UnitModel {
     switch (type) {
-        case UnitModelType.Mother:
-            return mother;
-
-        case UnitModelType.Rover:
-            return rover;
-
         case UnitModelType.Pile:
             return pile;
 
@@ -88,6 +80,21 @@ export function getUnitModel(type: UnitModelType): UnitModel {
 
         default:
             return unknown;
+    }
+}
+export function getUnitModel(type: UnitModelType, faction: Faction): UnitModel {
+    switch (type) {
+        case UnitModelType.Mother:
+            return mother(faction);
+
+        case UnitModelType.Rover:
+            return rover(faction);
+
+        case UnitModelType.MiningTower:
+            return tower(faction);
+
+        default:
+            return getUnitModelFactionless(type);
     }
 }
 

@@ -29,6 +29,8 @@ export enum KeyCode {
     Digit8 = 'Digit8',
     Digit9 = 'Digit9',
     Digit0 = 'Digit0',
+    DigitRowMinus = 'Minus',
+    DigitRowEquals = 'Equal',
 
     Space = 'Space',
     Enter = 'Enter',

@@ -7,6 +7,7 @@ export type FactionId = ID<number, 'FactionId'>;
 export type Faction = {
     id: FactionId;
     name: string;
+    color: string;
     isAI: boolean;
     deck: BlueprintDeck | null;
 };
@@ -25,6 +26,7 @@ export function createFactions(): GameFactions {
     const playerFaction: Faction = {
         id: factionIds.aquire(),
         name: 'player',
+        color: '#67b740',
         isAI: false,
         deck: null,
     };

@@ -55,7 +55,7 @@ const MenuContent: Component<{
                     <span class={styles.menuItemLabel}>Credits</span>
                 </ListItem>
             </List>
-            <footer class={styles.footnote}>langton-swarm v0.1.0, 2026-05-24</footer>
+            <footer class={styles.footnote}>langton-swarm v0.2.0, 2026-05-31</footer>
         </div>
     );
 };

@@ -11,6 +11,7 @@ export enum UnitModelType {
     Mother = 'mother',
     Pile = 'pile',
     ConstructionSite = 'constructionSite',
+    MiningTower = 'miningTower',
 }
 
 type SignalsSystemData = {
@@ -30,6 +31,7 @@ export function createSignalsSystem(opts: CreateUnitSystemCommonOptions) {
         [UnitModelType.Mother]: createSignal<UnitId[]>([]),
         [UnitModelType.Pile]: createSignal<UnitId[]>([]),
         [UnitModelType.ConstructionSite]: createSignal<UnitId[]>([]),
+        [UnitModelType.MiningTower]: createSignal<UnitId[]>([]),
     };
     const idsByBlueprint: Record<BlueprintId, Signal<UnitId[]>[]> = {};
 
@@ -73,6 +75,10 @@ function getUnitModel(config: UnitConfiguration): UnitModelType {
 
     if (isConstructionSite(config)) {
         return UnitModelType.ConstructionSite;
+    }
+
+    if (!config.engine && config.drill) {
+        return UnitModelType.MiningTower;
     }
 
     return UnitModelType.Unknown;

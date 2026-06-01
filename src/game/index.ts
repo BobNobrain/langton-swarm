@@ -70,6 +70,7 @@ export type { GameLoop, Ticker };
 
 export { getProcessorTickRate, type UnitConfiguration } from './config';
 export type { BlueprintDeck, BlueprintController, BlueprintId } from './deck';
+export { type Faction, type FactionId, type GameFactions, NO_FACTION } from './factions';
 export type { GameNots, NotificationData } from './nots';
 export {
     type KnownResourceName,

@@ -1,5 +1,5 @@
 import type { KnownResourceName } from '@/game/resources';
-import { BufferAttribute, BufferGeometry, ConeGeometry, MeshStandardMaterial, type Material } from 'three';
+import { BufferAttribute, BufferGeometry, MeshStandardMaterial, type Material } from 'three';
 
 export const defaultMat = new MeshStandardMaterial({
     color: '#ff00ff',
