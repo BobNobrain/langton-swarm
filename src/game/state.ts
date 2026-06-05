@@ -1,3 +1,4 @@
+import type { SavedStatePartition } from '@/lib/SavedState';
 import { createGameCamera, type GameCamera } from './camera';
 import { createBlueprintDeck, type BlueprintDeck } from './deck';
 import { createFactions, type GameFactions } from './factions';
@@ -24,19 +25,26 @@ type Options = {
     gameTick: GameLoop;
     nots: GameNots;
     onProgress: CreateGameProgressListener | undefined;
+    savedState: SavedStatePartition;
 };
 
-export async function createGameState({ gameTick, nots, onProgress, worldgen }: Options): Promise<GameState> {
+export async function createGameState({
+    gameTick,
+    nots,
+    onProgress,
+    worldgen,
+    savedState,
+}: Options): Promise<GameState> {
     const time = createGameTime(gameTick);
-    const world = await createGameWorld(gameTick, worldgen, onProgress);
+    const world = await createGameWorld(gameTick, worldgen, onProgress, savedState.partition('world'));
 
-    const factions = createFactions();
-    const playerDeck = createBlueprintDeck(factions.player.id);
+    const factions = createFactions(savedState.value('factions'));
+    const playerDeck = createBlueprintDeck(factions.player.id, savedState.value('deck'));
     factions.player.deck = playerDeck;
 
-    const units = createGameSystems(world, gameTick, factions, nots);
-    const ui = createGameUIState(units);
-    const camera = createGameCamera(world.radius);
+    const units = createGameSystems(world, gameTick, factions, nots, savedState.partition('units'));
+    const ui = createGameUIState(units); // should not be saved
+    const camera = createGameCamera(world.radius, savedState.value('cam'));
 
     const state: GameState = {
         world,

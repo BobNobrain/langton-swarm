@@ -3,6 +3,7 @@ import { sequentialId, type ID } from '@/lib/ids';
 import type { UnitConfiguration } from './config';
 import type { UnitId } from './types';
 import type { FactionId } from './factions';
+import type { SavedStateValue } from '@/lib/SavedState';
 
 export type BlueprintId = ID<number, 'BlueprintId'>;
 
@@ -48,8 +49,45 @@ export type BlueprintDeck = {
 
 const blueprintId = sequentialId<BlueprintId>();
 
-export function createBlueprintDeck(owner: FactionId): BlueprintDeck {
-    const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>({});
+type SaveDataBlueprint = {
+    id: BlueprintId;
+    name: string;
+    versions: BlueprintVersion[];
+    versionUnits?: Record<number, UnitId[]>;
+};
+type SaveData = {
+    bps: Record<number, SaveDataBlueprint>;
+};
+
+export function createBlueprintDeck(owner: FactionId, savedState: SavedStateValue<SaveData>): BlueprintDeck {
+    const [rCards, rSetCards] = createSignal<Record<number, BlueprintControllerFull>>(
+        Object.fromEntries(
+            Object.entries(savedState.get(() => ({ bps: {} })).bps).map(
+                ([idStr, bpData]): [string, BlueprintControllerFull] => {
+                    blueprintId.lock(bpData.id);
+                    return [idStr, createBlueprintController(bpData)];
+                },
+            ),
+        ),
+    );
+
+    savedState.onSave(() => {
+        return {
+            bps: Object.fromEntries(
+                Object.entries(rCards()).map(([idStr, controller]): [string, SaveDataBlueprint] => {
+                    return [
+                        idStr,
+                        {
+                            id: controller.id,
+                            name: controller.rName(),
+                            versions: Object.values(controller.rVersions()),
+                            versionUnits: controller.rUnitIds(),
+                        },
+                    ];
+                }),
+            ),
+        };
+    });
 
     return {
         owner,
@@ -61,7 +99,11 @@ export function createBlueprintDeck(owner: FactionId): BlueprintDeck {
         },
 
         create(name, config) {
-            const blueprint = createBlueprintController(blueprintId.aquire(), name, config);
+            const blueprint = createBlueprintController({
+                id: blueprintId.aquire(),
+                name,
+                versions: [{ version: 0, locked: false, config }],
+            });
             rSetCards((old) => ({ ...old, [blueprint.id]: blueprint }));
             return blueprint;
         },
@@ -99,20 +141,23 @@ export function createBlueprintDeck(owner: FactionId): BlueprintDeck {
     };
 }
 
-function createBlueprintController(id: BlueprintId, name: string, config: UnitConfiguration): BlueprintControllerFull {
+function createBlueprintController({
+    id,
+    name,
+    versions = [],
+    versionUnits = {},
+}: SaveDataBlueprint): BlueprintControllerFull {
     const [rName, rSetName] = createSignal(name);
-    const [rUnitIds, rSetUnitIds] = createSignal<Record<number, UnitId[]>>({});
+    const [rUnitIds, rSetUnitIds] = createSignal<Record<number, UnitId[]>>(versionUnits);
     let lastVersion = 0;
 
-    const firstVersion: BlueprintVersion = {
-        version: lastVersion,
-        config,
-        locked: false,
-    };
+    const initialRVersions: Record<number, BlueprintVersion> = {};
+    for (const ver of versions) {
+        initialRVersions[ver.version] = ver;
+        lastVersion = Math.max(lastVersion, ver.version);
+    }
 
-    const [rVersions, setRVersions] = createSignal<Readonly<Record<number, BlueprintVersion>>>({
-        [lastVersion]: firstVersion,
-    });
+    const [rVersions, setRVersions] = createSignal<Readonly<Record<number, BlueprintVersion>>>(initialRVersions);
 
     const rLastVersion = createMemo(() => {
         return rVersions()[lastVersion];

@@ -1,0 +1,19 @@
+.banner {
+    position: fixed;
+    inset: 0;
+    cursor: not-allowed;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.content {
+    min-width: 300px;
+    max-width: 40vw;
+    text-align: center;
+    padding: 16px 32px;
+    border: 3px double var(--c-red);
+    background-color: var(--c-gray-d);
+    color: var(--c-white);
+}

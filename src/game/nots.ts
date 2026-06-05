@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js';
 import type { GameLoop } from './loop';
 import type { UnitId } from './types';
+import type { SavedStateValue } from '@/lib/SavedState';
 
 export type NotificationData = {
     text: string;
@@ -18,9 +19,15 @@ export type GameNots = {
 
 const MAX_NOTS = 100;
 
-export function createGameNots(gameTick: GameLoop): GameNots {
-    const [rNots, rSetNots] = createSignal<NotificationData[]>([]);
-    const [rReadUntil, rSetReadUntil] = createSignal(-1);
+type SaveData = { v: 1; ns: NotificationData[]; r: number };
+
+export function createGameNots(gameTick: GameLoop, savedState: SavedStateValue<SaveData>): GameNots {
+    const loaded = savedState.get(() => ({ v: 1, ns: [], r: -1 }));
+
+    const [rNots, rSetNots] = createSignal<NotificationData[]>(loaded.ns);
+    const [rReadUntil, rSetReadUntil] = createSignal(loaded.r);
+
+    savedState.onSave(() => ({ v: 1, ns: rNots(), r: rReadUntil() }));
 
     return {
         rNots,

@@ -1,3 +1,4 @@
+import type { SavedStateValue } from '@/lib/SavedState';
 import { Spherical, type Vector3 } from 'three';
 
 export type CameraOrbit = {
@@ -50,10 +51,14 @@ function interpolate(animation: AnimationState, t: number): { result: CameraOrbi
     };
 }
 
-export function createGameCamera(planetRadius: number): GameCamera {
+type SaveData = { v: 1 } & CameraOrbit;
+
+export function createGameCamera(planetRadius: number, savedState: SavedStateValue<SaveData>): GameCamera {
+    const loaded = savedState.get(() => ({ v: 1, pitch: Math.PI / 2, yaw: 0, distance: planetRadius * 2 }));
+
     const MIN_DISTANCE = planetRadius * 1.1;
     const MAX_DISTANCE = planetRadius * 5;
-    const orbit: CameraOrbit = { pitch: Math.PI / 2, yaw: 0, distance: planetRadius * 2 };
+    const orbit: CameraOrbit = { pitch: loaded.pitch, yaw: loaded.yaw, distance: loaded.distance };
 
     let animation: AnimationState | null = null;
 
@@ -66,6 +71,14 @@ export function createGameCamera(planetRadius: number): GameCamera {
         Object.assign(orbit, result);
         animation = null;
     };
+
+    savedState.onSave(() => {
+        if (!animation) {
+            return { v: 1, ...orbit };
+        }
+
+        return { v: 1, ...interpolate(animation, performance.now()).result };
+    });
 
     return {
         getOrbit(t) {

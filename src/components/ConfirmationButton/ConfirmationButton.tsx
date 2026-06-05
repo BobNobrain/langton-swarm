@@ -47,6 +47,7 @@ export const ConfirmationButton: ParentComponent<
                                 {original.cancelText ?? 'Cancel'}
                             </Button>
                             <Button
+                                style={passedToButton.style}
                                 onClick={(ev) => {
                                     setConfirmationVisible(false);
                                     original.onClick?.(ev);

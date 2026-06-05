@@ -11,7 +11,7 @@ export type GameTimeState = {
 };
 
 export function createGameTime(gameLoop: GameLoop): GameTimeState {
-    const [rIsPaused, rSetIsPaused] = createSignal(false);
+    const [rIsPaused, rSetIsPaused] = createSignal(gameLoop.isPaused());
     const [rCurrentTick, rSetCurrentTick] = createSignal(0);
 
     let monotonicTime = 0;

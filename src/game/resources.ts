@@ -18,9 +18,19 @@ export type ResourceDeposit = {
 
 export type ResourceUpdateEvent = Event<(at: NodeId) => void>;
 
+export type PlanetaryResourcesSerialized = {
+    deposits: Map<NodeId, ResourceDeposit[]>;
+};
+
 export class PlanetaryResources {
     private depositsByLocation = new Map<NodeId, ResourceDeposit[]>();
     readonly updated: ResourceUpdateEvent = createEvent();
+
+    static deserialize(data: PlanetaryResourcesSerialized, graph: PlanetGraph): PlanetaryResources {
+        const resources = new PlanetaryResources(graph);
+        resources.depositsByLocation = data.deposits;
+        return resources;
+    }
 
     constructor(private graph: PlanetGraph) {}
 
@@ -128,5 +138,9 @@ export class PlanetaryResources {
         }
 
         return result;
+    }
+
+    serialize(): PlanetaryResourcesSerialized {
+        return { deposits: this.depositsByLocation };
     }
 }

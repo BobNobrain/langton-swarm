@@ -7,10 +7,19 @@ import {
     SphereGeometry,
     type Material,
 } from 'three';
-import { UnitModelType, Faction } from '@/game';
+import { Faction } from '@/game';
 import { miningTowerGeometry, miningTowerMaterial } from './miningTower';
 import { motherGeometry, motherMaterial } from './mother';
 import { roverGeometry, roverMaterial } from './rover';
+
+export enum UnitModelType {
+    Unknown = 'unknown',
+    Rover = 'rover',
+    Mother = 'mother',
+    Pile = 'pile',
+    ConstructionSite = 'constructionSite',
+    MiningTower = 'miningTower',
+}
 
 export type UnitModel = {
     geom: BufferGeometry;

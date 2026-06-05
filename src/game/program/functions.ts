@@ -8,15 +8,8 @@ import { MARKERS_FNS, MARKERS_SYSTEM_NAME } from '../systems/markers';
 import { NAVIGATOR_FNS, NAVIGATOR_SYSTEM_NAME } from '../systems/navigator';
 import { SCANNER_FNS, SCANNER_SYSTEM_NAME } from '../systems/scanner';
 import type { UnitSystemFunction } from '../systems/types';
-import type { BsmlValue, BsmlValueType } from './value';
-
-type BuiltinFn = {
-    name: string;
-    description?: string;
-    argNames: string[];
-    argTypes: BsmlValueType[];
-    returnType: BsmlValueType;
-};
+import type { BuiltinFn } from './utils';
+import type { BsmlValue } from './value';
 
 export function getFunctions(config: UnitConfiguration | null) {
     const result: Record<string, BuiltinFn> = {};

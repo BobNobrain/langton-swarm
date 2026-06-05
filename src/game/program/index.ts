@@ -12,5 +12,7 @@ export {
     renderStateName,
     renderValue,
     extractTyped,
+    typecheckValues,
+    renderTypeSignature,
 } from './utils';
 export type { BsmlValue, BsmlValueType } from './value';

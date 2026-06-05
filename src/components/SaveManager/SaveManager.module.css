@@ -1,4 +1,27 @@
 .manager {
-    padding: 32px 8px;
-    text-align: center;
+    padding: 32px 0;
+}
+
+.saveActions {
+    display: flex;
+    flex-flow: column;
+    gap: 4px;
+    align-items: stretch;
+    padding: 4px 0;
+}
+
+.badges {
+    display: flex;
+    gap: 8px;
+}
+
+.versionBadgeOk {
+    --badge-color: var(--c-primary);
+}
+.versionBadgeBad {
+    --badge-color: var(--c-red);
+}
+
+.seedBadge {
+    --badge-color: var(--c-white);
 }

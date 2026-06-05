@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js';
 import { sequentialId, type ID } from '@/lib/ids';
 import type { BlueprintDeck } from './deck';
+import type { SavedStateValue } from '@/lib/SavedState';
 
 export type FactionId = ID<number, 'FactionId'>;
 
@@ -20,21 +21,33 @@ export type GameFactions = {
 
 export const NO_FACTION: FactionId = 0 as FactionId;
 
-export function createFactions(): GameFactions {
+type SaveData = { fs: Omit<Faction, 'deck'>[] };
+
+export function createFactions(savedState: SavedStateValue<SaveData>): GameFactions {
     const factionIds = sequentialId<FactionId>();
 
-    const playerFaction: Faction = {
-        id: factionIds.aquire(),
-        name: 'player',
-        color: '#67b740',
-        isAI: false,
-        deck: null,
-    };
+    const loaded = savedState.get(() => ({
+        fs: [
+            {
+                id: factionIds.aquire(),
+                name: 'player',
+                color: '#67b740',
+                isAI: false,
+                // deck: null,
+            },
+        ],
+    }));
 
-    const [rFactions] = createSignal<Faction[]>([playerFaction]);
+    for (const faction of loaded.fs) {
+        factionIds.lock(faction.id);
+    }
+
+    const [rFactions] = createSignal<Faction[]>(loaded.fs.map((f) => ({ ...f, deck: null })));
+
+    savedState.onSave(() => ({ fs: rFactions().map(({ deck, ...f }) => f) }));
 
     return {
-        player: playerFaction,
+        player: rFactions()[0],
         rFactions,
         getFaction(id) {
             return rFactions().find((f) => f.id === id) ?? null;

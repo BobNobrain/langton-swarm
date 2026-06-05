@@ -107,3 +107,36 @@ export function extractCommands(program: BsmlProgram): UnitCommand[] {
         }),
     );
 }
+
+export type BuiltinFn = {
+    name: string;
+    description?: string;
+    argNames: string[];
+    argTypes: BsmlValueType[];
+    returnType: BsmlValueType;
+};
+
+export function typecheckValues(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTypes'>): string | null {
+    if (values.length !== fn.argTypes.length) {
+        return `wrong number of arguments: expected ${fn.argTypes.length}, found ${values.length}`;
+    }
+
+    for (let i = 0; i < values.length; i++) {
+        const expected = fn.argTypes[i];
+        if (expected === undefined) {
+            continue;
+        }
+
+        const actual = values[i].type;
+        if (expected !== actual) {
+            return `mismatching types: expected ${expected}, got ${actual}`;
+        }
+    }
+
+    return null;
+}
+
+export function renderTypeSignature(fn: BuiltinFn): string {
+    const argList = fn.argNames.map((name, i) => `${fn.argTypes[i] ?? '??'} ${name}`).join(', ');
+    return `${fn.returnType} ${argList ? `(${argList})` : ''}`;
+}

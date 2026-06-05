@@ -23,12 +23,29 @@ const ResourceRichness = {
     River: 0.0,
 };
 
+export type LandscapeSerialized = {
+    elevations: number[];
+    biomes: Biome[];
+    bridges: Map<number, number>;
+};
+
 export class Landscape {
     private elevations: number[] = [];
     private biomes: Biome[] = [];
     private biomeResourceCoeffs: number[] = [];
     private bridges = new Map<number, number>();
     private bridgesReverse = new Map<number, number>();
+
+    static deserialize(data: LandscapeSerialized, graph: PlanetGraph): Landscape {
+        const result = new Landscape(graph);
+        result.elevations = data.elevations;
+        result.biomes = data.biomes;
+        result.bridges = data.bridges;
+        for (const start of data.bridges.keys()) {
+            result.bridgesReverse.set(data.bridges.get(start)!, start);
+        }
+        return result;
+    }
 
     constructor(private graph: PlanetGraph) {
         const size = graph.size();
@@ -89,6 +106,14 @@ export class Landscape {
         }
 
         return true;
+    }
+
+    serialize(): LandscapeSerialized {
+        return {
+            elevations: this.elevations,
+            biomes: this.biomes,
+            bridges: this.bridges,
+        };
     }
 
     private generateVolcanicSplats(opts: LandscapeGenerateOptions) {

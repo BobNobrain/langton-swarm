@@ -1,12 +1,13 @@
-import { Landscape } from '@/lib/planet/Landscape';
-import { PlanetGraph } from '@/lib/planet/PlanetGraph';
+import { Landscape, type LandscapeSerialized } from '@/lib/planet/Landscape';
+import { PlanetGraph, type PlanetGraphSerialized } from '@/lib/planet/PlanetGraph';
 import { drawInteger, RandomNumberGenerator } from '@/lib/random';
 import { sleep } from '@/lib/timeouts';
-import { PlanetaryResources } from '../resources';
-import { type CreateGameProgressListener, type WorldgenOptions } from '../types';
+import { PlanetaryResources, type PlanetaryResourcesSerialized } from '../resources';
+import { type CreateGameProgressListener, type NodeId, type WorldgenOptions } from '../types';
 import { generateResourceDeposits } from './resources';
 import { generateSpawnPoint } from './spawn';
 import type { GeneratedPlanet } from './types';
+import type { SavedStatePartition, SavedStateValue } from '@/lib/SavedState';
 
 export async function generatePlanet(
     opts: WorldgenOptions,
@@ -78,4 +79,39 @@ export async function generatePlanet(
     generateResourceDeposits(seq, planet);
 
     return planet;
+}
+
+type SaveData = {
+    v: 1;
+    spawnLocation: NodeId;
+    radius: number;
+    graph: PlanetGraphSerialized;
+    landscape: LandscapeSerialized;
+    resources: PlanetaryResourcesSerialized;
+};
+
+export function loadPlanet(savedState: SavedStateValue<SaveData>): GeneratedPlanet {
+    const data = savedState.get()!;
+    const graph = PlanetGraph.deserialize(data.graph);
+
+    return {
+        radius: data.radius,
+        spawnLocation: data.spawnLocation,
+        graph,
+        landscape: Landscape.deserialize(data.landscape, graph),
+        resources: PlanetaryResources.deserialize(data.resources, graph),
+    };
+}
+
+export function setupPlanetSaving(planet: GeneratedPlanet, savedState: SavedStateValue<SaveData>) {
+    savedState.onSave(() => {
+        return {
+            v: 1,
+            radius: planet.radius,
+            spawnLocation: planet.spawnLocation,
+            graph: planet.graph.serialize(),
+            landscape: planet.landscape.serialize(),
+            resources: planet.resources.serialize(),
+        };
+    });
 }

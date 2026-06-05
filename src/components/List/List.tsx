@@ -87,9 +87,15 @@ export const ListItem: ParentComponent<{
 export const ListEmptyContent: ParentComponent<{
     title?: JSX.Element;
     actions?: JSX.Element;
+    centered?: boolean;
 }> = (props) => {
     return (
-        <li class={styles.empty}>
+        <li
+            class={styles.empty}
+            classList={{
+                [styles.centered]: props.centered,
+            }}
+        >
             <Show when={props.title}>
                 <h3>{props.title}</h3>
             </Show>

@@ -1,49 +1,35 @@
 import { For, type Component } from 'solid-js';
-import { SurfaceNode, UnitModelType, type UnitId } from '@/game';
+import { type FactionId, type UnitConfiguration, type UnitId } from '@/game';
+import { isConstructionSite, isPile } from '@/game/config';
 import { useGame } from '@/gameContext';
+import { createUnitEventAllListener } from '@/hooks/events';
 import { GridObjects, type GridObjectData, type GridObjectPositioning } from '../GridObjects/GridObjects';
 import { onBeforeRepaint } from '../hooks/handlers';
-import { getUnitModel, getUnitModelFactionless, selection, UnitModel } from '../models/units';
+import { getUnitModel, getUnitModelFactionless, UnitModel, UnitModelType } from '../models/units';
+import { SelectionSwarm } from './SelectionSwarm';
+import { syncPositions } from './sync';
 
 const UNIT_POSITIONING: GridObjectPositioning = { rotation: 'auto' };
 const PILE_BOUNCE_PERIOD = 400;
 
-const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitModel; animation?: 'pile' | 'none' }> = (
+const FACTIONLESS_MODELS = [UnitModelType.Pile, UnitModelType.Unknown] as const;
+const FACTION_MODELS = [
+    UnitModelType.Mother,
+    UnitModelType.Rover,
+    UnitModelType.MiningTower,
+    UnitModelType.ConstructionSite,
+] as const;
+
+type SwarmData = {
+    model: UnitModelType;
+    objects: Record<string, GridObjectData>;
+};
+
+const Swarm: Component<{ model: UnitModel; objects: Record<string, GridObjectData>; animation?: 'pile' | 'none' }> = (
     props,
 ) => {
-    const { units, gameTick } = useGame();
-    const objects: Record<string, GridObjectData> = {};
-
-    gameTick.addGameTask((tick) => {
-        const idsToDelete = new Set(Object.keys(objects));
-
-        for (const unitId of props.unitIds) {
-            const state = units.positions.getFullPosition(unitId);
-            if (!state) {
-                continue;
-            }
-
-            idsToDelete.delete(unitId.toString());
-            const location: Exclude<GridObjectData['location'], number> = {
-                from: state.sourcePosition,
-                to: state.targetPosition,
-                progress:
-                    state.targetTime === state.sourceTime
-                        ? 1
-                        : Math.min(1, (tick - state.sourceTime) / (state.targetTime - state.sourceTime)),
-            };
-
-            if (!objects[unitId]) {
-                objects[unitId] = { location };
-            } else {
-                objects[unitId].location = location;
-            }
-        }
-
-        for (const id of idsToDelete) {
-            delete objects[id];
-        }
-    });
+    const { units, world } = useGame();
+    const objects = props.objects; // not reactive anyway
 
     if (props.animation === 'pile') {
         onBeforeRepaint(({ t }) => {
@@ -62,19 +48,63 @@ const Swarm: Component<{ grid: SurfaceNode[]; unitIds: UnitId[]; model: UnitMode
         <GridObjects
             geom={props.model.geom}
             material={props.model.mat}
-            grid={props.grid}
+            grid={world.surface}
             objects={objects}
+            // TODO: increase maxCount dynamically, like a dynamic array does
             maxCount={200}
             positioning={UNIT_POSITIONING}
         />
     );
 };
 
-const FACTIONLESS_MODELS = [UnitModelType.Pile, UnitModelType.ConstructionSite, UnitModelType.Unknown];
-const FACTION_MODELS = [UnitModelType.Mother, UnitModelType.Rover, UnitModelType.MiningTower];
-
 export const GameSwarms: Component = () => {
-    const { world, units, ui, factions } = useGame();
+    const { units, factions, gameTick } = useGame();
+    const allStates = new Map<FactionId, SwarmData[]>();
+    const factionlessStates: Record<(typeof FACTIONLESS_MODELS)[number], Record<string, GridObjectData>> = {
+        [UnitModelType.Pile]: {},
+        [UnitModelType.Unknown]: {},
+    };
+
+    gameTick.addGameTask((tick) => {
+        for (const model of FACTIONLESS_MODELS) {
+            syncPositions(units.positions, factionlessStates[model], tick);
+        }
+
+        for (const swarms of allStates.values()) {
+            for (const swarm of swarms) {
+                syncPositions(units.positions, swarm.objects, tick);
+            }
+        }
+    });
+
+    createUnitEventAllListener({
+        ev: units.spawned,
+        listener({ unitId, payload: { at, faction, config } }) {
+            const model = getUnitModelType(config);
+            const swarms = allStates.get(faction)!;
+
+            for (const swarm of swarms) {
+                if (swarm.model === model) {
+                    swarm.objects[unitId] = { location: at };
+                    break;
+                }
+            }
+        },
+    });
+    createUnitEventAllListener({
+        ev: units.despawned,
+        listener({ unitId, payload: { faction, config } }) {
+            const model = getUnitModelType(config);
+            const swarms = allStates.get(faction)!;
+
+            for (const swarm of swarms) {
+                if (swarm.model === model) {
+                    delete swarm.objects[unitId];
+                    break;
+                }
+            }
+        },
+    });
 
     return (
         <>
@@ -82,9 +112,8 @@ export const GameSwarms: Component = () => {
                 {(modelType) => {
                     return (
                         <Swarm
-                            grid={world.surface}
                             model={getUnitModelFactionless(modelType)}
-                            unitIds={units.signals.getUnitIdsSignal(modelType)()}
+                            objects={factionlessStates[modelType]}
                             animation={modelType === UnitModelType.Pile ? 'pile' : undefined}
                         />
                     );
@@ -92,24 +121,44 @@ export const GameSwarms: Component = () => {
             </For>
             <For each={factions.rFactions()}>
                 {(faction) => {
+                    const states = allStates.getOrInsertComputed(faction.id, () =>
+                        FACTION_MODELS.map((umt): SwarmData => ({ model: umt, objects: {} })),
+                    );
+
                     return (
-                        <For each={FACTION_MODELS}>
-                            {(modelType) => {
-                                return (
-                                    <Swarm
-                                        grid={world.surface}
-                                        model={getUnitModel(modelType, faction)}
-                                        // TODO: incorporate faction!
-                                        unitIds={units.signals.getUnitIdsSignal(modelType)()}
-                                        animation={modelType === UnitModelType.Pile ? 'pile' : undefined}
-                                    />
-                                );
+                        <For each={states}>
+                            {(state) => {
+                                return <Swarm model={getUnitModel(state.model, faction)} objects={state.objects} />;
                             }}
                         </For>
                     );
                 }}
             </For>
-            <Swarm grid={world.surface} model={selection} unitIds={ui.rSelectedUnits()} />
+            <SelectionSwarm />
         </>
     );
 };
+
+function getUnitModelType(config: UnitConfiguration): UnitModelType {
+    if (config.assembler && !config.engine && config.storage) {
+        return UnitModelType.Mother;
+    }
+
+    if (config.engine) {
+        return UnitModelType.Rover;
+    }
+
+    if (isPile(config)) {
+        return UnitModelType.Pile;
+    }
+
+    if (isConstructionSite(config)) {
+        return UnitModelType.ConstructionSite;
+    }
+
+    if (!config.engine && config.drill) {
+        return UnitModelType.MiningTower;
+    }
+
+    return UnitModelType.Unknown;
+}

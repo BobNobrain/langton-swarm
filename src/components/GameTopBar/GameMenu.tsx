@@ -1,18 +1,16 @@
 import { createSignal, Show, type Component } from 'solid-js';
-import { Button, createButtonController } from '../Button/Button';
+import { useAppState } from '@/appContext';
+import { useGame } from '@/gameContext';
 import { triggerResize } from '@/lib/BoundsTracker';
+import { Button, createButtonController } from '../Button/Button';
 import { Floater } from '../Floater/Floater';
 import { List, ListItem } from '../List/List';
-import { useAppState } from '@/appContext';
 
 export const GameMenu: Component = () => {
     const [isOpen, setIsOpen] = createSignal(false);
     const toggle = createButtonController();
     const { setScene } = useAppState();
-
-    const save = () => {
-        alert('Sorry, not implemented yet');
-    };
+    const { saver } = useGame();
 
     return (
         <Button
@@ -39,7 +37,7 @@ export const GameMenu: Component = () => {
                         <ListItem
                             onClick={(ev) => {
                                 ev.stopImmediatePropagation();
-                                save();
+                                saver.save();
                             }}
                         >
                             Save
@@ -53,8 +51,7 @@ export const GameMenu: Component = () => {
                         </ListItem>
                         <ListItem
                             onClick={() => {
-                                save();
-                                setScene('menu');
+                                saver.save().then(() => setScene('menu'));
                             }}
                         >
                             Save & Quit

@@ -16,10 +16,24 @@ import { OctoTree } from './OctoTree';
 
 const EPS = 1e-6;
 
+export type PlanetGraphSerialized = {
+    vs: RawVertex[];
+    faces: number[][];
+    connections: number[][];
+};
+
 export class PlanetGraph {
     private vs: RawVertex[] = [];
     private faces: number[][] = [];
     private connections: Set<number>[] = [];
+
+    static deserialize(data: PlanetGraphSerialized): PlanetGraph {
+        const g = new PlanetGraph();
+        g.vs = data.vs;
+        g.faces = data.faces;
+        g.connections = data.connections.map((nbors) => new Set(nbors));
+        return g;
+    }
 
     constructor(size = 1) {
         const phi = (1.0 + Math.sqrt(5.0)) / 2.0;
@@ -280,6 +294,14 @@ export class PlanetGraph {
                 queue.push({ tileId: nb, d: d + 1 });
             }
         }
+    }
+
+    serialize(): PlanetGraphSerialized {
+        return {
+            vs: this.vs,
+            faces: this.faces,
+            connections: this.connections.map((nbors) => Array.from(nbors)),
+        };
     }
 
     private calcConnections() {

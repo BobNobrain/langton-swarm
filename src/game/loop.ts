@@ -1,3 +1,4 @@
+import type { SavedStateValue } from '@/lib/SavedState';
 import { createSparseCollection } from '@/lib/sparse';
 
 export type Ticker = (tick: number) => void;
@@ -22,13 +23,17 @@ export type GameLoop = {
     readonly tickDurationMs: number;
 };
 
-export function createGameLoop(tickTime: number): GameLoop {
+type SaveData = { v: 1; t: number; p: boolean };
+
+export function createGameLoop(tickTime: number, savedState: SavedStateValue<SaveData>): GameLoop {
+    const loaded = savedState.get(() => ({ v: 1, t: 0, p: false }));
+
     const gameTasks = createSparseCollection<Ticker>();
     const uiTasks = createSparseCollection<Ticker>();
 
     let intervalId: number;
-    let tick = 0;
-    let paused = false;
+    let tick = loaded.t;
+    let paused = loaded.p;
 
     const loop = () => {
         if (!paused) {
@@ -45,6 +50,8 @@ export function createGameLoop(tickTime: number): GameLoop {
             ++tick;
         }
     };
+
+    savedState.onSave(() => ({ v: 1, t: tick, p: paused }));
 
     return {
         addGameTask: (t) => {

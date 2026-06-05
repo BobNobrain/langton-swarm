@@ -1,21 +1,22 @@
-import { createSignal, Show, type Component, type JSX, type ParentComponent } from 'solid-js';
-import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
-import { Header, Heading } from '../Header/Header';
-import { List, ListItem } from '../List/List';
-import styles from './MainMenu.module.css';
+import { createSignal, type Component, type JSX, type ParentComponent } from 'solid-js';
+import { useAppState } from '@/appContext';
 import { absurd } from '@/lib/errors';
-import { Button } from '../Button/Button';
 import { KeyCode } from '@/lib/input';
+import { GAME_VERSION, renderGameVersion } from '@/lib/version';
+import { GameScene } from '@/three/GameScene/GameScene';
+import { SceneRenderer } from '@/three/SceneRenderer/SceneRenderer';
+import { Button } from '../Button/Button';
+import { FloatingPanel } from '../FloatingPanel/FloatingPanel';
+import { GameCredits } from '../GameCredits/GameCredits';
+import { GameSettings } from '../GameSettings/GameSettings';
+import { Header, Heading } from '../Header/Header';
+import { LibraryManager } from '../LibraryManager/LibraryManager';
+import { List, ListItem } from '../List/List';
+import { MenuGameProvider } from '../MenuGameProvider/MenuGameProvider';
+import { MultiplayerNotice } from '../MultiplayerNotice/MultiplayerNotice';
 import { NewGameSettings } from '../NewGameSettings/NewGameSettings';
 import { SaveManager } from '../SaveManager/SaveManager';
-import { GameSettings } from '../GameSettings/GameSettings';
-import { LibraryManager } from '../LibraryManager/LibraryManager';
-import { GameCredits } from '../GameCredits/GameCredits';
-import { MultiplayerNotice } from '../MultiplayerNotice/MultiplayerNotice';
-import { SceneRenderer } from '@/three/SceneRenderer/SceneRenderer';
-import { MenuGameProvider } from '../MenuGameProvider/MenuGameProvider';
-import { GameScene } from '@/three/GameScene/GameScene';
-import { useAppState } from '@/appContext';
+import styles from './MainMenu.module.css';
 
 type Submenu = 'newgame' | 'saves' | 'settings' | 'library' | 'credits' | 'multiplayer';
 
@@ -55,7 +56,7 @@ const MenuContent: Component<{
                     <span class={styles.menuItemLabel}>Credits</span>
                 </ListItem>
             </List>
-            <footer class={styles.footnote}>langton-swarm v0.2.0, 2026-05-31</footer>
+            <footer class={styles.footnote}>langton-swarm v{renderGameVersion(GAME_VERSION)}</footer>
         </div>
     );
 };

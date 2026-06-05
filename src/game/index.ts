@@ -1,12 +1,16 @@
+import { SavedStatePartition } from '@/lib/SavedState';
 import { createGameLoop, GameLoop, Ticker } from './loop';
 import { createGameNots, type GameNots } from './nots';
 import { createGameState, GameState } from './state';
 import type { CreateGameProgressListener, WorldgenOptionsInput } from './types';
 import { fillDefaults } from './worldgen/options';
+import { createGameSaver, type GameSaver } from './saver';
 
 export type Game = GameState & {
     start: () => void;
     stop: () => void;
+
+    saver: GameSaver;
 
     gameTick: Pick<
         GameLoop,
@@ -27,6 +31,8 @@ export type GameParams = {
     enableTutorial?: boolean;
     initiallyPaused?: boolean;
     onProgress?: CreateGameProgressListener;
+
+    save?: unknown;
 };
 
 export const DEFAULT_TICK_TIME = 50;
@@ -37,15 +43,23 @@ export async function createGame({
     initiallyPaused,
     worldgen,
     onProgress,
+    save,
 }: GameParams): Promise<Game> {
-    const gameTick = createGameLoop(tickTime);
-    const nots = createGameNots(gameTick);
-    const state = await createGameState({ gameTick, nots, worldgen: fillDefaults(worldgen), onProgress });
+    const savedState = new SavedStatePartition();
+    if (save) {
+        savedState.deserialize(save);
+    }
+
+    const gameTick = createGameLoop(tickTime, savedState.value('time'));
+    const nots = createGameNots(gameTick, savedState.value('nots'));
+    const state = await createGameState({ gameTick, nots, worldgen: fillDefaults(worldgen), onProgress, savedState });
+    const saver = createGameSaver(state.world, savedState);
 
     const game: Game = {
         ...state,
         gameTick,
         nots,
+        saver,
 
         start: () => {
             gameTick.start();
@@ -81,7 +95,6 @@ export {
 } from './resources';
 export {
     type GameUnitSystems,
-    UnitModelType,
     type InventoryController,
     type InventoryData,
     type CPUData,
@@ -90,6 +103,7 @@ export {
     type ScannerData,
     type DynamicLocation,
     type PositionalSystemController,
+    type DespawnedEventPayload,
 } from './systems';
 export type * from './types';
 export type { HighlightedTile } from './ui';

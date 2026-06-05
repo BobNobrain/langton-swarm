@@ -143,4 +143,8 @@
     }
 
     overflow: hidden;
+
+    &.centered {
+        text-align: center;
+    }
 }

@@ -130,10 +130,12 @@ export function createCameraKeyboardControls(camera: GameCamera) {
             pressedSince.forth = t;
         }
 
-        camera.updateManual({
-            deltaPitch: vTime * PITCH_SPEED,
-            deltaYaw: hTime * YAW_SPEED,
-            distanceFactor: Math.pow(DISTANCE_SCALING, zTime * 0.001),
-        });
+        if (hTime !== 0 || vTime !== 0 || zTime !== 0) {
+            camera.updateManual({
+                deltaPitch: vTime * PITCH_SPEED,
+                deltaYaw: hTime * YAW_SPEED,
+                distanceFactor: Math.pow(DISTANCE_SCALING, zTime * 0.001),
+            });
+        }
     });
 }

@@ -6,7 +6,8 @@ import {
     type CompletionResult,
 } from '@codemirror/autocomplete';
 import type { UnitConfiguration } from '@/game';
-import { getFunctions, renderTypeSignature } from '@/game/program/functions';
+import { renderTypeSignature } from '@/game/program';
+import { getFunctions } from '@/game/program/functions';
 
 type Autocomplete = (context: CompletionContext) => CompletionResult | Promise<CompletionResult | null> | null;
 
