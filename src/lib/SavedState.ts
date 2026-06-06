@@ -102,7 +102,6 @@ class SavedStateValue<T> {
     }
     deserialize(json: unknown) {
         this.value = json as T;
-        console.log(this.name, json);
     }
 }
 

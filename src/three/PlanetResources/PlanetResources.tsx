@@ -53,7 +53,7 @@ export const PlanetResources: Component = () => {
                     continue;
                 }
 
-                amounts.alter(deposit.resource, deposit.amount);
+                InventoryDelta.alter(amounts, deposit.resource, deposit.amount);
             }
 
             for (const resource of Object.keys(amounts.content)) {

@@ -3,8 +3,8 @@ import { getMaxSolarPower } from '../config';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem, type UnitSystemTickContext } from './UnitSystem';
 
 type SolarData = {
     maxOutput: number;
@@ -12,38 +12,36 @@ type SolarData = {
 
 const SLEEP_TIME_TICKS = 10;
 
-export function createSolarSystem(
-    opts: CreateUnitSystemCommonOptions,
-    world: GameWorld,
-    positions: PositionalSystemController,
-    battery: EnergySystemController,
-) {
-    const system = createUnitSystem<SolarData, {}>(opts, {
-        name: 'solar',
+export class SolarSystem extends UnitSystem<SolarData> {
+    constructor(
+        opts: UnitSystemOrchestrator,
+        private world: GameWorld,
+        private positions: PositionalSystemController,
+        private battery: EnergySystemController,
+    ) {
+        super('solar', opts);
+    }
 
-        initialData({ config }) {
-            if (!config.solar) {
-                return null;
-            }
+    protected initialData({ config }: SpawnOptions): SolarData | null {
+        if (!config.solar) {
+            return null;
+        }
 
-            return { maxOutput: getMaxSolarPower(config) * SLEEP_TIME_TICKS };
-        },
+        return { maxOutput: getMaxSolarPower(config) * SLEEP_TIME_TICKS };
+    }
 
-        tick(ctx) {
-            const solar = ctx.systemData;
-            const cos = dot(
-                normz(world.sunPosition),
-                normz(world.graph.getCoordsOf(positions.getEffectivePosition(ctx.unitId))),
-            );
-            const frac = solar.maxOutput * cos;
+    protected onTick(ctx: UnitSystemTickContext<SolarData>): void {
+        const solar = ctx.systemData;
+        const cos = dot(
+            normz(this.world.sunPosition),
+            normz(this.world.graph.getCoordsOf(this.positions.getEffectivePosition(ctx.unitId))),
+        );
+        const frac = solar.maxOutput * cos;
 
-            if (frac >= 0.1) {
-                battery.charge(ctx.unitId, Math.ceil(frac));
-            }
+        if (frac >= 0.1) {
+            this.battery.charge(ctx.unitId, Math.ceil(frac));
+        }
 
-            ctx.sleep(SLEEP_TIME_TICKS);
-        },
-    });
-
-    return system;
+        this.sleep(ctx.unitId, SLEEP_TIME_TICKS);
+    }
 }

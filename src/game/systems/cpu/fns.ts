@@ -1,5 +1,6 @@
 import type { BsmlValue } from '@/game/program/value';
-import type { UnitSystemFunction, UnitSystemTickContext } from '../types';
+import type { UnitSystemFunction } from '../types';
+import type { UnitSystemTickContext } from '../UnitSystem';
 import type { CPUData, CPUFunctionsDeps } from './types';
 
 export const CPU_FNS: Record<

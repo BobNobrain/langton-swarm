@@ -48,6 +48,7 @@ export async function createGame({
     const savedState = new SavedStatePartition();
     if (save) {
         savedState.deserialize(save);
+        console.log('[DEBUG] loading a previously saved game state', savedState);
     }
 
     const gameTick = createGameLoop(tickTime, savedState.value('time'));

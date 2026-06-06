@@ -1,49 +1,55 @@
 import { getDiscoveryRange, isStationary } from '../config';
-import type { NodeId } from '../types';
+import type { GameFactions } from '../factions';
+import type { NodeId, UnitId } from '../types';
 import type { GameWorld } from '../world';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem, type UnitSystemTickContext } from './UnitSystem';
 
 type DiscoverySystemData = {
     range: number;
     lastPosition: number;
 };
 
-export function createDiscoverySystem(
-    opts: CreateUnitSystemCommonOptions,
-    world: GameWorld,
-    positions: PositionalSystemController,
-) {
-    return createUnitSystem<DiscoverySystemData, {}>(opts, {
-        name: 'discovery',
+export class DiscoverySystem extends UnitSystem<DiscoverySystemData> {
+    constructor(
+        opts: UnitSystemOrchestrator,
+        private world: GameWorld,
+        private positions: PositionalSystemController,
+        private factions: GameFactions,
+    ) {
+        super('discovery', opts);
+    }
 
-        initialData({ config, at }) {
-            // TODO: check "faction"
+    protected initialData({ config, at, faction }: SpawnOptions, unitId: UnitId): DiscoverySystemData | null {
+        if (this.factions.getFaction(faction)?.isAI ?? true) {
+            // discovery only works for the player
+            // TODO: do something for multiplayer?
+            return null;
+        }
 
-            const range = getDiscoveryRange(config);
-            discover(world, at, range);
+        const range = getDiscoveryRange(config);
+        discover(this.world, at, range);
 
-            if (isStationary(config)) {
-                return null;
-            }
+        if (isStationary(config)) {
+            // no need to constantly check positions for a stationary unit
+            return null;
+        }
 
-            return { range, lastPosition: -1 };
-        },
+        return { range, lastPosition: -1 };
+    }
 
-        // TODO: events-based discovery?
-        tick(ctx) {
-            const discovery = ctx.systemData;
-            const pos = positions.getEffectivePosition(ctx.unitId);
+    protected onTick(ctx: UnitSystemTickContext<DiscoverySystemData>): void {
+        const discovery = ctx.systemData;
+        const pos = this.positions.getEffectivePosition(ctx.unitId);
 
-            if (pos === discovery.lastPosition) {
-                return;
-            }
+        if (pos === discovery.lastPosition) {
+            return;
+        }
 
-            discover(world, pos, discovery.range);
-            discovery.lastPosition = pos;
-        },
-    });
+        discover(this.world, pos, discovery.range);
+        discovery.lastPosition = pos;
+    }
 }
 
 function discover(world: GameWorld, loc: NodeId, radius: number) {

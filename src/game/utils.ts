@@ -71,8 +71,11 @@ export function spawnFromDeck(
         return null;
     }
 
-    bp.lockVersion(version.version);
-    const unitId = spawn({ at, config: version.config, faction: deck.owner });
-    bp.registerUnit(unitId, version.version);
+    const unitId = spawn({
+        at,
+        config: version.config,
+        faction: deck.owner,
+        blueprint: { id: bp.id, version: version.version },
+    });
     return unitId;
 }

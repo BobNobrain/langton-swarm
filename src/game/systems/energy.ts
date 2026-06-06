@@ -1,8 +1,8 @@
 import { getBatteryCapacity } from '../config';
 import type { UnitId } from '../types';
 import { createUnitEvent, type UnitEvent } from './events';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem } from './UnitSystem';
 
 type EnergySystemData = {
     charge: number;
@@ -21,65 +21,58 @@ export type EnergySystemController = {
     readonly recharged: UnitEvent<null>;
 };
 
-export function createEnergySystem(opts: CreateUnitSystemCommonOptions) {
-    const drained = createUnitEvent<null>();
-    opts.events.push(drained);
-    const recharged = createUnitEvent<null>();
-    opts.events.push(recharged);
+export class EnergySystem extends UnitSystem<EnergySystemData> implements EnergySystemController {
+    public readonly drained = createUnitEvent<null>();
+    public readonly recharged = createUnitEvent<null>();
 
-    const system = createUnitSystem<EnergySystemData, {}>(opts, {
-        name: 'energy',
-        initialData({ config }) {
-            if (!config.battery) {
-                return null;
-            }
+    constructor(opts: UnitSystemOrchestrator) {
+        super('energy', opts);
 
-            const capacity = getBatteryCapacity(config);
+        this.registerEvent(this.drained);
+        this.registerEvent(this.recharged);
+    }
 
-            return { charge: capacity, capacity, lastUpdated: 0 };
-        },
-    });
+    withdraw(unitId: UnitId, amount: number): boolean {
+        const energy = this.getData(unitId);
+        if (!energy) {
+            return false;
+        }
 
-    const controller: EnergySystemController = {
-        drained,
-        recharged,
+        if (energy.charge < amount) {
+            return false;
+        }
 
-        getData: system.getData,
+        energy.charge -= amount;
+        if (energy.charge === 0) {
+            this.drained.pub({ unitId, payload: null });
+        }
 
-        charge(unitId, amount) {
-            const energy = system.getData(unitId);
-            if (!energy || energy.charge >= energy.capacity) {
-                return;
-            }
+        energy.lastUpdated = performance.now();
+        return true;
+    }
 
-            const oldCharge = energy.charge;
-            energy.charge = Math.min(energy.capacity, energy.charge + amount);
-            energy.lastUpdated = performance.now();
+    charge(unitId: UnitId, amount: number): void {
+        const energy = this.getData(unitId);
+        if (!energy || energy.charge >= energy.capacity) {
+            return;
+        }
 
-            if (oldCharge < RECHARGED_TRESHOLD && energy.charge >= RECHARGED_TRESHOLD) {
-                recharged.pub({ unitId, payload: null });
-            }
-        },
+        const oldCharge = energy.charge;
+        energy.charge = Math.min(energy.capacity, energy.charge + amount);
+        energy.lastUpdated = performance.now();
 
-        withdraw(unitId, amount) {
-            const energy = system.getData(unitId);
-            if (!energy) {
-                return false;
-            }
+        if (oldCharge < RECHARGED_TRESHOLD && energy.charge >= RECHARGED_TRESHOLD) {
+            this.recharged.pub({ unitId, payload: null });
+        }
+    }
 
-            if (energy.charge < amount) {
-                return false;
-            }
+    protected initialData({ config }: SpawnOptions): EnergySystemData | null {
+        if (!config.battery) {
+            return null;
+        }
 
-            energy.charge -= amount;
-            if (energy.charge === 0) {
-                drained.pub({ unitId, payload: null });
-            }
+        const capacity = getBatteryCapacity(config);
 
-            energy.lastUpdated = performance.now();
-            return true;
-        },
-    };
-
-    return { system, controller };
+        return { charge: capacity, capacity, lastUpdated: 0 };
+    }
 }

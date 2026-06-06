@@ -105,7 +105,7 @@ export const BlueprintEditor: Component<{
                 const config = configuratorValue();
                 const newConfig: UnitConfiguration = {
                     ...config,
-                    program: { source: program, parsed: parsed.program, compiled },
+                    program: { source: program, compiled },
                 };
                 return newConfig;
             },

@@ -1,19 +1,14 @@
+import type { SavedStatePartition } from '@/lib/SavedState';
 import type { UnitConfiguration } from '../config';
 import type { FactionId } from '../factions';
 import type { GameLoop } from '../loop';
 import type { BsmlValueType } from '../program/value';
-import type { NodeId, UnitCommand, UnitCommandCall, UnitId } from '../types';
+import type { NodeId, UnitId } from '../types';
 import type { UnitEventController } from './events';
+import type { UnitSystem } from './UnitSystem';
+import type { BlueprintId } from '../deck';
 
 export type SendMessage = (to: string, message: UnitSystemMessage, delay?: number) => void;
-
-export type UnitSystemTickContext<Data> = {
-    unitId: UnitId;
-    systemData: Data;
-    system: UnitSystem<Data>;
-    sleep: (ticksFor?: number) => void;
-    sendMessage: SendMessage;
-};
 
 export type UnitSystemFunction = {
     description?: string;
@@ -28,42 +23,27 @@ export type UnitSystemMessage = {
     payload: unknown;
 };
 
-export type CreateUnitSystemCommonOptions = {
+export type UnitSystemOrchestrator = {
     sendMessage: SendMessage;
     events: UnitEventController[];
-    systems: Record<string, UnitSystem<unknown>>;
+    systems: Record<string, UnitSystem<any, unknown, unknown>>;
     logicTick: GameLoop;
+    savedState: SavedStatePartition;
+    spawn: SpawnFn;
+    despawn: DespawnFn;
 };
 
 export type SpawnOptions = {
     config: UnitConfiguration;
     at: NodeId;
     faction: FactionId;
+    blueprint: { id: BlueprintId; version: number } | null;
 };
 
 export type SpawnFn = (opts: SpawnOptions) => UnitId;
 export type DespawnFn = (id: UnitId) => void;
 
-export type UnitSystemPublic<Data> = {
-    readonly name: string;
-    readonly fns: Record<string, UnitSystemFunction>;
-    getData(unitId: UnitId): Data | null;
-    getUnitIds(): UnitId[];
-};
-
-export type UnitSystem<Data> = UnitSystemPublic<Data> & {
-    tick(): void;
-    create(unitId: UnitId, options: SpawnOptions): void;
-    activate(unitId: UnitId, delayTicks?: number): void;
-    deactivate(unitId: UnitId): void;
-    remove(unitId: UnitId): void;
-
-    has(unitId: UnitId): boolean;
-    handleMessage(msg: UnitSystemMessage): void;
-
-    queryCommands(unitId: UnitId): UnitCommand[];
-    handleCommand(unitId: UnitId, cmd: UnitCommandCall): void;
-    hasCommand: (name: string) => boolean;
-
-    getDebugEntry(unitId: UnitId): unknown;
+export type DespawnedEventPayload = {
+    faction: FactionId;
+    config: UnitConfiguration;
 };

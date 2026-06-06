@@ -1,151 +1,57 @@
-import { PILE_PRESET } from '@/game/config';
-import { NO_FACTION } from '@/game/factions';
-import { InventoryDelta } from '@/game/inventory';
-import { typedUSF, type CallableUnitSystemFunctions } from '../func';
-import type { InventoryData, InventoryDeps } from './types';
-import { measure } from './utils';
+import { UnitSystem } from '../UnitSystem';
 
-export const INVENTORY_FNS: CallableUnitSystemFunctions<InventoryData, InventoryDeps> = {
-    unload_all: {
+export const INVENTORY_FNS = {
+    unload_all: UnitSystem.declareFn({
+        name: 'unload_all',
+        args: {},
+        returnType: 'flag',
         description:
             "Unloads everything in unit's inventory into storage at its location (or just drops it on the ground)",
-        argNames: [],
-        argTypes: [],
-        returnType: 'flag',
-        *body(_, ctx, { inventories, stationaries, spawn, positions }) {
-            const inv = ctx.systemData;
-            const loc = positions.getEffectivePosition(ctx.unitId);
-
-            let target = stationaries.getAt(loc);
-            if (target === ctx.unitId) {
-                // a stationary object cannot dump its inventory
-                return { type: 'flag', value: false };
-            }
-
-            if (!target) {
-                // a pile of material on the ground
-                target = spawn({ at: loc, config: PILE_PRESET, faction: NO_FACTION });
-            }
-
-            const transfered = inventories.transfer({
-                from: ctx.unitId,
-                to: target,
-                amounts: null,
-                strategy: 'all',
-            });
-
-            return { type: 'flag', value: transfered !== null };
-        },
-    },
-    unload_max: typedUSF({
-        description:
-            'Unloads as much as possible, but no more than specified amount of materials, into storage at its location (or just drops it on the ground)',
+    }),
+    unload_max: UnitSystem.declareFn({
+        name: 'unload_max',
         args: { items: 'inventory' },
         returnType: 'flag',
-        *body(args, ctx, { positions, stationaries, spawn, inventories }) {
-            const loc = positions.getEffectivePosition(ctx.unitId);
-
-            let target = stationaries.getAt(loc);
-            if (target === ctx.unitId) {
-                // a stationary object cannot dump its inventory
-                return { type: 'flag', value: false };
-            }
-
-            if (!target) {
-                // a pile of material on the ground
-                target = spawn({ at: loc, config: PILE_PRESET, faction: NO_FACTION });
-            }
-
-            const transfered = inventories.transfer({
-                from: ctx.unitId,
-                to: target,
-                amounts: args.items.value.content,
-                strategy: 'max',
-            });
-
-            return { type: 'flag', value: transfered !== null && measure(transfered) > 0 };
-        },
+        description:
+            'Unloads as much as possible, but no more than specified amount of materials, into storage at its location (or just drops it on the ground)',
     }),
 
-    pickup_all: {
+    pickup_all: UnitSystem.declareFn({
+        name: 'pickup_all',
+        args: {},
+        returnType: 'number',
         description: "Picks up everything in the storage/pile at current unit's location into unit's own storage",
-        argNames: [],
-        argTypes: [],
+    }),
+
+    get_free_space: UnitSystem.declareFn({
+        name: 'get_free_space',
+        args: {},
         returnType: 'number',
-        *body(_, ctx, { inventories, stationaries, positions }) {
-            const loc = positions.getEffectivePosition(ctx.unitId);
-
-            let pickupFrom = stationaries.getAt(loc);
-            if (pickupFrom === ctx.unitId) {
-                // a stationary object cannot pickup
-                return { type: 'number', value: 0 };
-            }
-
-            if (!pickupFrom) {
-                // there's no storage to pick up from
-                return { type: 'number', value: 0 };
-            }
-
-            const transfered = inventories.transfer({
-                from: pickupFrom,
-                to: ctx.unitId,
-                amounts: null,
-                strategy: 'max',
-            });
-
-            return { type: 'number', value: transfered === null ? 0 : measure(transfered) };
-        },
-    },
-
-    get_free_space: {
         description: "Allows to check, how much free space is left in unit's storage",
-        argNames: [],
-        argTypes: [],
+    }),
+    get_filled_share: UnitSystem.declareFn({
+        name: 'get_filled_share',
+        args: {},
         returnType: 'number',
-        *body(_, ctx) {
-            const inv = ctx.systemData;
-            return { type: 'number', value: inv.capacity - inv.size };
-        },
-    },
-    get_filled_share: {
         description: 'Returns how much storage is filled, on scale of 0 to 1',
-        argNames: [],
-        argTypes: [],
-        returnType: 'number',
-        *body(_, ctx) {
-            const inv = ctx.systemData;
-            return { type: 'number', value: inv.size / inv.capacity };
-        },
-    },
-    is_empty: {
+    }),
+    is_empty: UnitSystem.declareFn({
+        name: 'is_empty',
+        args: {},
+        returnType: 'flag',
         description: "Allows to check if unit's storage is empty",
-        argNames: [],
-        argTypes: [],
+    }),
+    is_full: UnitSystem.declareFn({
+        name: 'is_full',
+        args: {},
         returnType: 'flag',
-        *body(_, ctx) {
-            const inv = ctx.systemData;
-            return { type: 'flag', value: inv.size === 0 };
-        },
-    },
-    is_full: {
         description: "Allows to check if unit's storage is full",
-        argNames: [],
-        argTypes: [],
-        returnType: 'flag',
-        *body(_, ctx) {
-            const inv = ctx.systemData;
-            return { type: 'flag', value: inv.size === inv.capacity };
-        },
-    },
+    }),
 
-    content: {
-        description: "Returns inventory content of unit's storage",
-        argNames: [],
-        argTypes: [],
+    content: UnitSystem.declareFn({
+        name: 'content',
+        args: {},
         returnType: 'inventory',
-        *body(_, ctx) {
-            const inv = ctx.systemData;
-            return { type: 'inventory', value: InventoryDelta.fromMany(inv.contents) };
-        },
-    },
-};
+        description: "Returns inventory content of unit's storage",
+    }),
+} as const;

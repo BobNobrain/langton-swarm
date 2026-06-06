@@ -1,7 +1,7 @@
 import type { GameLoop } from '../loop';
 import type { NodeId, UnitId } from '../types';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem } from './UnitSystem';
 
 export type DynamicPosition = {
     targetPosition: NodeId;
@@ -20,83 +20,85 @@ export type PositionalSystemController = {
     findAtPosition(pos: NodeId, opts?: { strict?: boolean }): UnitId[];
 };
 
-export function createPositionalSystem(opts: CreateUnitSystemCommonOptions, gameLoop: GameLoop) {
-    const system = createUnitSystem<DynamicPosition, {}>(opts, {
-        name: 'positions',
-        initialData({ at }) {
-            return {
-                targetPosition: at,
-                sourcePosition: at,
-                targetTime: 0,
-                sourceTime: 0,
-            };
-        },
-    });
+export class PositionalSystem extends UnitSystem<DynamicPosition> implements PositionalSystemController {
+    constructor(
+        opts: UnitSystemOrchestrator,
+        private gameLoop: GameLoop,
+    ) {
+        super('positions', opts);
+    }
 
-    const controller: PositionalSystemController = {
-        getFullPosition: system.getData,
-        getEffectivePosition(unitId) {
-            const pos = system.getData(unitId);
-            if (!pos) {
-                return -1 as NodeId;
-            }
+    protected initialData({ at }: SpawnOptions): DynamicPosition | null {
+        return {
+            targetPosition: at,
+            sourcePosition: at,
+            targetTime: 0,
+            sourceTime: 0,
+        };
+    }
 
-            const tick = gameLoop.getCurrentTick();
-            if (tick >= pos.targetTime) {
-                return pos.targetPosition;
-            }
+    move(unitId: UnitId, to: NodeId, deltaTime: number): boolean {
+        const pos = this.getData(unitId);
+        if (!pos) {
+            return false;
+        }
 
-            return (tick - pos.sourceTime) / (pos.targetTime - pos.sourceTime) >= 0.5
-                ? pos.targetPosition
-                : pos.sourcePosition;
-        },
+        const time = this.gameLoop.getCurrentTick();
+        if (time < pos.targetTime) {
+            return false;
+        }
 
-        isMoving(unitId) {
-            const pos = system.getData(unitId);
-            return pos ? gameLoop.getCurrentTick() < pos.targetTime : false;
-        },
+        pos.sourcePosition = pos.targetPosition;
+        pos.targetPosition = to;
+        pos.sourceTime = time;
+        pos.targetTime = time + deltaTime;
+        return true;
+    }
 
-        move(unitId, to, deltaTime) {
-            const pos = system.getData(unitId);
-            if (!pos) {
-                return false;
-            }
+    isMoving(unitId: UnitId): boolean {
+        const pos = this.getData(unitId);
+        return pos ? this.gameLoop.getCurrentTick() < pos.targetTime : false;
+    }
 
-            const time = gameLoop.getCurrentTick();
-            if (time < pos.targetTime) {
-                return false;
-            }
+    getEffectivePosition(unitId: UnitId): NodeId {
+        const pos = this.getData(unitId);
+        if (!pos) {
+            return -1 as NodeId;
+        }
 
-            pos.sourcePosition = pos.targetPosition;
-            pos.targetPosition = to;
-            pos.sourceTime = time;
-            pos.targetTime = time + deltaTime;
-            return true;
-        },
+        const tick = this.gameLoop.getCurrentTick();
+        if (tick >= pos.targetTime) {
+            return pos.targetPosition;
+        }
 
-        findAtPosition(pos, { strict } = {}) {
-            // TODO: cache or something
-            const result: UnitId[] = [];
+        return (tick - pos.sourceTime) / (pos.targetTime - pos.sourceTime) >= 0.5
+            ? pos.targetPosition
+            : pos.sourcePosition;
+    }
 
-            if (strict) {
-                for (const unitId of system.getUnitIds()) {
-                    if (controller.getEffectivePosition(unitId) === pos) {
-                        result.push(unitId);
-                    }
-                }
-                return result;
-            }
+    getFullPosition(unitId: UnitId): DynamicPosition | null {
+        return this.getData(unitId);
+    }
 
-            const time = gameLoop.getCurrentTick();
-            for (const unitId of system.getUnitIds()) {
-                const data = controller.getFullPosition(unitId)!;
-                if (data.targetPosition === pos || (data.sourcePosition === pos && time <= data.targetTime)) {
+    findAtPosition(pos: NodeId, { strict }: { strict?: boolean } = {}): UnitId[] {
+        // TODO: cache or something
+        const result: UnitId[] = [];
+
+        if (strict) {
+            for (const unitId of this.activeData.keys()) {
+                if (this.getEffectivePosition(unitId) === pos) {
                     result.push(unitId);
                 }
             }
             return result;
-        },
-    };
+        }
 
-    return { system, controller };
+        const time = this.gameLoop.getCurrentTick();
+        for (const [unitId, { systemData: data }] of this.activeData.entries()) {
+            if (data.targetPosition === pos || (data.sourcePosition === pos && time <= data.targetTime)) {
+                result.push(unitId);
+            }
+        }
+        return result;
+    }
 }

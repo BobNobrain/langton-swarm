@@ -12,7 +12,6 @@ export type UnitConfiguration = {
     /** BSML program for unit's CPU */
     program?: {
         source: string;
-        parsed: BsmlProgram;
         compiled: CompiledProgram;
     };
     /** Unit's movement characteristics */

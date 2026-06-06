@@ -2,45 +2,45 @@ import type { KnownResourceName } from './resources';
 
 export type InventoryDelta = {
     readonly content: {
-        readonly [key in string]: number;
+        [key in string]: number;
     };
-    readonly size: number;
-
-    isEmpty(this: InventoryDelta): boolean;
-
-    get(this: InventoryDelta, resource: string): number;
-    set(this: InventoryDelta, resource: string, amount: number): void;
-    alter(this: InventoryDelta, resource: string, delta: number): void;
-
-    toShortString(): string;
+    size: number;
 };
 
 export namespace InventoryDelta {
+    const SHORT_NAMES: Record<KnownResourceName, string> = {
+        electrical: 'Cu',
+        structural: 'Ti',
+        energetical: 'Li',
+        combat: '◊',
+        special: '▼',
+    };
+
     export function empty(): InventoryDelta {
-        return new InventoryDeltaImpl();
+        return { content: {}, size: 0 };
     }
 
     export function fromSingle(resource: string, amount: number): InventoryDelta {
-        const result = new InventoryDeltaImpl();
-        result.set(resource, amount);
+        const result = empty();
+        set(result, resource, amount);
         return result;
     }
 
     export function fromMany(deltas: Record<string, number>): InventoryDelta {
-        const result = new InventoryDeltaImpl();
+        const result = empty();
         for (const [resource, amount] of Object.entries(deltas)) {
-            result.set(resource, amount);
+            set(result, resource, amount);
         }
         return result;
     }
 
     export function combine(delta1: InventoryDelta, delta2: InventoryDelta, factor1 = 1, factor2 = 1): InventoryDelta {
-        const result = new InventoryDeltaImpl();
+        const result = empty();
         for (const [resource, amount] of Object.entries(delta1.content)) {
-            result.set(resource, amount * factor1);
+            set(result, resource, amount * factor1);
         }
         for (const [resource, amount] of Object.entries(delta2.content)) {
-            result.set(resource, amount * factor2);
+            set(result, resource, amount * factor2);
         }
         return result;
     }
@@ -97,7 +97,7 @@ export namespace InventoryDelta {
     }
 
     export function multiply(delta: InventoryDelta, scalar: number): InventoryDelta {
-        const result = new InventoryDeltaImpl();
+        const result = empty();
 
         for (const [resource, amount] of Object.entries(delta.content)) {
             result.content[resource] = amount * scalar;
@@ -109,7 +109,7 @@ export namespace InventoryDelta {
 
     export function min(delta1: InventoryDelta, delta2: InventoryDelta): InventoryDelta {
         const rs = new Set([...Object.keys(delta1.content), ...Object.keys(delta2.content)]);
-        const result = new InventoryDeltaImpl();
+        const result = empty();
 
         for (const resource of rs) {
             const amt1 = delta1.content[resource] ?? 0;
@@ -123,7 +123,7 @@ export namespace InventoryDelta {
     }
 
     export function abs(delta: InventoryDelta): InventoryDelta {
-        const result = new InventoryDeltaImpl();
+        const result = empty();
 
         for (const resource of Object.keys(delta.content)) {
             const amt = Math.max(0, delta.content[resource]);
@@ -145,132 +145,113 @@ export namespace InventoryDelta {
 
         return totalProvided / target.size;
     }
-}
 
-export type Inventory = {
-    readonly content: {
-        readonly [key in string]: number;
-    };
-    readonly size: number;
-
-    isEmpty(this: Inventory): boolean;
-
-    get(this: Inventory, resource: string): number;
-    set(this: Inventory, resource: string, amount: number): void;
-
-    alter(this: Inventory, resource: string, delta: number): number;
-    apply(this: Inventory, delta: InventoryDelta): InventoryDelta;
-
-    clone(this: Inventory): Inventory;
-};
-
-export namespace Inventory {
-    export function empty(): Inventory {
-        return new InventoryImpl();
+    export function isEmpty(target: InventoryDelta): boolean {
+        return !Object.values(target.content).some(Boolean);
     }
 
-    export function fromSingle(resource: string, amount: number): Inventory {
-        const result = new InventoryImpl();
-        if (amount > 0) {
-            result.set(resource, amount);
-        }
-        return result;
+    export function get(target: InventoryDelta, resource: string): number {
+        return target.content[resource] ?? 0;
+    }
+    export function set(target: InventoryDelta, resource: string, amount: number) {
+        const old = target.content[resource] ?? 0;
+        target.content[resource] = amount;
+        target.size += amount - old;
     }
 
-    export function fromMany(amounts: Record<string, number>): Inventory {
-        const result = new InventoryImpl();
-
-        for (const [resource, amount] of Object.entries(amounts)) {
-            if (amount > 0) {
-                result.set(resource, amount);
-            }
-        }
-
-        return result;
-    }
-}
-
-const SHORT_NAMES: Record<KnownResourceName, string> = {
-    electrical: 'Co',
-    structural: 'Ti',
-    energetical: 'Li',
-    combat: '◊',
-    special: '▼',
-};
-
-class InventoryDeltaImpl implements InventoryDelta {
-    content: Record<string, number> = {};
-    size = 0;
-
-    get(resource: string): number {
-        return this.content[resource] ?? 0;
-    }
-    set(resource: string, amount: number) {
-        const old = this.content[resource] ?? 0;
-        this.content[resource] = amount;
-        this.size += amount - old;
-    }
-    alter(resource: string, delta: number) {
-        this.content[resource] ??= 0;
-        this.content[resource] += delta;
-        this.size += delta;
+    export function alter(target: InventoryDelta, resource: string, delta: number): void {
+        target.content[resource] ??= 0;
+        target.content[resource] += delta;
+        target.size += delta;
     }
 
-    isEmpty(): boolean {
-        return !Object.values(this.content).some(Boolean);
-    }
-
-    toShortString(): string {
+    export function toShortString(target: InventoryDelta): string {
         const parts: string[] = [];
-        for (const resource of Object.keys(this.content)) {
+        for (const resource of Object.keys(target.content)) {
             parts.push(
-                (SHORT_NAMES[resource as never] ?? resource.substring(0, 2)) + this.content[resource].toString(),
+                (SHORT_NAMES[resource as never] ?? resource.substring(0, 2)) + target.content[resource].toString(),
             );
         }
         return parts.join(';') ?? '--';
     }
 }
 
-class InventoryImpl extends InventoryDeltaImpl implements Inventory {
-    isEmpty(): boolean {
-        return this.size === 0;
+// TODO: remove?
+export type Inventory = {
+    readonly content: {
+        [key in string]: number;
+    };
+    size: number;
+};
+
+export namespace Inventory {
+    export function empty(): Inventory {
+        return { content: {}, size: 0 };
     }
 
-    alter(resource: string, delta: number): number {
-        const oldAmount = this.content[resource] ?? 0;
+    export function fromSingle(resource: string, amount: number): Inventory {
+        const result = empty();
+        if (amount > 0) {
+            set(result, resource, amount);
+        }
+        return result;
+    }
+
+    export function fromMany(amounts: Record<string, number>): Inventory {
+        const result = empty();
+
+        for (const [resource, amount] of Object.entries(amounts)) {
+            if (amount > 0) {
+                set(result, resource, amount);
+            }
+        }
+
+        return result;
+    }
+
+    export function isEmpty(target: Inventory): boolean {
+        return target.size === 0;
+    }
+
+    export function set(target: Inventory, resource: string, amount: number) {
+        amount = Math.max(0, amount);
+        const old = target.content[resource] ?? 0;
+        target.content[resource] = amount;
+        target.size += amount - old;
+    }
+
+    export function alter(target: Inventory, resource: string, delta: number): number {
+        const oldAmount = target.content[resource] ?? 0;
         const newAmount = Math.max(0, oldAmount + delta);
         if (newAmount > 0) {
-            this.content[resource] = newAmount;
+            target.content[resource] = newAmount;
         } else {
-            delete this.content[resource];
+            delete target.content[resource];
         }
 
         return newAmount - oldAmount;
     }
 
-    apply(delta: InventoryDelta) {
-        const effectiveDelta = new InventoryDeltaImpl();
+    export function apply(target: Inventory, delta: InventoryDelta) {
+        const effectiveDelta = InventoryDelta.empty();
 
         for (const [resource, deltaAmount] of Object.entries(delta.content)) {
-            const oldAmount = this.content[resource] ?? 0;
+            const oldAmount = target.content[resource] ?? 0;
             const newAmount = Math.max(0, oldAmount + deltaAmount);
 
             if (newAmount > 0) {
-                this.content[resource] = newAmount;
+                target.content[resource] = newAmount;
             } else {
-                delete this.content[resource];
+                delete target.content[resource];
             }
 
-            effectiveDelta.set(resource, newAmount - oldAmount);
+            InventoryDelta.set(effectiveDelta, resource, newAmount - oldAmount);
         }
 
         return effectiveDelta;
     }
 
-    clone(): Inventory {
-        const clone = new InventoryImpl();
-        clone.content = { ...this.content };
-        clone.size = this.size;
-        return clone;
+    export function clone(target: Inventory): Inventory {
+        return { content: { ...target.content }, size: target.size };
     }
 }

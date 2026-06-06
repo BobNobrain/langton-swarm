@@ -1,73 +1,75 @@
 import { isStationary } from '../config';
 import { NodeId, type UnitId } from '../types';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
-import { createScheduler } from './utils';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem, type UnitSystemTickContext } from './UnitSystem';
 
 type StationaryData = NodeId; // position
 const STATIONARIES_SYSTEM_NAME = 'stationaries';
+const LOCATION_TAKEN_EVENT = 'locTaken';
 
 export type StationariesSystemController = {
     getAt(location: NodeId): UnitId | null;
     isStationary(unitId: UnitId): boolean;
 };
 
-const schedule = createScheduler<StationaryData>(STATIONARIES_SYSTEM_NAME);
+type SaveData = {
+    v: 1;
+    byLoc: Map<NodeId, UnitId>;
+};
 
-export function createStationariesSystem(
-    opts: CreateUnitSystemCommonOptions,
-    { despawn }: { despawn: (uid: UnitId) => void },
-) {
-    const stationaries = new Map<NodeId, UnitId>();
+export class StationariesSystem extends UnitSystem<StationaryData, SaveData> implements StationariesSystemController {
+    private byLocation = new Map<NodeId, UnitId>();
 
-    const system = createUnitSystem<StationaryData, {}>(opts, {
-        name: STATIONARIES_SYSTEM_NAME,
-        initialData({ config, at }, unitId) {
-            if (!isStationary(config)) {
-                return null;
-            }
+    constructor(opts: UnitSystemOrchestrator) {
+        super(STATIONARIES_SYSTEM_NAME, opts);
 
-            if (stationaries.has(at)) {
-                // this location is already taken by another stationary object
-                schedule(
-                    { unitId, sendMessage: opts.sendMessage },
-                    (ctx) => {
-                        despawn(ctx.unitId);
-                    },
-                    0,
-                );
-                return null;
-            }
+        if (this.loadedState) {
+            this.byLocation = this.loadedState.byLoc;
+        }
 
-            stationaries.set(at, unitId);
-            return at;
-        },
+        this.registerMessageHandler(LOCATION_TAKEN_EVENT, (_, ctx) => {
+            this.orchestrator.despawn(ctx.unitId);
+        });
+    }
 
-        finalize(ctx) {
-            const isValid = ctx.systemData;
-            if (!isValid) {
-                return;
-            }
+    getAt(location: NodeId): UnitId | null {
+        return this.byLocation.get(location) ?? null;
+    }
+    isStationary(unitId: UnitId): boolean {
+        return this.getData(unitId) !== null;
+    }
 
-            const position = ctx.systemData;
+    protected onSave(): SaveData {
+        return { v: 1, byLoc: this.byLocation };
+    }
 
-            const unitId = stationaries.get(position);
-            if (unitId !== ctx.unitId) {
-                return;
-            }
+    protected initialData({ config, at }: SpawnOptions, unitId: UnitId): NodeId | null {
+        if (!isStationary(config)) {
+            return null;
+        }
 
-            stationaries.delete(position);
-        },
-    });
+        if (this.byLocation.has(at)) {
+            // this location is already taken by another stationary object
+            this.sendMessage(STATIONARIES_SYSTEM_NAME, { event: LOCATION_TAKEN_EVENT, payload: null, unitId }, 0);
+            return null;
+        }
 
-    const controller: StationariesSystemController = {
-        getAt(location) {
-            return stationaries.get(location) ?? null;
-        },
-        isStationary(unitId) {
-            return system.getData(unitId) !== null;
-        },
-    };
+        this.byLocation.set(at, unitId);
+        return at;
+    }
+    protected onFinalize(ctx: UnitSystemTickContext<NodeId>): void {
+        const isValid = ctx.systemData;
+        if (!isValid) {
+            return;
+        }
 
-    return { system, controller };
+        const position = ctx.systemData;
+
+        const unitId = this.byLocation.get(position);
+        if (unitId !== ctx.unitId) {
+            return;
+        }
+
+        this.byLocation.delete(position);
+    }
 }

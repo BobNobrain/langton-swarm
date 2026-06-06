@@ -26,10 +26,3 @@ export type InventoryController = {
 
     updated: UnitEvent<InventoryData>;
 };
-
-export type InventoryDeps = {
-    stationaries: StationariesSystemController;
-    inventories: InventoryController;
-    positions: PositionalSystemController;
-    spawn: SpawnFn;
-};

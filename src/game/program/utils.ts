@@ -1,3 +1,4 @@
+import { InventoryDelta } from '../inventory';
 import type { UnitCommand } from '../types';
 import type { BsmlProgram } from './program';
 import type { BsmlValue, BsmlValueType } from './value';
@@ -55,7 +56,7 @@ export function renderValue(val: BsmlValue | null | undefined): string {
             return `<blueprint:${val.value}>`;
 
         case 'inventory':
-            return `<inventory:${val.value.toShortString()}>`;
+            return `<inventory:${InventoryDelta.toShortString(val.value)}>`;
     }
 }
 

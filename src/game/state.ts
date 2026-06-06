@@ -43,6 +43,16 @@ export async function createGameState({
     factions.player.deck = playerDeck;
 
     const units = createGameSystems(world, gameTick, factions, nots, savedState.partition('units'));
+
+    units.spawned.subToAll(({ unitId, payload }) => {
+        const fid = payload.faction;
+        if (fid !== playerDeck.owner || !payload.blueprint) {
+            return;
+        }
+
+        playerDeck.registerUnit(unitId, payload.blueprint.id, payload.blueprint.version);
+    });
+
     const ui = createGameUIState(units); // should not be saved
     const camera = createGameCamera(world.radius, savedState.value('cam'));
 

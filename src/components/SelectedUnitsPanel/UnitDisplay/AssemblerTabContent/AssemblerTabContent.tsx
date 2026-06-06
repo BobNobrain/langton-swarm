@@ -6,7 +6,7 @@ import { FloatingPanelOverlay } from '@/components/FloatingPanel/FloatingPanel';
 import { InventoryContent } from '@/components/Inventory/Inventory';
 import { List, ListEmptyContent, ListItem } from '@/components/List/List';
 import { TimeLabel } from '@/components/TimeLabel/TimeLabel';
-import type { UnitId } from '@/game';
+import type { BlueprintId, UnitId } from '@/game';
 import { getConstructionCosts, getConstructionPoints } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { createInventoryTracker, createAssemblerTracker, createIsStaticTracker } from '@/hooks/trackers';
@@ -33,6 +33,11 @@ export const AssemblerTabContent: Component<{ unitId: UnitId | null }> = (props)
     const isCurrentSpawnBlocked = createMemo(() => rCurrentSpawn()?.resourcesConsumed === false);
 
     const [isPickerVisible, setPickerVisible] = createSignal(false);
+
+    const getBpName = (bp: { id: BlueprintId; v: number }): string => {
+        const controller = playerDeck.getBlueprint(bp.id)!;
+        return controller.rName();
+    };
 
     return (
         <>
@@ -63,10 +68,7 @@ export const AssemblerTabContent: Component<{ unitId: UnitId | null }> = (props)
                     <div>
                         <span class={styles.assemblingLabel}>Assembling:</span>
                         <Show when={rCurrentSpawn()!.bp} fallback="(unknown blueprint)">
-                            <BlueprintLabel
-                                name={rCurrentSpawn()!.bp!.controller.rName()}
-                                version={rCurrentSpawn()!.bp!.v}
-                            />
+                            <BlueprintLabel name={getBpName(rCurrentSpawn()!.bp!)} version={rCurrentSpawn()!.bp!.v} />
                         </Show>
                         <span class={styles.progressLabel}>{(rSpawnProgress() * 100).toFixed()}%</span>
                     </div>
@@ -110,10 +112,7 @@ export const AssemblerTabContent: Component<{ unitId: UnitId | null }> = (props)
                                     <span class={styles.queueIndexLabel}>#{index() + 1}</span>
                                     <span style="flex: 1 1 auto">
                                         <Show when={queueItem.bp} fallback="(unknown blueprint)">
-                                            <BlueprintLabel
-                                                name={queueItem.bp!.controller.rName()}
-                                                version={queueItem.bp!.v}
-                                            />
+                                            <BlueprintLabel name={getBpName(queueItem.bp!)} version={queueItem.bp!.v} />
                                         </Show>
                                     </span>
                                 </div>

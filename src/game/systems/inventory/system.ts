@@ -1,152 +1,249 @@
-import { isPile, getStorageCapacity } from '@/game/config';
-import { createUnitEvent } from '../events';
-import { usfHandlers, type CallableUnitSystemMessages } from '../func';
+import { isPile, getStorageCapacity, PILE_PRESET } from '@/game/config';
+import { NO_FACTION } from '@/game/factions';
+import { InventoryDelta } from '@/game/inventory';
+import type { NodeId, UnitId } from '@/game/types';
+import { createUnitEvent, type UnitEvent } from '../events';
 import type { PositionalSystemController } from '../positions';
 import type { StationariesSystemController } from '../stationaries';
-import { createUnitSystem } from '../systems';
-import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn, UnitSystem } from '../types';
+import type { UnitSystemOrchestrator, SpawnOptions } from '../types';
+import { fnReturn, UnitSystem, type UnitSystemTickContext } from '../UnitSystem';
 import { INVENTORY_FNS } from './fns';
-import type { InventoryController, InventoryData, InventoryDeps } from './types';
+import type { InventoryController, InventoryData } from './types';
 import { measure, transferAsMuchAsPossible, transferEverything } from './utils';
 
 export const INVENTORY_SYSTEM_NAME = 'storage';
 
-export function createInventorySystem(
-    options: CreateUnitSystemCommonOptions,
-    stationaries: StationariesSystemController,
-    positions: PositionalSystemController,
-    spawn: SpawnFn,
-    despawn: DespawnFn,
-) {
-    let system: UnitSystem<InventoryData>;
+export class InventorySystem extends UnitSystem<InventoryData> implements InventoryController {
+    readonly updated: UnitEvent<InventoryData>;
 
-    const updated = createUnitEvent<InventoryData>();
-    options.events.push(updated);
+    constructor(
+        opts: UnitSystemOrchestrator,
+        stationaries: StationariesSystemController,
+        positions: PositionalSystemController,
+    ) {
+        super(INVENTORY_SYSTEM_NAME, opts);
 
-    const controller: InventoryController = {
-        updated,
+        this.registerEvent((this.updated = createUnitEvent()));
 
-        add({ to, amounts }) {
-            const inv = system.getData(to);
-            if (!inv) {
-                return {};
+        this.registerFn(INVENTORY_FNS.unload_all).implement((_, ctx) => {
+            const loc = positions.getEffectivePosition(ctx.unitId);
+
+            let target = stationaries.getAt(loc);
+            if (target === ctx.unitId) {
+                // a stationary object cannot dump its inventory
+                return fnReturn({ type: 'flag', value: false });
             }
 
-            const effective = transferAsMuchAsPossible({ from: null, to: inv, amounts });
-            if (measure(effective) !== 0) {
-                system.activate(to);
-                controller.updated.pub({ unitId: to, payload: inv });
+            if (!target) {
+                // a pile of material on the ground
+                target = this.spawnPile(loc);
             }
 
-            return effective;
-        },
-        withdraw({ from, amounts }) {
-            const inv = system.getData(from);
-            if (!inv) {
-                return false;
+            const transfered = this.transfer({
+                from: ctx.unitId,
+                to: target,
+                amounts: null,
+                strategy: 'all',
+            });
+
+            return fnReturn({ type: 'flag', value: transfered !== null });
+        });
+
+        this.registerFn(INVENTORY_FNS.unload_max).implement(({ args }, ctx) => {
+            const loc = positions.getEffectivePosition(ctx.unitId);
+
+            let target = stationaries.getAt(loc);
+            if (target === ctx.unitId) {
+                // a stationary object cannot dump its inventory
+                return fnReturn({ type: 'flag', value: false });
             }
 
-            const ok = transferEverything({ from: inv, to: null, amounts });
-            if (ok) {
-                system.activate(from);
-                controller.updated.pub({ unitId: from, payload: inv });
-            }
-            return ok;
-        },
-
-        transfer({ from, to, amounts, strategy }) {
-            const invFrom = system.getData(from);
-            const invTo = system.getData(to);
-            if (!invFrom || !invTo) {
-                return null;
+            if (!target) {
+                // a pile of material on the ground
+                target = this.spawnPile(loc);
             }
 
-            if (amounts === null) {
-                amounts = { ...invFrom.contents };
+            const transfered = this.transfer({
+                from: ctx.unitId,
+                to: target,
+                amounts: args.items.value.content,
+                strategy: 'max',
+            });
+
+            return fnReturn({ type: 'flag', value: transfered !== null && measure(transfered) > 0 });
+        });
+
+        this.registerFn(INVENTORY_FNS.pickup_all).implement((_, ctx) => {
+            const loc = positions.getEffectivePosition(ctx.unitId);
+
+            let pickupFrom = stationaries.getAt(loc);
+            if (pickupFrom === ctx.unitId) {
+                // a stationary object cannot pickup
+                return fnReturn({ type: 'number', value: 0 });
             }
 
-            let result: Record<string, number> | null = null;
-            switch (strategy) {
-                case 'all':
-                    result = transferEverything({ from: invFrom, to: invTo, amounts }) ? amounts : null;
-                    break;
-
-                case 'max':
-                    result = transferAsMuchAsPossible({
-                        from: invFrom,
-                        to: invTo,
-                        amounts,
-                    });
-                    break;
+            if (!pickupFrom) {
+                // there's no storage to pick up from
+                return fnReturn({ type: 'number', value: 0 });
             }
 
-            if (result) {
-                system.activate(from);
-                system.activate(to);
+            const transfered = this.transfer({
+                from: pickupFrom,
+                to: ctx.unitId,
+                amounts: null,
+                strategy: 'max',
+            });
 
-                controller.updated.pub({ unitId: from, payload: invFrom });
-                controller.updated.pub({ unitId: to, payload: invTo });
-            }
+            return fnReturn({ type: 'number', value: transfered === null ? 0 : measure(transfered) });
+        });
 
-            return result;
-        },
+        this.registerFn(INVENTORY_FNS.get_free_space).implement((_, ctx) => {
+            const inv = ctx.systemData;
+            return fnReturn({ type: 'number', value: inv.capacity - inv.size });
+        });
 
-        hasSpace(unitId, space) {
-            const inv = system.getData(unitId);
-            if (!inv) {
-                return false;
-            }
+        this.registerFn(INVENTORY_FNS.get_filled_share).implement((_, ctx) => {
+            const inv = ctx.systemData;
+            return fnReturn({ type: 'number', value: inv.size / inv.capacity });
+        });
 
-            return inv.capacity - inv.size >= space;
-        },
+        this.registerFn(INVENTORY_FNS.is_empty).implement((_, ctx) => {
+            const inv = ctx.systemData;
+            return fnReturn({ type: 'flag', value: inv.size === 0 });
+        });
 
-        getInfo(unitId) {
-            return system.getData(unitId);
-        },
+        this.registerFn(INVENTORY_FNS.is_full).implement((_, ctx) => {
+            const inv = ctx.systemData;
+            return fnReturn({ type: 'flag', value: inv.size === inv.capacity });
+        });
 
-        getFreeSpace(unitId) {
-            const inventory = system.getData(unitId);
-            if (!inventory) {
-                return 0;
-            }
-            return inventory.capacity - inventory.size;
-        },
-    };
+        this.registerFn(INVENTORY_FNS.content).implement((_, ctx) => {
+            const inv = ctx.systemData;
+            return fnReturn({ type: 'inventory', value: InventoryDelta.fromMany(inv.contents) });
+        });
+    }
 
-    system = createUnitSystem<InventoryData, CallableUnitSystemMessages>(options, {
-        name: INVENTORY_SYSTEM_NAME,
-        messages: {
-            ...usfHandlers<InventoryData, InventoryDeps>(INVENTORY_FNS, {
-                stationaries,
-                inventories: controller,
-                spawn,
-                positions,
-            }),
-        },
+    add({ to, amounts }: { to: UnitId; amounts: Record<string, number> }): Record<string, number> {
+        const inv = this.getData(to);
+        if (!inv) {
+            return {};
+        }
 
-        initialData: ({ config }) => {
-            if (!config.storage) {
-                return null;
-            }
+        const effective = transferAsMuchAsPossible({ from: null, to: inv, amounts });
+        if (measure(effective) !== 0) {
+            this.activate(to);
+            this.updated.pub({ unitId: to, payload: inv });
+        }
 
-            return {
-                capacity: getStorageCapacity(config),
-                size: 0,
-                contents: {},
-                shouldDespawnWhenEmpty: isPile(config),
-            };
-        },
+        return effective;
+    }
 
-        tick(ctx) {
-            if (!ctx.systemData.shouldDespawnWhenEmpty || ctx.systemData.size > 0) {
-                ctx.sleep();
-                return;
-            }
+    withdraw({ from, amounts }: { from: UnitId; amounts: Record<string, number> }): boolean {
+        const inv = this.getData(from);
+        if (!inv) {
+            return false;
+        }
 
-            console.log('[DEBUG] despawning a pile:', ctx.systemData);
-            despawn(ctx.unitId);
-        },
-    });
+        const ok = transferEverything({ from: inv, to: null, amounts });
+        if (ok) {
+            this.activate(from);
+            this.updated.pub({ unitId: from, payload: inv });
+        }
+        return ok;
+    }
 
-    return { system, controller };
+    transfer({
+        from,
+        to,
+        amounts,
+        strategy,
+    }: {
+        from: UnitId;
+        to: UnitId;
+        amounts: Record<string, number> | null;
+        strategy: 'max' | 'all';
+    }): Record<string, number> | null {
+        const invFrom = this.getData(from);
+        const invTo = this.getData(to);
+        if (!invFrom || !invTo) {
+            return null;
+        }
+
+        if (amounts === null) {
+            amounts = { ...invFrom.contents };
+        }
+
+        let result: Record<string, number> | null = null;
+        switch (strategy) {
+            case 'all':
+                result = transferEverything({ from: invFrom, to: invTo, amounts }) ? amounts : null;
+                break;
+
+            case 'max':
+                result = transferAsMuchAsPossible({
+                    from: invFrom,
+                    to: invTo,
+                    amounts,
+                });
+                break;
+        }
+
+        if (result) {
+            this.activate(from);
+            this.activate(to);
+
+            this.updated.pub({ unitId: from, payload: invFrom });
+            this.updated.pub({ unitId: to, payload: invTo });
+        }
+
+        return result;
+    }
+
+    hasSpace(unitId: UnitId, space: number): boolean {
+        const inv = this.getData(unitId);
+        if (!inv) {
+            return false;
+        }
+
+        return inv.capacity - inv.size >= space;
+    }
+    /** @deprecated */
+    getInfo(unitId: UnitId): InventoryData | null {
+        return this.getData(unitId);
+    }
+
+    getFreeSpace(unitId: UnitId): number {
+        const inventory = this.getData(unitId);
+        if (!inventory) {
+            return 0;
+        }
+        return inventory.capacity - inventory.size;
+    }
+
+    protected initialData({ config }: SpawnOptions): InventoryData | null {
+        if (!config.storage) {
+            return null;
+        }
+
+        return {
+            capacity: getStorageCapacity(config),
+            size: 0,
+            contents: {},
+            shouldDespawnWhenEmpty: isPile(config),
+        };
+    }
+
+    protected onTick(ctx: UnitSystemTickContext<InventoryData>): void {
+        if (!ctx.systemData.shouldDespawnWhenEmpty || ctx.systemData.size > 0) {
+            this.sleep(ctx.unitId);
+            return;
+        }
+
+        console.log('[DEBUG] despawning a pile:', ctx.systemData);
+        this.orchestrator.despawn(ctx.unitId);
+    }
+
+    private spawnPile(at: NodeId): UnitId {
+        return this.orchestrator.spawn({ at, config: PILE_PRESET, faction: NO_FACTION, blueprint: null });
+    }
 }

@@ -399,7 +399,6 @@ function compileOrDie(source: string): NonNullable<UnitConfiguration['program']>
 
     return {
         source,
-        parsed: parsed.program,
         compiled,
     };
 }

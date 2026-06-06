@@ -3,12 +3,11 @@ import { ResourceTier } from '../resources';
 import type { NodeId } from '../types';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
-import { usfSleep, usfHandlers, type CallableUnitSystemFunctions, type CallableUnitSystemMessages } from './func';
 import type { InventoryController } from './inventory';
 import type { MarkersSystemController } from './markers';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { fnReturn, UnitSystem } from './UnitSystem';
 import { bfsSleepTime } from './utils';
 
 type ScannerDeps = {
@@ -30,13 +29,58 @@ const emptyScannedData = (): ScannedTilesData => new Set();
 
 export const SCANNER_SYSTEM_NAME = 'scanner';
 
-export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> = {
-    find_closest_unscanned: {
-        description: 'Finds the closest location that has not been scanned yet',
-        argNames: [],
-        argTypes: [],
+export const SCANNER_FNS = {
+    find_closest_unscanned: UnitSystem.declareFn({
+        name: 'find_closest_unscanned',
+        args: {},
         returnType: 'position',
-        *body(_, ctx, { world: { nav }, positions }) {
+        description: 'Finds the closest location that has not been scanned yet',
+    }),
+    closest_surface_deposit: UnitSystem.declareFn({
+        name: 'closest_surface_deposit',
+        args: {},
+        returnType: 'position',
+        description: 'Returns the location of the closest surface resource deposit',
+    }),
+
+    scan: UnitSystem.declareFn({
+        name: 'scan',
+        args: {},
+        returnType: 'number',
+        description: 'Scans for nearby resource deposits',
+    }),
+
+    radius: UnitSystem.declareFn({
+        name: 'radius',
+        args: {},
+        returnType: 'number',
+        description: 'Returns the scan radius of this scanner',
+    }),
+} as const;
+
+type SaveData = {
+    v: 1;
+    scanned: ScannedTilesDataByFaction;
+};
+
+export class ScannerSystem extends UnitSystem<ScannerData, SaveData> {
+    private scannedTilesByFaction: ScannedTilesDataByFaction = new Map();
+
+    constructor(
+        opts: UnitSystemOrchestrator,
+        { nav, resources, terraIncognita }: ScannerDeps['world'],
+        positions: PositionalSystemController,
+        inventory: InventoryController,
+        battery: EnergySystemController,
+        markers: MarkersSystemController,
+    ) {
+        super(SCANNER_SYSTEM_NAME, opts);
+
+        if (this.loadedState) {
+            this.scannedTilesByFaction = this.loadedState.scanned;
+        }
+
+        this.registerFn(SCANNER_FNS.find_closest_unscanned).implement((_, ctx) => {
             const scanner = ctx.systemData;
             const location = positions.getEffectivePosition(ctx.unitId);
             const bfs = nav.bfs<NodeId>(location);
@@ -52,16 +96,10 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            yield usfSleep(bfsSleepTime(bfs.getVisited()));
-            return { type: 'position', value: result };
-        },
-    },
-    closest_surface_deposit: {
-        description: 'Returns the location of the closest surface resource deposit',
-        argNames: [],
-        argTypes: [],
-        returnType: 'position',
-        *body(_, ctx, { positions, world: { nav, resources, terraIncognita } }) {
+            return fnReturn({ type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
+        });
+
+        this.registerFn(SCANNER_FNS.closest_surface_deposit).implement((_, ctx) => {
             const location = positions.getEffectivePosition(ctx.unitId);
             const bfs = nav.bfs<NodeId>(location);
             let result = location;
@@ -82,29 +120,22 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            yield usfSleep(bfsSleepTime(bfs.getVisited()));
-            return { type: 'position', value: result };
-        },
-    },
+            return fnReturn({ type: 'position', value: result }, bfsSleepTime(bfs.getVisited()));
+        });
 
-    scan: {
-        description: 'Scans for nearby resource deposits',
-        argNames: [],
-        argTypes: [],
-        returnType: 'number',
-        *body(_, ctx, { positions, world, battery, markers }) {
+        this.registerFn(SCANNER_FNS.scan).implement((_, ctx) => {
             const scanner = ctx.systemData;
             let nFound = 0;
             const location = positions.getEffectivePosition(ctx.unitId);
 
-            const bfs = world.nav.bfs(location);
+            const bfs = nav.bfs(location);
             while (!bfs.isDone() && bfs.nextNodeToVisit().depth <= scanner.maxRadius) {
                 if (!battery.withdraw(ctx.unitId, 1)) {
                     break;
                 }
 
                 const loc = bfs.nextNodeToVisit().node;
-                const newDeposits = world.resources.discover(loc, ResourceTier.Tier2);
+                const newDeposits = resources.discover(loc, ResourceTier.Tier2);
 
                 if (newDeposits.length > 0) {
                     markers.getMapForUnit(ctx.unitId).set({
@@ -132,51 +163,24 @@ export const SCANNER_FNS: CallableUnitSystemFunctions<ScannerData, ScannerDeps> 
                 bfs.expand();
             }
 
-            yield usfSleep(bfsSleepTime(bfs.getVisited()));
-            return { type: 'number', value: nFound };
-        },
-    },
+            return fnReturn({ type: 'number', value: nFound }, bfsSleepTime(bfs.getVisited()));
+        });
 
-    radius: {
-        description: 'Returns the scan radius of this scanner',
-        argNames: [],
-        argTypes: [],
-        returnType: 'number',
-        *body(_, ctx) {
-            return { type: 'number', value: ctx.systemData.maxRadius };
-        },
-    },
-};
+        this.registerFn(SCANNER_FNS.scan).implement((_, ctx) =>
+            fnReturn({ type: 'number', value: ctx.systemData.maxRadius }),
+        );
+    }
 
-export function createScannerSystem(
-    opts: CreateUnitSystemCommonOptions,
-    world: ScannerDeps['world'],
-    positions: PositionalSystemController,
-    inventory: InventoryController,
-    battery: EnergySystemController,
-    markers: MarkersSystemController,
-) {
-    const scannedTilesByFaction: ScannedTilesDataByFaction = new Map();
+    protected initialData({ config, faction }: SpawnOptions): ScannerData | null {
+        if (!config.scanner) {
+            return null;
+        }
 
-    return createUnitSystem<ScannerData, CallableUnitSystemMessages>(opts, {
-        name: SCANNER_SYSTEM_NAME,
-        initialData({ config, faction }) {
-            if (!config.scanner) {
-                return null;
-            }
+        const scannedTiles = this.scannedTilesByFaction.getOrInsertComputed(faction, emptyScannedData);
+        return { maxRadius: 3, scannedTiles };
+    }
 
-            const scannedTiles = scannedTilesByFaction.getOrInsertComputed(faction, emptyScannedData);
-            return { maxRadius: 3, scannedTiles };
-        },
-
-        messages: {
-            ...usfHandlers<ScannerData, ScannerDeps>(SCANNER_FNS, {
-                world,
-                inventory,
-                battery,
-                positions,
-                markers,
-            }),
-        },
-    });
+    protected onSave(): SaveData {
+        return { v: 1, scanned: this.scannedTilesByFaction };
+    }
 }

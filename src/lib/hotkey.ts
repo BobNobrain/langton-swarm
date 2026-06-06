@@ -188,8 +188,6 @@ function shouldSkipKeydown(ev: KeyboardEvent): boolean {
                 return false;
             }
 
-            console.log('HOTKEY SKIPPED FOR INPUT', ev.code);
-
             return true;
 
         case 'BUTTON':

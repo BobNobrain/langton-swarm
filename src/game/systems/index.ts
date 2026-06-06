@@ -1,43 +1,41 @@
 import { sequentialId } from '@/lib/ids';
+import type { SavedStatePartition } from '@/lib/SavedState';
 import type { UnitConfiguration } from '../config';
 import type { GameFactions } from '../factions';
 import type { GameLoop } from '../loop';
 import type { GameNots } from '../nots';
 import type { UnitCommand, UnitCommandCall, UnitId } from '../types';
 import type { GameWorld } from '../world';
-import { createAssemblerSystem, type AssemblerSystemController } from './assembler';
-import { createCPUSystem, type CPUData, type CPUSystemController } from './cpu';
-import { createDiscoverySystem } from './discovery';
-import { createDrillSystem } from './drill';
-import { createEnergySystem, type EnergySystemController } from './energy';
-import { createEngineSystem } from './engine';
+import { AssemblerSystem, type AssemblerSystemController } from './assembler';
+import { CPUSystem, type CPUData, type CPUSystemController } from './cpu';
+import { DiscoverySystem } from './discovery';
+import { DrillSystem } from './drill';
+import { EnergySystem, type EnergySystemController } from './energy';
+import { EngineSystem } from './engine';
 import { createUnitEvent, type UnitEvent, type UnitEventController } from './events';
-import { createInventorySystem, type InventoryController } from './inventory';
-import { createNavigatorSystem, type NavigatorSystemData } from './navigator';
-import { createPositionalSystem, type PositionalSystemController } from './positions';
-import { createScannerSystem, type ScannerData } from './scanner';
-import { createSignalsSystem } from './signals';
-import { createSolarSystem } from './solar';
-import { createStationariesSystem, type StationariesSystemController } from './stationaries';
+import { FactionsSystem, type FactionSystemController } from './faction';
+import { InventorySystem, type InventoryController } from './inventory';
+import { MarkersSystem, type MarkersSystemController } from './markers';
+import { NavigatorSystem, type NavigatorSystemData } from './navigator';
+import { PositionalSystem, type PositionalSystemController } from './positions';
+import { ScannerSystem, type ScannerData } from './scanner';
+import { ConstructionSitesSystem, type ConstructionSitesController } from './sites';
+import { SolarSystem } from './solar';
+import { StationariesSystem, type StationariesSystemController } from './stationaries';
 import type {
-    CreateUnitSystemCommonOptions,
+    UnitSystemOrchestrator,
+    DespawnedEventPayload,
     DespawnFn,
     SendMessage,
     SpawnFn,
     SpawnOptions,
-    UnitSystem,
     UnitSystemMessage,
-    UnitSystemPublic,
 } from './types';
-import { createMarkers, type MarkersSystemController } from './markers';
-import { createFactionsSystem, type FactionSystemController } from './faction';
-import { createConstructionSitesSystem, type ConstructionSitesController } from './sites';
+import type { UnitSystem } from './UnitSystem';
 
 export type GameUnitSystems = {
-    readonly signals: Pick<ReturnType<typeof createSignalsSystem>, 'getUnitIdsSignal'>;
-
     readonly spawned: UnitEvent<SpawnOptions>;
-    readonly despawned: UnitEvent<unknown>;
+    readonly despawned: UnitEvent<DespawnedEventPayload>;
 
     readonly energy: EnergySystemController;
     readonly positions: PositionalSystemController;
@@ -46,8 +44,8 @@ export type GameUnitSystems = {
     readonly inventory: InventoryController;
     readonly assembler: AssemblerSystemController;
     readonly cpu: CPUSystemController;
-    readonly navigator: UnitSystemPublic<NavigatorSystemData>;
-    readonly scanner: UnitSystemPublic<ScannerData>;
+    readonly navigator: NavigatorSystem;
+    readonly scanner: ScannerSystem;
     readonly factions: FactionSystemController;
     readonly sites: ConstructionSitesController;
 
@@ -56,6 +54,7 @@ export type GameUnitSystems = {
     spawn: SpawnFn;
     despawn: DespawnFn;
 
+    all(): UnitId[];
     queryCommands(unitId: UnitId): UnitCommand[];
     executeCommand(unitId: UnitId, call: UnitCommandCall): void;
     executeCommandMany(unitIds: UnitId[], call: UnitCommandCall): void;
@@ -63,24 +62,57 @@ export type GameUnitSystems = {
     getSpawnTime(id: UnitId): number;
 };
 
+type MessageQueueItem = { to: string; message: UnitSystemMessage; notUntil?: number };
+
+type SaveData = {
+    v: 1;
+    mq: MessageQueueItem[];
+    us: {
+        id: UnitId;
+        st: number;
+        cfg: UnitConfiguration;
+    }[];
+};
+
 export function createGameSystems(
     world: GameWorld,
     logicTick: GameLoop,
     gameFactions: GameFactions,
     nots: GameNots,
+    savedState: SavedStatePartition,
 ): GameUnitSystems {
     const systems: Record<string, UnitSystem<unknown>> = {};
-    const messageQueue: { to: string; message: UnitSystemMessage; notUntil?: number }[] = [];
+    const messageQueue: MessageQueueItem[] = [];
     const events: UnitEventController[] = [];
 
     const spawnedEvent = createUnitEvent<SpawnOptions>();
     events.push(spawnedEvent);
-    const despawnedEvent = createUnitEvent<null>();
+    const despawnedEvent = createUnitEvent<DespawnedEventPayload>();
     events.push(despawnedEvent);
 
     const unitId = sequentialId<UnitId>();
     const unitSpawnTimes: Record<UnitId, number> = {};
     const unitConfigs: Record<UnitId, UnitConfiguration> = {};
+
+    const save = savedState.value<SaveData>('systems');
+    const loaded = save.get();
+    if (loaded) {
+        messageQueue.push(...loaded.mq);
+        for (const unitData of loaded.us) {
+            const id = unitData.id;
+            unitId.lock(id);
+            unitSpawnTimes[id] = unitData.st;
+            unitConfigs[id] = unitData.cfg;
+        }
+    }
+    save.onSave(() => {
+        const data: SaveData = { v: 1, mq: messageQueue.slice(), us: [] };
+        for (const unitIdStr of Object.keys(unitSpawnTimes)) {
+            const unitId = Number(unitIdStr) as UnitId;
+            data.us.push({ id: unitId, st: unitSpawnTimes[unitId], cfg: unitConfigs[unitId] });
+        }
+        return data;
+    });
 
     const sendMessage: SendMessage = (to, message, delay) => {
         messageQueue.push({ to, message, notUntil: delay ? logicTick.getCurrentTick() + delay : undefined });
@@ -105,6 +137,9 @@ export function createGameSystems(
     const despawn: DespawnFn = (unitId) => {
         console.log('[DEBUG] despawn:', unitId);
 
+        const factionId = factions.getFaction(unitId);
+        const config = unitConfigs[unitId];
+
         for (const system of Object.values(systems)) {
             system.remove(unitId);
         }
@@ -116,61 +151,42 @@ export function createGameSystems(
             ev.clear(unitId);
         }
 
-        despawnedEvent.pub({ unitId, payload: null });
+        despawnedEvent.pub({ unitId, payload: { faction: factionId, config } });
     };
 
-    const opts: CreateUnitSystemCommonOptions = {
+    const orc: UnitSystemOrchestrator = {
         sendMessage,
         events,
         systems,
         logicTick,
-    };
-
-    const energy = createEnergySystem(opts);
-    const positions = createPositionalSystem(opts, logicTick);
-    const factions = createFactionsSystem(opts, gameFactions);
-    const markers = createMarkers(opts, positions.controller, world.nav);
-    const cpu = createCPUSystem(opts, energy.controller, nots);
-    const engine = createEngineSystem(opts, { world, battery: energy.controller, positions: positions.controller });
-    const stationaries = createStationariesSystem(opts, { despawn });
-    const inventory = createInventorySystem(opts, stationaries.controller, positions.controller, spawn, despawn);
-    const sites = createConstructionSitesSystem(
-        opts,
-        inventory.controller,
-        positions.controller,
-        factions.controller,
+        savedState: savedState.partition('data'),
         spawn,
         despawn,
-    );
-    const assembler = createAssemblerSystem(
-        opts,
-        spawn,
-        positions.controller,
-        inventory.controller,
-        factions.controller,
-        sites.controller,
-    );
-    const signals = createSignalsSystem(opts);
-    const drill = createDrillSystem(opts, world, positions.controller, inventory.controller, energy.controller);
-    const scanner = createScannerSystem(
-        opts,
-        world,
-        positions.controller,
-        inventory.controller,
-        energy.controller,
-        markers.controller,
-    );
-    const navigator = createNavigatorSystem(opts, { world, positions: positions.controller });
-    const discovery = createDiscoverySystem(opts, world, positions.controller);
-    const solar = createSolarSystem(opts, world, positions.controller, energy.controller);
+    };
+
+    const energy = new EnergySystem(orc);
+    const positions = new PositionalSystem(orc, logicTick);
+    const factions = new FactionsSystem(orc, gameFactions);
+    const markers = new MarkersSystem(orc, positions, world.nav, factions);
+    const cpu = new CPUSystem(orc, energy, nots);
+    const engine = new EngineSystem(orc, { world, battery: energy, positions: positions });
+    const stationaries = new StationariesSystem(orc);
+    const inventory = new InventorySystem(orc, stationaries, positions);
+    const sites = new ConstructionSitesSystem(orc, inventory, positions, factions);
+    const assembler = new AssemblerSystem(orc, positions, inventory, factions, sites);
+    const drill = new DrillSystem(orc, world, positions, inventory, energy);
+    const scanner = new ScannerSystem(orc, world, positions, inventory, energy, markers);
+    const navigator = new NavigatorSystem(orc, { world, positions: positions });
+    const discovery = new DiscoverySystem(orc, world, positions, gameFactions);
+    const solar = new SolarSystem(orc, world, positions, energy);
 
     logicTick.addGameTask((tick) => {
         // main unit update loop
 
         // tick all the components, in order
         solar.tick();
-        cpu.system.tick();
-        inventory.system.tick();
+        cpu.tick();
+        inventory.tick();
         discovery.tick();
 
         // process all the messages to activate the components
@@ -194,7 +210,6 @@ export function createGameSystems(
     });
 
     return {
-        signals,
         debug: { systems, messageQueue },
         spawned: spawnedEvent,
         despawned: despawnedEvent,
@@ -202,33 +217,29 @@ export function createGameSystems(
         spawn,
         despawn,
 
-        energy: energy.controller,
-        positions: positions.controller,
-        stationaries: stationaries.controller,
-        factions: factions.controller,
-        markers: markers.controller,
-        inventory: inventory.controller,
-        assembler: assembler.controller,
-        cpu: cpu.controller,
+        energy: energy,
+        positions: positions,
+        stationaries: stationaries,
+        factions: factions,
+        markers: markers,
+        inventory: inventory,
+        assembler: assembler,
+        cpu: cpu,
         navigator,
         scanner,
-        sites: sites.controller,
+        sites: sites,
 
         queryCommands(unitId) {
-            if (cpu.system.has(unitId)) {
-                return cpu.system.queryCommands(unitId);
-            }
-
-            return [];
+            return cpu.queryCommands(unitId);
         },
 
         executeCommand(unitId, call) {
-            cpu.system.handleCommand(unitId, call);
+            cpu.executeCommand(unitId, call);
         },
 
         executeCommandMany(unitIds, call) {
             for (const unitId of unitIds) {
-                cpu.system.handleCommand(unitId, call);
+                cpu.executeCommand(unitId, call);
             }
         },
 
@@ -238,11 +249,14 @@ export function createGameSystems(
         getSpawnTime(id) {
             return unitSpawnTimes[id] ?? -1;
         },
+
+        all() {
+            return Object.keys(unitSpawnTimes).map(Number) as UnitId[];
+        },
     };
 }
 
-export type { CPUData, NavigatorSystemData, ScannerData };
-export { UnitModelType } from './signals';
+export type { CPUData, NavigatorSystemData, ScannerData, DespawnedEventPayload };
 export { type InventoryController, type InventoryData } from './inventory';
 export type { AssemblerData } from './assembler';
 export type { DynamicPosition as DynamicLocation, PositionalSystemController } from './positions';

@@ -2,17 +2,11 @@ import type { NavMesh } from '@/lib/NavMesh';
 import { createEvent, type Event } from '@/lib/sparse';
 import { FactionId } from '../factions';
 import { NodeId, type UnitId } from '../types';
-import { MarkersMap } from './MarkersMap';
+import { MarkersMap, type MarkerData, type MarkersMapSerialized } from './MarkersMap';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
-import {
-    usfSleep,
-    usfHandlers,
-    typedUSF,
-    type CallableUnitSystemFunctions,
-    type CallableUnitSystemMessages,
-} from './func';
+import type { UnitSystemOrchestrator } from './types';
+import { fnReturn, fnSleep, UnitSystem } from './UnitSystem';
+import type { FactionSystemController } from './faction';
 
 export const MARKERS_SYSTEM_NAME = 'markers';
 const MAX_SEARCH_DEPTH = 10;
@@ -43,76 +37,126 @@ state :roaming
 markers.set_in_radius(navigator.location, scanner.radius, "_scanned")
  */
 
-export const MARKERS_FNS: CallableUnitSystemFunctions<
-    MarkersSystemData,
-    { updated: MarkersSystemController['updated']; positions: PositionalSystemController; nav: NavMesh }
-> = {
-    set: typedUSF({
-        description: 'Creates or rewrites a map marker at a specified location',
+const newMarkersMap = () => new MarkersMap();
+
+type SaveData = {
+    v: 1;
+    byFaction: Map<FactionId, MarkersMapSerialized>;
+};
+
+export const MARKERS_FNS = {
+    set: UnitSystem.declareFn({
+        name: 'set',
         args: { location: 'position', type: 'string' },
         returnType: 'flag',
-        *body(args, ctx, { updated }) {
-            const { markers } = ctx.systemData;
-            const location = args.location.value;
-            const type = args.type.value;
-            const author = ctx.unitId;
-
-            const existed = markers.set({ location: location, type: type, author });
-            updated.trigger(markers, new Set([location]), type);
-
-            return { type: 'flag', value: existed };
-        },
+        description: 'Creates or rewrites a map marker at a specified location',
     }),
-    set_in_radius: typedUSF({
-        description: 'Creates or rewrites markers on every tile around the center in specified radius',
+    set_in_radius: UnitSystem.declareFn({
+        name: 'set_in_radius',
         args: {
             location: 'position',
             radius: 'number',
             type: 'string',
         },
         returnType: 'number',
-        *body(args, ctx, { nav, updated }) {
-            const { markers } = ctx.systemData;
-            const location = args.location.value;
-            const radius = args.radius.value;
-            const type = args.type.value;
-            const author = ctx.unitId;
-            const tilesAffected = new Set<NodeId>();
-
-            if (radius > 0) {
-                const bfs = nav.bfs(location);
-                bfs.expandToDepth(Math.min(radius, 6));
-
-                for (const tile of bfs.getVisited().keys()) {
-                    markers.set({ location: tile, type, author });
-                    yield usfSleep();
-                    tilesAffected.add(tile);
-                }
-
-                updated.trigger(markers, tilesAffected, type);
-            }
-
-            return { type: 'number', value: tilesAffected.size };
-        },
+        description: 'Creates or rewrites markers on every tile around the center in specified radius',
     }),
 
-    is_present: typedUSF({
-        description: 'Checks if a marker of given type exists at specified location',
+    is_present: UnitSystem.declareFn({
+        name: 'is_present',
         args: { location: 'position', type: 'string' },
         returnType: 'flag',
-        *body(args, ctx) {
-            const { markers } = ctx.systemData;
-            const exists = markers.get(args.location.value, args.type.value) !== null;
-            return { type: 'flag', value: exists };
-        },
+        description: 'Checks if a marker of given type exists at specified location',
     }),
-    find_closest: typedUSF({
-        description:
-            'Finds closest marker of a given type and returns its location (markers too far away may be not found)',
+    find_closest: UnitSystem.declareFn({
+        name: 'find_closest',
         args: { type: 'string' },
         returnType: 'position',
-        *body(args, ctx, { positions, nav }) {
-            const { markers } = ctx.systemData;
+        description:
+            'Finds closest marker of a given type and returns its location (markers too far away may be not found)',
+    }),
+    find_closest_without: UnitSystem.declareFn({
+        name: 'find_closest_without',
+        args: { type: 'string' },
+        returnType: 'position',
+        description: 'Finds closest location where a given marker type does not exist',
+    }),
+} as const;
+
+export class MarkersSystem extends UnitSystem<true, SaveData> implements MarkersSystemController {
+    readonly updated: Event<(map: MarkersMap, at: Set<NodeId>, type: string) => void> = createEvent();
+    private markersByFaction = new Map<FactionId, MarkersMap>();
+
+    constructor(
+        opts: UnitSystemOrchestrator,
+        positions: PositionalSystemController,
+        nav: NavMesh,
+        private factions: FactionSystemController,
+    ) {
+        super(MARKERS_SYSTEM_NAME, opts);
+
+        if (this.loadedState) {
+            for (const [fid, serialized] of this.loadedState.byFaction.entries()) {
+                this.markersByFaction.set(fid, MarkersMap.deserialize(serialized));
+            }
+        }
+
+        this.registerFn(MARKERS_FNS.set).implement(({ args }, ctx) => {
+            const markers = this.getMapForUnit(ctx.unitId);
+            const location = args.location.value;
+            const type = args.type.value;
+            const author = ctx.unitId;
+
+            const existed = markers.set({ location: location, type: type, author });
+            this.updated.trigger(markers, new Set([location]), type);
+
+            return fnReturn({ type: 'flag', value: existed });
+        });
+
+        this.registerFn(MARKERS_FNS.set_in_radius).implement<{
+            markersToAdd?: MarkerData[];
+            nTotal?: number;
+        }>((state, ctx) => {
+            if (!state.markersToAdd) {
+                const location = state.args.location.value;
+                const radius = state.args.radius.value;
+                if (radius <= 0) {
+                    return fnReturn({ type: 'number', value: 0 });
+                }
+
+                const type = state.args.type.value;
+                const author = ctx.unitId;
+                const bfs = nav.bfs(location);
+                bfs.expandToDepth(Math.min(radius, 6));
+                state.markersToAdd = [];
+
+                for (const tile of bfs.getVisited().keys()) {
+                    state.markersToAdd.push({ location: tile, type, author });
+                }
+
+                state.nTotal = state.markersToAdd.length;
+                return fnSleep();
+            }
+
+            if (!state.markersToAdd.length) {
+                return fnReturn({ type: 'number', value: state.nTotal ?? 0 });
+            }
+
+            const marker = state.markersToAdd.pop()!;
+            const map = this.getMapForUnit(ctx.unitId);
+            map.set(marker);
+            this.updated.trigger(map, new Set([marker.location]), marker.type);
+            return fnSleep();
+        });
+
+        this.registerFn(MARKERS_FNS.is_present).implement(({ args }, ctx) => {
+            const markers = this.getMapForUnit(ctx.unitId);
+            const exists = markers.get(args.location.value, args.type.value) !== null;
+            return fnReturn({ type: 'flag', value: exists });
+        });
+
+        this.registerFn(MARKERS_FNS.find_closest).implement(({ args }, ctx) => {
+            const markers = this.getMapForUnit(ctx.unitId);
             const type = args.type.value;
             let result: NodeId | null = null;
             const location = positions.getEffectivePosition(ctx.unitId);
@@ -127,15 +171,11 @@ export const MARKERS_FNS: CallableUnitSystemFunctions<
                 result = found.location;
             }
 
-            return { type: 'position', value: result ?? location };
-        },
-    }),
-    find_closest_without: typedUSF({
-        description: 'Finds closest location where a given marker type does not exist',
-        args: { type: 'string' },
-        returnType: 'position',
-        *body(args, ctx, { positions, nav }) {
-            const { markers } = ctx.systemData;
+            return fnReturn({ type: 'position', value: result ?? location });
+        });
+
+        this.registerFn(MARKERS_FNS.find_closest_without).implement(({ args }, ctx) => {
+            const markers = this.getMapForUnit(ctx.unitId);
             const type = args.type.value;
             let result: NodeId | null = null;
             const location = positions.getEffectivePosition(ctx.unitId);
@@ -153,41 +193,28 @@ export const MARKERS_FNS: CallableUnitSystemFunctions<
                 }
             }
 
-            return { type: 'position', value: result ?? location };
-        },
-    }),
-};
+            return fnReturn({ type: 'position', value: result ?? location });
+        });
+    }
 
-const newMarkersMap = () => new MarkersMap();
+    getMap(faction: FactionId): MarkersMap {
+        return this.markersByFaction.getOrInsertComputed(faction, newMarkersMap);
+    }
+    getMapForUnit(unitId: UnitId): MarkersMap {
+        const fid = this.factions.getFaction(unitId);
+        return this.markersByFaction.getOrInsertComputed(fid, newMarkersMap);
+    }
 
-export function createMarkers(
-    opts: CreateUnitSystemCommonOptions,
-    positions: PositionalSystemController,
-    nav: NavMesh,
-) {
-    const markersByFaction = new Map<FactionId, MarkersMap>();
+    protected initialData(): true | null {
+        return true;
+    }
 
-    const controller: MarkersSystemController = {
-        getMap(faction) {
-            return markersByFaction.getOrInsertComputed(faction, newMarkersMap);
-        },
-        getMapForUnit(unitId) {
-            return system.getData(unitId)!.markers;
-        },
-        updated: createEvent(),
-    };
+    protected onSave(): SaveData {
+        const serialized = new Map<FactionId, MarkersMapSerialized>();
+        for (const [fid, map] of this.markersByFaction.entries()) {
+            serialized.set(fid, map.serialize());
+        }
 
-    const system = createUnitSystem<MarkersSystemData, CallableUnitSystemMessages>(opts, {
-        name: MARKERS_SYSTEM_NAME,
-
-        initialData({ faction }) {
-            return { markers: markersByFaction.getOrInsertComputed(faction, newMarkersMap) };
-        },
-
-        messages: {
-            ...usfHandlers(MARKERS_FNS, { updated: controller.updated, positions, nav }),
-        },
-    });
-
-    return { system, controller };
+        return { v: 1, byFaction: serialized };
+    }
 }

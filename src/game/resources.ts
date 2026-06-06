@@ -71,7 +71,8 @@ export class PlanetaryResources {
             }
 
             deposit.amount -= amount;
-            result.alter(deposit.resource, amount);
+            InventoryDelta.alter(result, deposit.resource, amount);
+            break;
         }
 
         if (result.size > 0) {

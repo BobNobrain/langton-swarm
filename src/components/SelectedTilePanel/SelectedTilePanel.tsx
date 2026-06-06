@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, onMount, Show, type Component } from 'solid-js';
 import { ResourceDeposit, ResourceTier } from '@/game';
-import { Inventory } from '@/game/inventory';
+import { InventoryDelta } from '@/game/inventory';
 import type { MarkerData } from '@/game/systems';
 import { useGame } from '@/gameContext';
 import { createEventListener } from '@/hooks/events';
@@ -64,17 +64,17 @@ export const SelectedTilePanel: Component = () => {
             return null;
         }
 
-        const surfaceDeposits = Inventory.empty();
-        const deepDeposits = Inventory.empty();
+        const surfaceDeposits = InventoryDelta.empty();
+        const deepDeposits = InventoryDelta.empty();
 
         for (const deposit of getDeposits()) {
             switch (deposit.tier) {
                 case ResourceTier.Tier1:
-                    surfaceDeposits.alter(deposit.resource, deposit.amount);
+                    InventoryDelta.alter(surfaceDeposits, deposit.resource, deposit.amount);
                     break;
 
                 case ResourceTier.Tier2:
-                    deepDeposits.alter(deposit.resource, deposit.amount);
+                    InventoryDelta.alter(deepDeposits, deposit.resource, deposit.amount);
                     break;
             }
         }

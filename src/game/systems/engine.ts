@@ -1,16 +1,9 @@
 import { getEnergyPerMove, getTicksPerMove } from '../config';
 import type { GameWorld } from '../world';
 import type { EnergySystemController } from './energy';
-import {
-    usfSleep,
-    usfHandlers,
-    typedUSF,
-    type CallableUnitSystemFunctions,
-    type CallableUnitSystemMessages,
-} from './func';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { fnReturn, UnitSystem } from './UnitSystem';
 
 type EngineData = {
     ticksPerMove: number;
@@ -25,12 +18,20 @@ type EngineDeps = {
 
 export const ENGINE_SYSTEM_NAME = 'engine';
 
-export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
-    move: typedUSF({
-        description: 'Commands the unit to move to a specified position (must be a neighbouring tile)',
+export const ENGINE_FNS = {
+    move: UnitSystem.declareFn({
+        name: 'move',
         args: { to: 'position' },
         returnType: 'flag',
-        *body(args, ctx, { world: { nav }, battery, positions }) {
+        description: 'Commands the unit to move to a specified position (must be a neighbouring tile)',
+    }),
+} as const;
+
+export class EngineSystem extends UnitSystem<EngineData> {
+    constructor(opts: UnitSystemOrchestrator, { battery, positions, world: { nav } }: EngineDeps) {
+        super(ENGINE_SYSTEM_NAME, opts);
+
+        this.registerFn(ENGINE_FNS.move).implement(({ args }, ctx) => {
             const currentPosition = positions.getEffectivePosition(ctx.unitId);
             const engine = ctx.systemData;
             const destination = args.to.value;
@@ -41,30 +42,20 @@ export const ENGINE_FNS: CallableUnitSystemFunctions<EngineData, EngineDeps> = {
 
             if (success) {
                 positions.move(ctx.unitId, destination, engine.ticksPerMove);
-                yield usfSleep(engine.ticksPerMove);
             }
 
-            return { type: 'flag', value: success };
-        },
-    }),
-};
+            return fnReturn({ type: 'flag', value: success }, success ? engine.ticksPerMove : 0);
+        });
+    }
 
-export function createEngineSystem(options: CreateUnitSystemCommonOptions, deps: EngineDeps) {
-    return createUnitSystem<EngineData, CallableUnitSystemMessages>(options, {
-        name: ENGINE_SYSTEM_NAME,
-        messages: {
-            ...usfHandlers(ENGINE_FNS, deps),
-        },
+    protected initialData({ config }: SpawnOptions): EngineData | null {
+        if (!config.engine) {
+            return null;
+        }
 
-        initialData({ config }) {
-            if (!config.engine) {
-                return null;
-            }
-
-            return {
-                ticksPerMove: getTicksPerMove(config),
-                powerPerMove: getEnergyPerMove(config),
-            };
-        },
-    });
+        return {
+            ticksPerMove: getTicksPerMove(config),
+            powerPerMove: getEnergyPerMove(config),
+        };
+    }
 }

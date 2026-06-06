@@ -45,6 +45,7 @@ export type BlueprintDeck = {
     getConfiguration(id: BlueprintId, version?: number): UnitConfiguration | null;
     findByName(name: string): BlueprintController | null;
     findByUnitId(unitId: UnitId): { bp: BlueprintController; v: number } | null;
+    registerUnit(unitId: UnitId, bpId: BlueprintId, v: number): void;
 };
 
 const blueprintId = sequentialId<BlueprintId>();
@@ -138,6 +139,16 @@ export function createBlueprintDeck(owner: FactionId, savedState: SavedStateValu
             }
             return null;
         },
+
+        registerUnit(unitId, bpId, v) {
+            const blueprint = rCards()[bpId];
+            if (!blueprint) {
+                return;
+            }
+
+            blueprint.registerUnit(unitId, v);
+            blueprint.lockVersion(v);
+        },
     };
 }
 
@@ -164,6 +175,13 @@ function createBlueprintController({
     });
 
     const versionNumbersByUnitId: Record<UnitId, number> = {};
+
+    for (const [vStr, unitIds] of Object.entries(versionUnits)) {
+        const v = Number(vStr);
+        for (const unitId of unitIds) {
+            versionNumbersByUnitId[unitId] = v;
+        }
+    }
 
     return {
         id,

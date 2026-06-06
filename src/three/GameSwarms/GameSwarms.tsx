@@ -1,5 +1,5 @@
 import { For, type Component } from 'solid-js';
-import { type FactionId, type UnitConfiguration, type UnitId } from '@/game';
+import { type FactionId, type NodeId, type UnitConfiguration, type UnitId } from '@/game';
 import { isConstructionSite, isPile } from '@/game/config';
 import { useGame } from '@/gameContext';
 import { createUnitEventAllListener } from '@/hooks/events';
@@ -65,7 +65,31 @@ export const GameSwarms: Component = () => {
         [UnitModelType.Unknown]: {},
     };
 
-    gameTick.addGameTask((tick) => {
+    for (const unitId of units.all()) {
+        const cfg = units.getConfig(unitId);
+        if (!cfg) {
+            continue;
+        }
+
+        const modelType = getUnitModelType(cfg);
+        const faction = units.factions.getFaction(unitId);
+
+        // TODO: there's a better way to do this, implement when there's time for it
+        if (FACTIONLESS_MODELS.includes(modelType as never)) {
+            factionlessStates[modelType as (typeof FACTIONLESS_MODELS)[number]][unitId] = { location: 0 as NodeId };
+        } else {
+            const swarms = allStates.getOrInsertComputed(faction, initialSwarmData);
+
+            for (const swarm of swarms) {
+                if (swarm.model === modelType) {
+                    swarm.objects[unitId] = { location: 0 as NodeId };
+                    break;
+                }
+            }
+        }
+    }
+
+    const syncAll = (tick: number) => {
         for (const model of FACTIONLESS_MODELS) {
             syncPositions(units.positions, factionlessStates[model], tick);
         }
@@ -75,7 +99,10 @@ export const GameSwarms: Component = () => {
                 syncPositions(units.positions, swarm.objects, tick);
             }
         }
-    });
+    };
+
+    syncAll(gameTick.getCurrentTick());
+    gameTick.addGameTask(syncAll);
 
     createUnitEventAllListener({
         ev: units.spawned,
@@ -121,9 +148,7 @@ export const GameSwarms: Component = () => {
             </For>
             <For each={factions.rFactions()}>
                 {(faction) => {
-                    const states = allStates.getOrInsertComputed(faction.id, () =>
-                        FACTION_MODELS.map((umt): SwarmData => ({ model: umt, objects: {} })),
-                    );
+                    const states = allStates.getOrInsertComputed(faction.id, initialSwarmData);
 
                     return (
                         <For each={states}>
@@ -161,4 +186,8 @@ function getUnitModelType(config: UnitConfiguration): UnitModelType {
     }
 
     return UnitModelType.Unknown;
+}
+
+function initialSwarmData(): SwarmData[] {
+    return FACTION_MODELS.map((umt): SwarmData => ({ model: umt, objects: {} }));
 }

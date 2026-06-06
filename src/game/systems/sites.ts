@@ -8,8 +8,8 @@ import { createUnitEvent, type UnitEvent } from './events';
 import type { FactionSystemController } from './faction';
 import type { InventoryController } from './inventory';
 import type { PositionalSystemController } from './positions';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions, DespawnFn, SpawnFn, SpawnOptions } from './types';
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem, type UnitSystemTickContext } from './UnitSystem';
 
 export type ConstructionSiteData = {
     target: UnitConfiguration;
@@ -17,22 +17,22 @@ export type ConstructionSiteData = {
     pointsRequired: number;
     pointsSpent: number;
     deckInfo: {
-        deck: BlueprintDeck;
         blueprint: BlueprintId;
         version?: number;
     } | null;
+    location: NodeId;
 };
 
 export type ConstructionSitesController = {
     spawnFromDeck(
-        options: Omit<SpawnOptions, 'config'>,
+        options: Omit<SpawnOptions, 'config' | 'blueprint'>,
         deck: BlueprintDeck,
         targetBlueprint: BlueprintId,
         targetVersion?: number,
     ): UnitId | null;
     findByLocation(location: NodeId): UnitId | null;
     isEnoughMaterials(site: UnitId): boolean;
-    contributeAsMuchMaterialsAsPossible(opts: { site: UnitId; from: UnitId }): void;
+    contributeAsMuchMaterialsAsPossible(opts: { site: UnitId; from: UnitId }): boolean;
     contributeTime(unitId: UnitId, points: number): { ok: boolean; done?: boolean };
 
     getProgress(unitId: UnitId): number;
@@ -41,149 +41,166 @@ export type ConstructionSitesController = {
     progress: UnitEvent<number>;
 };
 
-export function createConstructionSitesSystem(
-    opts: CreateUnitSystemCommonOptions,
-    inventory: InventoryController,
-    positions: PositionalSystemController,
-    factions: FactionSystemController,
-    spawn: SpawnFn,
-    despawn: DespawnFn,
-) {
-    const byLocation = new Map<NodeId, UnitId>();
+type SaveData = {
+    v: 1;
+    byLoc: Map<NodeId, UnitId>;
+};
 
-    const system = createUnitSystem<ConstructionSiteData, {}>(opts, {
-        name: 'sites',
+export class ConstructionSitesSystem
+    extends UnitSystem<ConstructionSiteData, SaveData>
+    implements ConstructionSitesController
+{
+    readonly progress: UnitEvent<number>;
+    private byLocation = new Map<NodeId, UnitId>();
 
-        initialData(options, unitId) {
-            if (!options.config.construction) {
-                return null;
-            }
+    constructor(
+        opts: UnitSystemOrchestrator,
+        private inventory: InventoryController,
+        private positions: PositionalSystemController,
+        private factions: FactionSystemController,
+    ) {
+        super('sites', opts);
 
-            byLocation.set(options.at, unitId);
+        if (this.loadedState) {
+            this.byLocation = this.loadedState.byLoc;
+        }
 
-            const target = options.config.construction;
-            return {
-                target,
-                matsRequired: InventoryDelta.fromMany(getConstructionCosts(target)),
-                pointsSpent: 0,
-                pointsRequired: getConstructionPoints(target),
-                deckInfo: null,
-            };
-        },
+        this.registerEvent((this.progress = createUnitEvent()));
+    }
 
-        finalize(ctx) {
-            byLocation.delete(positions.getEffectivePosition(ctx.unitId));
-        },
-    });
+    spawnFromDeck(
+        options: Omit<SpawnOptions, 'config' | 'blueprint'>,
+        deck: BlueprintDeck,
+        targetBlueprint: BlueprintId,
+        targetVersion?: number,
+    ): UnitId | null {
+        const targetConfig = deck.getConfiguration(targetBlueprint, targetVersion);
+        if (!targetConfig) {
+            return null;
+        }
 
-    const controller: ConstructionSitesController = {
-        progress: createUnitEvent(),
+        const unitId = this.orchestrator.spawn({
+            ...options,
+            config: constructionSitePreset(targetConfig),
+            blueprint: null,
+        });
 
-        spawnFromDeck(options, deck, targetBlueprint, targetVersion) {
-            const targetConfig = deck.getConfiguration(targetBlueprint, targetVersion);
-            if (!targetConfig) {
-                return null;
-            }
+        this.getData(unitId)!.deckInfo = {
+            blueprint: targetBlueprint,
+            version: targetVersion,
+        };
 
-            const unitId = spawn({
-                ...options,
-                config: constructionSitePreset(targetConfig),
-            });
+        return unitId;
+    }
+    findByLocation(location: NodeId): UnitId | null {
+        return this.byLocation.get(location) ?? null;
+    }
+    isEnoughMaterials(site: UnitId): boolean {
+        const data = this.getData(site);
+        if (!data) {
+            return false;
+        }
 
-            system.getData(unitId)!.deckInfo = {
-                deck,
-                blueprint: targetBlueprint,
-                version: targetVersion,
-            };
+        const provided = InventoryDelta.fromMany(this.inventory.getInfo(site)!.contents);
+        const required = data.matsRequired;
+        return InventoryDelta.fulfillment(required, provided) >= 1;
+    }
+    contributeAsMuchMaterialsAsPossible({ site, from }: { site: UnitId; from: UnitId }): boolean {
+        const data = this.getData(site);
+        if (!data) {
+            return false;
+        }
 
-            return unitId;
-        },
+        const provided = InventoryDelta.fromMany(this.inventory.getInfo(site)!.contents);
+        const required = data.matsRequired;
+        const missing = InventoryDelta.combine(required, provided, 1, -1);
 
-        findByLocation(location) {
-            return byLocation.get(location) ?? null;
-        },
+        this.inventory.transfer({
+            from,
+            to: site,
+            amounts: missing.content,
+            strategy: 'max',
+        }) ?? {};
 
-        isEnoughMaterials(site) {
-            const data = system.getData(site);
-            if (!data) {
-                return false;
-            }
+        return true;
+    }
+    contributeTime(unitId: UnitId, points: number): { ok: boolean; done?: boolean } {
+        const site = this.getData(unitId);
+        if (!site) {
+            return { ok: false };
+        }
 
-            const provided = InventoryDelta.fromMany(inventory.getInfo(site)!.contents);
-            const required = data.matsRequired;
-            return InventoryDelta.fulfillment(required, provided) >= 1;
-        },
+        const { pointsRequired, pointsSpent } = site;
+        const materialsProvided = InventoryDelta.fulfillment(
+            site.matsRequired,
+            InventoryDelta.fromMany(this.inventory.getInfo(unitId)!.contents),
+        );
 
-        contributeAsMuchMaterialsAsPossible({ site, from }) {
-            const data = system.getData(site);
-            if (!data) {
-                return false;
-            }
+        const newPoints = Math.min(pointsSpent + points, pointsRequired);
+        if (materialsProvided < newPoints / pointsRequired) {
+            return { ok: false };
+        }
 
-            const provided = InventoryDelta.fromMany(inventory.getInfo(site)!.contents);
-            const required = data.matsRequired;
-            const missing = InventoryDelta.combine(required, provided, 1, -1);
+        site.pointsSpent = newPoints;
+        this.progress.pub({ unitId: unitId, payload: site.pointsSpent / site.pointsRequired });
 
-            inventory.transfer({
-                from,
-                to: site,
-                amounts: missing.content,
-                strategy: 'max',
-            }) ?? {};
-            return true;
-        },
+        let done = false;
+        if (site.pointsSpent >= pointsRequired) {
+            done = true;
+            this.turnIntoTarget(unitId, site);
+        }
 
-        contributeTime(unitId, points) {
-            const site = system.getData(unitId);
-            if (!site) {
-                return { ok: false };
-            }
+        return { ok: true, done };
+    }
+    getProgress(unitId: UnitId): number {
+        const site = this.getData(unitId);
+        if (!site) {
+            return 0;
+        }
 
-            const { pointsRequired, pointsSpent } = site;
-            const materialsProvided = InventoryDelta.fulfillment(
-                site.matsRequired,
-                InventoryDelta.fromMany(inventory.getInfo(unitId)!.contents),
-            );
+        return site.pointsSpent / site.pointsRequired;
+    }
+    getMatsRequired(unitId: UnitId): InventoryDelta | null {
+        return this.getData(unitId)?.matsRequired ?? null;
+    }
 
-            const newPoints = Math.min(pointsSpent + points, pointsRequired);
-            if (materialsProvided < newPoints / pointsRequired) {
-                return { ok: false };
-            }
+    protected onSave(): SaveData {
+        return { v: 1, byLoc: this.byLocation };
+    }
 
-            site.pointsSpent = newPoints;
-            controller.progress.pub({ unitId: unitId, payload: site.pointsSpent / site.pointsRequired });
+    protected initialData({ config, at }: SpawnOptions, unitId: UnitId): ConstructionSiteData | null {
+        if (!config.construction) {
+            return null;
+        }
 
-            let done = false;
-            if (site.pointsSpent >= pointsRequired) {
-                done = true;
-                const location = positions.getEffectivePosition(unitId);
-                const faction = factions.getFaction(unitId);
-                inventory.withdraw({ from: unitId, amounts: site.matsRequired.content });
+        this.byLocation.set(at, unitId);
 
-                despawn(unitId);
+        const target = config.construction;
+        return {
+            target,
+            matsRequired: InventoryDelta.fromMany(getConstructionCosts(target)),
+            pointsSpent: 0,
+            pointsRequired: getConstructionPoints(target),
+            deckInfo: null,
+            location: at,
+        };
+    }
+    protected onFinalize(ctx: UnitSystemTickContext<ConstructionSiteData>): void {
+        this.byLocation.delete(ctx.systemData.location);
+    }
 
-                if (site.deckInfo) {
-                    spawnFromDeck(site.deckInfo.deck, spawn, location, site.deckInfo.blueprint, site.deckInfo.version);
-                } else {
-                    spawn({ at: location, config: site.target, faction });
-                }
-            }
+    private turnIntoTarget(siteId: UnitId, site: ConstructionSiteData) {
+        const location = this.positions.getEffectivePosition(siteId);
+        const faction = this.factions.getFaction(siteId);
+        this.inventory.withdraw({ from: siteId, amounts: site.matsRequired.content });
 
-            return { ok: true, done };
-        },
+        this.orchestrator.despawn(siteId);
 
-        getProgress(unitId) {
-            const site = system.getData(unitId);
-            if (!site) {
-                return 0;
-            }
-
-            return site.pointsSpent / site.pointsRequired;
-        },
-        getMatsRequired(unitId) {
-            return system.getData(unitId)?.matsRequired ?? null;
-        },
-    };
-
-    return { system, controller };
+        const deck = site.deckInfo ? this.factions.getFactionData(siteId)?.deck : null;
+        if (deck) {
+            spawnFromDeck(deck, this.orchestrator.spawn, location, site.deckInfo!.blueprint, site.deckInfo!.version);
+        } else {
+            this.orchestrator.spawn({ at: location, config: site.target, faction, blueprint: null });
+        }
+    }
 }

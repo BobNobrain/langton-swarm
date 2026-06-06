@@ -1,9 +1,7 @@
-import type { Faction, FactionId, GameFactions } from '../factions';
+import { type Faction, type FactionId, type GameFactions, NO_FACTION } from '../factions';
 import type { UnitId } from '../types';
-import { createUnitSystem } from './systems';
-import type { CreateUnitSystemCommonOptions } from './types';
-
-type FactionSystemData = FactionId;
+import type { UnitSystemOrchestrator, SpawnOptions } from './types';
+import { UnitSystem } from './UnitSystem';
 
 export type FactionSystemController = {
     getFaction(unitId: UnitId): FactionId;
@@ -12,29 +10,43 @@ export type FactionSystemController = {
     getAllUnits(fid: FactionId): Set<UnitId>;
 };
 
-export function createFactionsSystem(opts: CreateUnitSystemCommonOptions, factions: GameFactions) {
-    const unitsByFaction = new Map<FactionId, Set<UnitId>>();
+type SaveData = {
+    v: 1;
+    bf: Map<FactionId, Set<UnitId>>;
+};
 
-    const system = createUnitSystem(opts, {
-        name: 'factions',
-        initialData(options, unitId) {
-            const units = unitsByFaction.getOrInsertComputed(options.faction, () => new Set());
-            units.add(unitId);
-            return options.faction;
-        },
-    });
+export class FactionsSystem extends UnitSystem<FactionId, SaveData> implements FactionSystemController {
+    private unitsByFaction = new Map<FactionId, Set<UnitId>>();
 
-    const controller: FactionSystemController = {
-        getFaction: system.getData as FactionSystemController['getFaction'],
-        getFactionData(unitId) {
-            const fid = system.getData(unitId)!;
-            return factions.getFaction(fid);
-        },
+    constructor(
+        opts: UnitSystemOrchestrator,
+        private factions: GameFactions,
+    ) {
+        super('factions', opts);
 
-        getAllUnits(fid) {
-            return unitsByFaction.getOrInsertComputed(fid, () => new Set());
-        },
-    };
+        if (this.loadedState) {
+            this.unitsByFaction = this.loadedState.bf;
+        }
+    }
 
-    return { system, controller };
+    getFaction(unitId: UnitId): FactionId {
+        return this.getData(unitId) ?? NO_FACTION;
+    }
+    getFactionData(unitId: UnitId): Faction | null {
+        const fid = this.getData(unitId)!;
+        return this.factions.getFaction(fid);
+    }
+    getAllUnits(fid: FactionId): Set<UnitId> {
+        return this.unitsByFaction.getOrInsertComputed(fid, () => new Set());
+    }
+
+    protected initialData(options: SpawnOptions, unitId: UnitId): (number & { __idTag__: 'FactionId' }) | null {
+        const units = this.unitsByFaction.getOrInsertComputed(options.faction, () => new Set());
+        units.add(unitId);
+        return options.faction;
+    }
+
+    protected onSave(): SaveData {
+        return { v: 1, bf: this.unitsByFaction };
+    }
 }

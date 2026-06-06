@@ -9,8 +9,18 @@ export type MarkerData = {
     attrs?: Record<string, BsmlValue>;
 };
 
+export type MarkersMapSerialized = {
+    data: Map<NodeId, Record<string, MarkerData>>;
+};
+
 export class MarkersMap {
     private byLocation = new Map<NodeId, Record<string, MarkerData>>();
+
+    static deserialize({ data }: MarkersMapSerialized): MarkersMap {
+        const result = new MarkersMap();
+        result.byLocation = data;
+        return result;
+    }
 
     getAllAt(location: NodeId) {
         return this.byLocation.get(location) ?? {};
@@ -80,5 +90,9 @@ export class MarkersMap {
         }
 
         return null;
+    }
+
+    serialize(): MarkersMapSerialized {
+        return { data: this.byLocation };
     }
 }

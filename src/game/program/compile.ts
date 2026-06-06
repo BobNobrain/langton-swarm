@@ -1,4 +1,5 @@
 import { absurd } from '@/lib/errors';
+import type { UnitCommand } from '../types';
 import type {
     BsmlAssignmentInstruction,
     BsmlConditonalInstruction,
@@ -11,7 +12,7 @@ import type {
     CodePosition,
 } from './program';
 import type { BsmlValue } from './value';
-import { getCommandStateName } from './utils';
+import { extractCommands, getCommandStateName } from './utils';
 
 export type CompiledInstruction =
     | { type: 'push'; value: BsmlValue }
@@ -30,6 +31,7 @@ export type CompiledProgram = {
     defaultState: string;
     stateArgNames: Record<string, string[]>;
     sourcemap: Record<string, CodePosition[]>;
+    commands: UnitCommand[];
 };
 
 class InstructionWriter {
@@ -69,6 +71,7 @@ export function compile(program: BsmlProgram): CompiledProgram {
             idle: [],
             error: [],
         },
+        commands: extractCommands(program),
     };
 
     for (const stateDecl of program.stateDeclarations) {
