@@ -115,7 +115,7 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
         setCpuProgram(cpu.program);
         setCpuStack(cpu.stack.slice());
         setCpuStackSources(cpu.stackSources.slice());
-        setCpuPtr(cpu.ptr >= cpu.program.stateInstructions[cpu.state].length ? 0 : cpu.ptr);
+        setCpuPtr(cpu.ptr >= cpu.program.instructions.length ? 0 : cpu.ptr);
         setStateName(cpu.state);
         setCpuIsWaiting(cpu.waitingForReturn?.system ?? '--');
         setCpuVars({ ...cpu.variables });

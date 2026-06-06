@@ -16,7 +16,7 @@ export function setState(cpu: CPUData, state: string) {
     cpu.variables = {};
     cpu.stack = [];
     cpu.stackSources = [];
-    cpu.ptr = 0;
+    cpu.ptr = cpu.program.stateStarts[state] ?? -1;
     if (cpu.waitingForReturn) {
         cpu.waitingForReturn.ignoreResult = true;
     }

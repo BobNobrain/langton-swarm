@@ -17,7 +17,7 @@ const HINTS: Record<CompiledInstruction['type'], string> = {
     unop: 'Replaces the last stack item with a result of an unary operator, acted on that item',
 };
 
-export const DebuggerInstruction: Component<{ instruction: CompiledInstruction }> = (props) => {
+export const DebuggerInstruction: Component<{ index: number; instruction: CompiledInstruction }> = (props) => {
     const args = createMemo(() => {
         const result: JSX.Element[] = [];
         const instr = props.instruction;
@@ -60,6 +60,7 @@ export const DebuggerInstruction: Component<{ instruction: CompiledInstruction }
 
     return (
         <span class={styles.instruction} title={HINTS[props.instruction.type]}>
+            <span class={styles.instructionIndex}>{props.index.toString()}</span>
             <span class={styles.instructionName}>{props.instruction.type}</span>
             {args()}
         </span>

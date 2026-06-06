@@ -37,6 +37,10 @@
     padding-right: 8px;
 }
 
+.instructionIndex {
+    color: var(--c-gray-l);
+}
+
 .instructionName {
     text-transform: uppercase;
     font-weight: 600;

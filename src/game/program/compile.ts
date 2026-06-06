@@ -8,6 +8,7 @@ import type {
     BsmlInstruction,
     BsmlProgram,
     BsmlSetStateInstruction,
+    BsmlStateDeclaration,
     BsmlWhileLoopInstruction,
     CodePosition,
 } from './program';
@@ -27,27 +28,23 @@ export type CompiledInstruction =
     | { type: 'jumpz'; position: number };
 
 export type CompiledProgram = {
-    stateInstructions: Record<string, CompiledInstruction[]>;
+    instructions: CompiledInstruction[];
+    stateStarts: Record<string, number>;
     defaultState: string;
     stateArgNames: Record<string, string[]>;
-    sourcemap: Record<string, CodePosition[]>;
+    sourcemap: CodePosition[];
     commands: UnitCommand[];
 };
 
 class InstructionWriter {
+    readonly start: number;
     private instructions: CompiledInstruction[];
     private sourcemap: CodePosition[];
 
-    constructor(result: CompiledProgram, stateName: string) {
-        if (!result.stateInstructions[stateName]) {
-            result.stateInstructions[stateName] = [];
-        }
-        if (!result.sourcemap[stateName]) {
-            result.sourcemap[stateName] = [];
-        }
-
-        this.instructions = result.stateInstructions[stateName];
-        this.sourcemap = result.sourcemap[stateName];
+    constructor(result: CompiledProgram) {
+        this.instructions = result.instructions;
+        this.sourcemap = result.sourcemap;
+        this.start = result.instructions.length;
     }
 
     write(instruction: CompiledInstruction, codePos: CodePosition) {
@@ -61,16 +58,14 @@ class InstructionWriter {
 
 export function compile(program: BsmlProgram): CompiledProgram {
     const result: CompiledProgram = {
-        stateInstructions: {
-            idle: [],
-            error: [],
+        instructions: [],
+        stateStarts: {
+            idle: -1,
+            error: -1,
         },
         defaultState: 'idle',
         stateArgNames: {},
-        sourcemap: {
-            idle: [],
-            error: [],
-        },
+        sourcemap: [],
         commands: extractCommands(program),
     };
 
@@ -79,19 +74,26 @@ export function compile(program: BsmlProgram): CompiledProgram {
             result.defaultState = stateDecl.name;
         }
 
-        result.stateInstructions[stateDecl.name] = [];
         result.stateArgNames[stateDecl.name] = stateDecl.args.map((arg) => arg.name);
-        compileCommands(stateDecl.body, new InstructionWriter(result, stateDecl.name));
+
+        const w = new InstructionWriter(result);
+        compileCommands(stateDecl.body, w);
+        w.write({ type: 'jump', position: w.start }, Sourcemap.locateStateDeclarationEnd(stateDecl));
+
+        result.stateStarts[stateDecl.name] = w.start;
     }
 
     for (const cmdDecl of program.commandDeclarations) {
         const cmdStateName = getCommandStateName(cmdDecl.name);
-        result.stateInstructions[cmdStateName] = [];
-        compileCommands(cmdDecl.body, new InstructionWriter(result, cmdStateName));
+        const w = new InstructionWriter(result);
+
+        compileCommands(cmdDecl.body, w);
 
         // implicit return to :idle after the command has been finished
-        result.stateInstructions[cmdStateName].push({ type: 'push', value: { type: 'state', value: 'idle' } });
-        result.stateInstructions[cmdStateName].push({ type: 'setstate', nargs: 0 });
+        result.instructions.push({ type: 'push', value: { type: 'state', value: 'idle' } });
+        result.instructions.push({ type: 'setstate', nargs: 0 });
+
+        result.stateStarts[cmdStateName] = w.start;
     }
 
     return result;
@@ -247,5 +249,9 @@ namespace Sourcemap {
     const LOOP_OFFSET = 'loop'.length;
     export function locateLoopStmt(stmt: BsmlWhileLoopInstruction & { pos: CodePosition }): CodePosition {
         return { from: stmt.pos.from, to: stmt.pos.from + LOOP_OFFSET };
+    }
+
+    export function locateStateDeclarationEnd(decl: BsmlStateDeclaration): CodePosition {
+        return { from: decl.pos.to - 1, to: decl.pos.to };
     }
 }

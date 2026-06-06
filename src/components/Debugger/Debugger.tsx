@@ -23,21 +23,6 @@ export const Debugger: Component<{
     stackSources: string[];
     vars: Record<string, BsmlValue>;
 }> = (props) => {
-    const currentInstructionsSet = createMemo(() => {
-        const program = props.program;
-        if (!program) {
-            return [];
-        }
-
-        const state = props.stateName;
-        if (!state) {
-            return [];
-        }
-
-        const instructions = program.stateInstructions[state] ?? [];
-        return instructions;
-    });
-
     const enrichedStack = () => {
         const stack = props.stack;
         const sources = props.stackSources;
@@ -57,11 +42,14 @@ export const Debugger: Component<{
                 </DefList>
             </div>
             <List class={styles.instructions}>
-                <For each={currentInstructionsSet()} fallback={<ListEmptyContent>(no instructions)</ListEmptyContent>}>
+                <For
+                    each={props.program?.instructions ?? []}
+                    fallback={<ListEmptyContent>(no instructions)</ListEmptyContent>}
+                >
                     {(instruction, index) => {
                         return (
                             <ListItem selected={index() === props.ptr}>
-                                <DebuggerInstruction instruction={instruction} />
+                                <DebuggerInstruction index={index()} instruction={instruction} />
                             </ListItem>
                         );
                     }}

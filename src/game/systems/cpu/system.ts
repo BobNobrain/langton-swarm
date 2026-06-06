@@ -147,7 +147,7 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
 
     protected onTick(ctx: UnitSystemTickContext<CPUData>): void {
         const cpu = ctx.systemData;
-        const instructions = cpu.program.stateInstructions[cpu.state];
+        const instructions = cpu.program.instructions;
 
         if (cpu.isUpgrading) {
             this.triggerEvent(ctx.unitId, 'upgraded');
@@ -155,15 +155,15 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
             return;
         }
 
-        if (!instructions || !instructions.length) {
+        if (!instructions || !instructions.length || cpu.ptr < 0) {
             this.sleep(ctx.unitId);
             return;
         }
 
         this.updated.pub({ unitId: ctx.unitId, payload: cpu });
 
-        if (cpu.ptr >= instructions.length || cpu.ptr < 0) {
-            cpu.ptr = 0;
+        if (cpu.ptr >= instructions.length) {
+            toErrorState(cpu, 'Instruction pointer went out of bounds');
         }
 
         this.sleep(ctx.unitId, cpu.tickRate);

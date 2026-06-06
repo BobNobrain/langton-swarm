@@ -44,7 +44,7 @@ export function useDebuggerData() {
             return null;
         }
 
-        return program.sourcemap[state][ptr] ?? null;
+        return program.sourcemap[ptr] ?? null;
     };
 
     return {

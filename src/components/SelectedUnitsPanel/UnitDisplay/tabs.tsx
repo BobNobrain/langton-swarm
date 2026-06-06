@@ -20,8 +20,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
             return null;
         }
 
-        const instructions = program.stateInstructions[state] ?? [];
-        return instructions[rCpuPtr()] ?? null;
+        return program.instructions[rCpuPtr()] ?? null;
     });
 
     return (
@@ -31,7 +30,7 @@ export const CpuTabContent: Component<{ unitId: UnitId | null }> = (props) => {
                 <DefListItem name="Waiting">{rCpuIsWaiting()}</DefListItem>
                 <DefListItem name="Instruction">
                     <Show when={currentInstruction()} fallback="--">
-                        <DebuggerInstruction instruction={currentInstruction()!} />
+                        <DebuggerInstruction index={rCpuPtr()} instruction={currentInstruction()!} />
                     </Show>
                 </DefListItem>
             </DefList>
