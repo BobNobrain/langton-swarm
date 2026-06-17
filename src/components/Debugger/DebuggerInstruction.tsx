@@ -15,6 +15,7 @@ const HINTS: Record<CompiledInstruction['type'], string> = {
     setstate:
         'SETSTATE(n) removes last n+1 items from the stack, uses the first to change the current state, and the rest as arguments to that state',
     unop: 'Replaces the last stack item with a result of an unary operator, acted on that item',
+    ret: 'Indicates the end of an event handler, returns program state to where it was interrupted by the event',
 };
 
 export const DebuggerInstruction: Component<{ index: number; instruction: CompiledInstruction }> = (props) => {
@@ -25,7 +26,7 @@ export const DebuggerInstruction: Component<{ index: number; instruction: Compil
         switch (instr.type) {
             case 'assign':
             case 'read':
-                result.push(<span class={styles.varName}>{instr.name}</span>);
+                result.push(<span class={styles.varName}>{instr.debugVarName}</span>);
                 break;
 
             case 'call':

@@ -11,6 +11,7 @@ type EnergySystemData = {
 };
 
 const RECHARGED_TRESHOLD = 20;
+const BATTERY_LOW_TRESHOLD = 0.1;
 
 export type EnergySystemController = {
     withdraw(unitId: UnitId, amount: number): boolean;
@@ -19,17 +20,20 @@ export type EnergySystemController = {
 
     readonly drained: UnitEvent<null>;
     readonly recharged: UnitEvent<null>;
+    readonly low: UnitEvent<EnergySystemData>;
 };
 
 export class EnergySystem extends UnitSystem<EnergySystemData> implements EnergySystemController {
-    public readonly drained = createUnitEvent<null>();
-    public readonly recharged = createUnitEvent<null>();
+    public readonly drained: UnitEvent<null>;
+    public readonly recharged: UnitEvent<null>;
+    public readonly low: UnitEvent<EnergySystemData>;
 
     constructor(opts: UnitSystemOrchestrator) {
         super('energy', opts);
 
-        this.registerEvent(this.drained);
-        this.registerEvent(this.recharged);
+        this.registerEvent((this.drained = createUnitEvent()));
+        this.registerEvent((this.recharged = createUnitEvent()));
+        this.registerEvent((this.low = createUnitEvent()));
     }
 
     withdraw(unitId: UnitId, amount: number): boolean {
@@ -45,6 +49,8 @@ export class EnergySystem extends UnitSystem<EnergySystemData> implements Energy
         energy.charge -= amount;
         if (energy.charge === 0) {
             this.drained.pub({ unitId, payload: null });
+        } else if (energy.charge / energy.capacity < 0.1) {
+            this.low.pub({ unitId, payload: energy });
         }
 
         energy.lastUpdated = performance.now();

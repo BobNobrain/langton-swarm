@@ -1,8 +1,11 @@
 import { absurd } from '@/lib/errors';
 import type { UnitCommand } from '../types';
 import type {
+    BsmlArgument,
     BsmlAssignmentInstruction,
+    BsmlCommandDeclaration,
     BsmlConditonalInstruction,
+    BsmlEventListener,
     BsmlExpression,
     BsmlFunctionCall,
     BsmlInstruction,
@@ -19,17 +22,19 @@ export type CompiledInstruction =
     | { type: 'push'; value: BsmlValue }
     | { type: 'pop' }
     | { type: 'call'; fname: string; nargs: number }
-    | { type: 'assign'; name: string }
-    | { type: 'read'; name: string }
+    | { type: 'assign'; memptr: number; debugVarName: string }
+    | { type: 'read'; memptr: number; debugVarName: string }
     | { type: 'binop'; operator: string }
     | { type: 'unop'; operator: string }
     | { type: 'setstate'; nargs: number }
     | { type: 'jump'; position: number }
-    | { type: 'jumpz'; position: number };
+    | { type: 'jumpz'; position: number }
+    | { type: 'ret' };
 
 export type CompiledProgram = {
     instructions: CompiledInstruction[];
     stateStarts: Record<string, number>;
+    eventStarts: Record<string, number>;
     defaultState: string;
     stateArgNames: Record<string, string[]>;
     sourcemap: CodePosition[];
@@ -40,11 +45,14 @@ class InstructionWriter {
     readonly start: number;
     private instructions: CompiledInstruction[];
     private sourcemap: CodePosition[];
+    private memIdx: number;
+    private scopeStack: { vars: string[]; nameToMemPtr: Record<string, number> }[] = [];
 
     constructor(result: CompiledProgram) {
         this.instructions = result.instructions;
         this.sourcemap = result.sourcemap;
         this.start = result.instructions.length;
+        this.memIdx = 0;
     }
 
     write(instruction: CompiledInstruction, codePos: CodePosition) {
@@ -53,6 +61,39 @@ class InstructionWriter {
     }
     length() {
         return this.instructions.length;
+    }
+
+    createVar(varname: string): number {
+        const last = this.scopeStack[this.scopeStack.length - 1];
+        const memPtr = this.memIdx++;
+        last.vars.push(varname);
+        last.nameToMemPtr[varname] = memPtr;
+        return memPtr;
+    }
+    getVar(varname: string): number {
+        for (let scopeIndex = this.scopeStack.length - 1; scopeIndex >= 0; scopeIndex--) {
+            const scope = this.scopeStack[scopeIndex];
+            const memPtr = scope.nameToMemPtr[varname];
+            if (memPtr !== undefined) {
+                return memPtr;
+            }
+        }
+
+        return -1;
+    }
+    pushScope() {
+        this.scopeStack.push({ vars: [], nameToMemPtr: {} });
+    }
+    popScope() {
+        const last = this.scopeStack.pop()!;
+        this.memIdx -= last.vars.length;
+    }
+
+    pushScopeWithArgs(args: BsmlArgument[]) {
+        this.pushScope();
+        for (const arg of args) {
+            this.createVar(arg.name);
+        }
     }
 }
 
@@ -63,6 +104,7 @@ export function compile(program: BsmlProgram): CompiledProgram {
             idle: -1,
             error: -1,
         },
+        eventStarts: {},
         defaultState: 'idle',
         stateArgNames: {},
         sourcemap: [],
@@ -77,8 +119,9 @@ export function compile(program: BsmlProgram): CompiledProgram {
         result.stateArgNames[stateDecl.name] = stateDecl.args.map((arg) => arg.name);
 
         const w = new InstructionWriter(result);
-        compileCommands(stateDecl.body, w);
-        w.write({ type: 'jump', position: w.start }, Sourcemap.locateStateDeclarationEnd(stateDecl));
+        w.pushScopeWithArgs(stateDecl.args);
+        compileCommandBlock(stateDecl.body, w);
+        w.write({ type: 'jump', position: w.start }, Sourcemap.locateDeclarationEnd(stateDecl));
 
         result.stateStarts[stateDecl.name] = w.start;
     }
@@ -86,32 +129,46 @@ export function compile(program: BsmlProgram): CompiledProgram {
     for (const cmdDecl of program.commandDeclarations) {
         const cmdStateName = getCommandStateName(cmdDecl.name);
         const w = new InstructionWriter(result);
+        w.pushScopeWithArgs(cmdDecl.args);
 
-        compileCommands(cmdDecl.body, w);
+        compileCommandBlock(cmdDecl.body, w);
 
         // implicit return to :idle after the command has been finished
-        result.instructions.push({ type: 'push', value: { type: 'state', value: 'idle' } });
-        result.instructions.push({ type: 'setstate', nargs: 0 });
+        w.write({ type: 'push', value: { type: 'state', value: 'idle' } }, Sourcemap.locateDeclarationEnd(cmdDecl));
+        w.write({ type: 'setstate', nargs: 0 }, Sourcemap.locateDeclarationEnd(cmdDecl));
 
         result.stateStarts[cmdStateName] = w.start;
+    }
+
+    for (const evtDecl of program.eventListeners) {
+        const w = new InstructionWriter(result);
+        compileCommandBlock(evtDecl.body, w);
+
+        w.write({ type: 'ret' }, Sourcemap.locateDeclarationEnd(evtDecl));
+
+        result.eventStarts[evtDecl.event] = w.start;
     }
 
     return result;
 }
 
-function compileCommands(cmds: BsmlInstruction[], writer: InstructionWriter) {
+function compileCommandBlock(cmds: BsmlInstruction[], writer: InstructionWriter) {
+    writer.pushScope();
     for (const cmd of cmds) {
         switch (cmd.type) {
             case 'assign':
                 compileExpression(cmd.value, writer);
-                writer.write({ type: 'assign', name: cmd.variable }, Sourcemap.locateAssignStmt(cmd));
+                writer.write(
+                    { type: 'assign', memptr: writer.createVar(cmd.variable), debugVarName: cmd.variable },
+                    Sourcemap.locateAssignStmt(cmd),
+                );
                 break;
 
             case 'branch': {
                 compileExpression(cmd.condition, writer);
                 const jump = { type: 'jumpz', position: -1 } satisfies CompiledInstruction;
                 writer.write(jump, Sourcemap.locateIfStmt(cmd));
-                compileCommands(cmd.body, writer);
+                compileCommandBlock(cmd.body, writer);
                 jump.position = writer.length();
                 break;
             }
@@ -141,7 +198,7 @@ function compileCommands(cmds: BsmlInstruction[], writer: InstructionWriter) {
                     const jumpzToExit = { type: 'jumpz', position: -1 } satisfies CompiledInstruction;
                     const jumpToStart: CompiledInstruction = { type: 'jump', position: writer.length() };
 
-                    compileCommands(cmd.body, writer);
+                    compileCommandBlock(cmd.body, writer);
 
                     if (cmd.condition) {
                         compileExpression(cmd.condition, writer);
@@ -160,7 +217,7 @@ function compileCommands(cmds: BsmlInstruction[], writer: InstructionWriter) {
                         writer.write(jumpzToExit, Sourcemap.locateLoopStmt(cmd));
                     }
 
-                    compileCommands(cmd.body, writer);
+                    compileCommandBlock(cmd.body, writer);
                     writer.write(jumpToStart, Sourcemap.locateLoopStmt(cmd));
 
                     jumpzToExit.position = writer.length();
@@ -177,6 +234,7 @@ function compileCommands(cmds: BsmlInstruction[], writer: InstructionWriter) {
                 return absurd(cmd);
         }
     }
+    writer.popScope();
 }
 
 function compileExpression(expr: BsmlExpression, writer: InstructionWriter) {
@@ -198,7 +256,10 @@ function compileExpression(expr: BsmlExpression, writer: InstructionWriter) {
             break;
 
         case 'ident':
-            writer.write({ type: 'read', name: expr.identifier }, expr.pos);
+            writer.write(
+                { type: 'read', memptr: writer.getVar(expr.identifier), debugVarName: expr.identifier },
+                expr.pos,
+            );
             break;
 
         case 'call':
@@ -251,7 +312,9 @@ namespace Sourcemap {
         return { from: stmt.pos.from, to: stmt.pos.from + LOOP_OFFSET };
     }
 
-    export function locateStateDeclarationEnd(decl: BsmlStateDeclaration): CodePosition {
+    export function locateDeclarationEnd(
+        decl: BsmlStateDeclaration | BsmlCommandDeclaration | BsmlEventListener,
+    ): CodePosition {
         return { from: decl.pos.to - 1, to: decl.pos.to };
     }
 }

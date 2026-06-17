@@ -4,31 +4,40 @@ import type { UnitEvent } from '../events';
 import type { GameNots } from '@/game/nots';
 
 export type CPUFrameData = {
-    readonly code: readonly CompiledInstruction[];
     ptr: number;
     stack: BsmlValue[];
     stackSources: string[];
-    locals: Record<string, BsmlValue>;
 };
 
 export type CPUData = {
     program: CompiledProgram;
-    commands: UnitCommand[];
     energyConsumption: number;
     tickRate: number;
 
     state: string;
     ptr: number;
-    stack: BsmlValue[];
-    /** For unit debugging – a human-readable explanation of what have spawned a particular stack value */
-    stackSources: string[];
-    variables: Record<string, BsmlValue>;
     waitingForReturn: null | {
         system: string;
         fname: string;
         ignoreResult: boolean;
     };
-    isUpgrading: boolean;
+    upgradeEnds: number;
+
+    stack: BsmlValue[];
+    /** For unit debugging – a human-readable explanation of what have spawned a particular stack value */
+    stackSources: string[];
+
+    memory: BsmlValue[];
+    /** For unit debugging – a map of memory cells to the variable name it represents */
+    memoryVarnames: string[];
+
+    eventQueue: { name: string }[]; // queue all events and run them one after another (but an event interrupts the main code)
+    /** Main program state to restore when event handlers are done */
+    programSavedState: {
+        memory: BsmlValue[];
+        memoryVarnames: string[];
+        ptr: number;
+    } | null;
 };
 
 export type CPUSystemController = {

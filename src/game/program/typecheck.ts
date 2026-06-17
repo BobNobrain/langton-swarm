@@ -10,13 +10,13 @@ import type {
 } from './program';
 import type { BsmlValueType } from './value';
 
-type TypecheckMessage = {
+type TypecheckError = {
     pos: CodePosition;
     message: string;
     nonCritical?: boolean;
 };
 type TypecheckState = {
-    result: TypecheckMessage[];
+    result: TypecheckError[];
     stateArgTypes: Record<string, BsmlValueType[]>;
     fns: ReturnType<typeof getFunctions>;
 };
@@ -24,11 +24,11 @@ type LocalState = {
     variables: Record<string, BsmlValueType | null>;
 };
 
-export function typecheck(program: BsmlProgram, config: UnitConfiguration | null): TypecheckMessage[] {
-    const result: TypecheckMessage[] = [];
+export function typecheck(program: BsmlProgram, config: UnitConfiguration | null): TypecheckError[] {
+    const result: TypecheckError[] = [];
     const state: TypecheckState = {
         result,
-        stateArgTypes: { idle: [], error: [] },
+        stateArgTypes: { idle: [] },
         fns: getFunctions(config),
     };
 
@@ -38,12 +38,23 @@ export function typecheck(program: BsmlProgram, config: UnitConfiguration | null
                 pos: stateDecl.pos,
                 message: '"idle" is a reserved state name. You cannot define a behaviour for it.',
             });
-        } else if (stateDecl.name !== 'error' && state.stateArgTypes[stateDecl.name]) {
+            continue;
+        }
+
+        if (state.stateArgTypes[stateDecl.name]) {
             result.push({ pos: stateDecl.pos, message: `State "${stateDecl.name}" has already been declared` });
+            continue;
+        }
+
+        if (stateDecl.name === 'error' && stateDecl.args.length !== 0) {
+            result.push({ pos: stateDecl.pos, message: `Cannot declare arguments for a built-in "error" state` });
+            continue;
         }
 
         state.stateArgTypes[stateDecl.name] = stateDecl.args.map((argDecl) => argDecl.type as BsmlValueType);
     }
+
+    state.stateArgTypes['error'] ??= [];
 
     for (const stateDecl of program.stateDeclarations) {
         typecheckStatementBlock(stateDecl.body, state, localStateWithArgs(stateDecl.args));
@@ -89,9 +100,14 @@ function typecheckInstruction(instruction: BsmlInstruction, state: TypecheckStat
             break;
         }
 
-        case 'assign':
-            localState.variables[instruction.variable] = typecheckExpression(instruction.value, state, localState);
+        case 'assign': {
+            const valueType = typecheckExpression(instruction.value, state, localState);
+            localState.variables[instruction.variable] = valueType;
+            if (valueType) {
+                instruction.valueType = valueType;
+            }
             break;
+        }
 
         case 'branch': {
             const conditionType = typecheckExpression(instruction.condition, state, localState);
@@ -123,8 +139,15 @@ function typecheckFunctionCall(
         state.result.push({ pos: call.pos, message: `Unknown function "${call.name}"` });
         return null;
     }
+    if (!fn.available) {
+        state.result.push({
+            pos: call.pos,
+            message: `Function "${call.name}" is not available with selected configuration`,
+        });
+    }
 
     typecheckArguments(call, fn.argTypes, call.args, state, localState);
+    call.returnType = fn.returnType;
     return fn.returnType;
 }
 
@@ -181,11 +204,21 @@ function typecheckExpression(
         case 'call':
             return typecheckFunctionCall(expr, state, localState);
 
-        case 'unary':
-            return typecheckUnaryExpression(expr, state, localState);
+        case 'unary': {
+            const valueType = typecheckUnaryExpression(expr, state, localState);
+            if (valueType) {
+                expr.valueType = valueType;
+            }
+            return valueType;
+        }
 
-        case 'binary':
-            return typecheckBinaryExpression(expr, state, localState);
+        case 'binary': {
+            const valueType = typecheckBinaryExpression(expr, state, localState);
+            if (valueType) {
+                expr.valueType = valueType;
+            }
+            return valueType;
+        }
     }
 }
 

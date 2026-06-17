@@ -168,7 +168,6 @@ export function createGameSystems(
     const positions = new PositionalSystem(orc, logicTick);
     const factions = new FactionsSystem(orc, gameFactions);
     const markers = new MarkersSystem(orc, positions, world.nav, factions);
-    const cpu = new CPUSystem(orc, energy, nots);
     const engine = new EngineSystem(orc, { world, battery: energy, positions: positions });
     const stationaries = new StationariesSystem(orc);
     const inventory = new InventorySystem(orc, stationaries, positions);
@@ -179,6 +178,8 @@ export function createGameSystems(
     const navigator = new NavigatorSystem(orc, { world, positions: positions });
     const discovery = new DiscoverySystem(orc, world, positions, gameFactions);
     const solar = new SolarSystem(orc, world, positions, energy);
+
+    const cpu = new CPUSystem(orc, energy, nots, { assembler });
 
     logicTick.addGameTask((tick) => {
         // main unit update loop

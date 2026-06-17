@@ -11,14 +11,14 @@ import type {
     CodePosition,
 } from './program';
 
-type SyntaxError = {
+type ParseError = {
     pos: CodePosition;
     message: string;
 };
 
 type ParsingResult = {
     program: BsmlProgram;
-    errors: SyntaxError[];
+    errors: ParseError[];
 };
 
 type MatcherState = ParsingResult & {
@@ -178,6 +178,7 @@ function matchStatementBlock(node: SyntaxNode, state: MatcherState): BsmlInstruc
                 pos: nodePos(node),
                 type: 'assign',
                 variable: '',
+                valueType: 'null',
                 value: { pos: nodePos(node), type: 'string', value: '' },
             };
 
@@ -309,7 +310,7 @@ function matchExpression(node: SyntaxNode, state: MatcherState): BsmlExpression 
                 throw new Error('cannot parse unary expression');
             }
 
-            result = { pos: nodePos(node), type: 'unary', operator, operand };
+            result = { pos: nodePos(node), type: 'unary', operator, operand, valueType: 'null' };
         },
         BinaryExpression: (node) => {
             let left: BsmlExpression | null = null;
@@ -343,7 +344,7 @@ function matchExpression(node: SyntaxNode, state: MatcherState): BsmlExpression 
                 throw new Error('cannot parse binary expression');
             }
 
-            result = { pos: nodePos(node), type: 'binary', operator, left, right };
+            result = { pos: nodePos(node), type: 'binary', operator, left, right, valueType: 'null' };
         },
         Expression: (node) => {
             result = matchExpression(node, state);
@@ -358,6 +359,7 @@ function matchProcCall(node: SyntaxNode, state: MatcherState): BsmlFunctionCall 
         type: 'call',
         name: '',
         args: [],
+        returnType: 'null',
     };
     matchChildNodes(node, {
         ProcedureName: (node) => {

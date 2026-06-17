@@ -2,6 +2,7 @@
     align-items: center;
     --tbb-color: var(--c-white);
     cursor: pointer;
+    overflow: hidden;
 
     &:hover {
         border-top-color: var(--c-primary);
@@ -34,6 +35,10 @@
 .notificationsLastContent {
     display: block;
     align-content: center;
+
+    & .notificationText {
+        max-width: calc(100% - 24px);
+    }
 }
 
 .notificationsItem {

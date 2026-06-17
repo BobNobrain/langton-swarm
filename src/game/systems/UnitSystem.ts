@@ -1,5 +1,6 @@
 import { namedArguments, type BsmlValue, type BsmlValueType, typecheckValues } from '../program';
 import type { UnitId } from '../types';
+import { CPU_RETURN_MESSAGE_NAME } from './cpu/constants';
 import type { UnitEventController } from './events';
 import type { UnitSystemOrchestrator, SendMessage, SpawnOptions, UnitSystemFunction, UnitSystemMessage } from './types';
 
@@ -337,7 +338,7 @@ export abstract class UnitSystem<Data, SavedState = null, SavedUnitState = Data>
                 this.sendMessage(
                     'cpu',
                     {
-                        event: 'return',
+                        event: CPU_RETURN_MESSAGE_NAME,
                         unitId,
                         payload: {
                             value: result.value,

@@ -17,53 +17,48 @@ export function getFunctions(config: UnitConfiguration | null) {
         namespace: string,
         name: string,
         { argNames, argTypes, returnType, description }: UnitSystemFunction,
+        available: boolean,
     ) => {
         const fqn = [namespace, name].filter(Boolean).join('.');
-        result[fqn] = { name: fqn, argNames, argTypes, returnType, description };
+        result[fqn] = { name: fqn, argNames, argTypes, returnType, description, available };
     };
 
     for (const [name, fn] of Object.entries(CPU_FNS)) {
-        add('', name, fn);
+        add('', name, fn, true);
     }
 
     for (const [name, fn] of Object.entries(MARKERS_FNS)) {
-        add(MARKERS_SYSTEM_NAME, name, fn);
+        add(MARKERS_SYSTEM_NAME, name, fn, true);
     }
 
-    if (config?.navigator) {
-        for (const [name, fn] of Object.entries(NAVIGATOR_FNS)) {
-            add(NAVIGATOR_SYSTEM_NAME, name, fn);
-        }
+    const navigatorAvailable = Boolean(config?.navigator);
+    for (const [name, fn] of Object.entries(NAVIGATOR_FNS)) {
+        add(NAVIGATOR_SYSTEM_NAME, name, fn, navigatorAvailable);
     }
 
-    if (config?.engine) {
-        for (const [name, fn] of Object.entries(ENGINE_FNS)) {
-            add(ENGINE_SYSTEM_NAME, name, fn);
-        }
+    const engineAvailable = Boolean(config?.engine);
+    for (const [name, fn] of Object.entries(ENGINE_FNS)) {
+        add(ENGINE_SYSTEM_NAME, name, fn, engineAvailable);
     }
 
-    if (config?.drill) {
-        for (const [name, fn] of Object.entries(DRILL_FNS)) {
-            add(DRILL_SYSTEM_NAME, name, fn);
-        }
+    const drillAvailable = Boolean(config?.drill);
+    for (const [name, fn] of Object.entries(DRILL_FNS)) {
+        add(DRILL_SYSTEM_NAME, name, fn, drillAvailable);
     }
 
-    if (config?.scanner) {
-        for (const [name, fn] of Object.entries(SCANNER_FNS)) {
-            add(SCANNER_SYSTEM_NAME, name, fn);
-        }
+    const scannerAvailable = Boolean(config?.scanner);
+    for (const [name, fn] of Object.entries(SCANNER_FNS)) {
+        add(SCANNER_SYSTEM_NAME, name, fn, scannerAvailable);
     }
 
-    if (config?.storage) {
-        for (const [name, fn] of Object.entries(INVENTORY_FNS)) {
-            add(INVENTORY_SYSTEM_NAME, name, fn);
-        }
+    const storageAvailable = Boolean(config?.storage);
+    for (const [name, fn] of Object.entries(INVENTORY_FNS)) {
+        add(INVENTORY_SYSTEM_NAME, name, fn, storageAvailable);
     }
 
-    if (config?.assembler) {
-        for (const [name, fn] of Object.entries(ASSEMBLER_FNS)) {
-            add(ASSEMBLER_SYSTEM_NAME, name, fn);
-        }
+    const assemblerAvailable = Boolean(config?.assembler);
+    for (const [name, fn] of Object.entries(ASSEMBLER_FNS)) {
+        add(ASSEMBLER_SYSTEM_NAME, name, fn, assemblerAvailable);
     }
 
     return result;

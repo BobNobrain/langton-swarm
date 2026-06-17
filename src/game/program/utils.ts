@@ -115,6 +115,7 @@ export type BuiltinFn = {
     argNames: string[];
     argTypes: BsmlValueType[];
     returnType: BsmlValueType;
+    available: boolean;
 };
 
 export function typecheckValues(values: BsmlValue[], fn: Pick<BuiltinFn, 'argTypes'>): string | null {

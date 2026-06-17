@@ -1,3 +1,5 @@
+import type { BsmlValueType } from './value';
+
 export type BsmlProgram = {
     stateDeclarations: BsmlStateDeclaration[];
     commandDeclarations: BsmlCommandDeclaration[];
@@ -48,6 +50,7 @@ export type BsmlAssignmentInstruction = {
     type: 'assign';
     variable: string;
     value: BsmlExpression;
+    valueType: BsmlValueType;
 };
 export type BsmlConditonalInstruction = {
     type: 'branch';
@@ -103,17 +106,20 @@ export type BsmlFunctionCall = {
     type: 'call';
     name: string;
     args: BsmlExpression[];
+    returnType: BsmlValueType;
 };
 export type BsmlBinaryExpression = {
     type: 'binary';
     operator: string;
     left: BsmlExpression;
     right: BsmlExpression;
+    valueType: BsmlValueType;
 };
 export type BsmlUnaryExpression = {
     type: 'unary';
     operator: string;
     operand: BsmlExpression;
+    valueType: BsmlValueType;
 };
 
 export type CodePosition = {

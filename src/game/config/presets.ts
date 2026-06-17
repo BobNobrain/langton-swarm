@@ -16,10 +16,6 @@ command spawn(blueprint target) {
     state :assembling
 }
 
-command kick {
-    state :assembling
-}
-
 state assembling {
     if not assembler.is_assembling {
         if assembler.queue_length == 0 {
@@ -35,6 +31,10 @@ state assembling {
         # if something went wrong
         state :idle
     }
+}
+
+when assembler.queue_updated {
+    state :assembling
 }
 `),
     assembler: AssemblerConfiguration.Tier2,
@@ -88,6 +88,11 @@ state navigating {
 
 export const TEST_PRESET: UnitConfiguration = {
     program: compileOrDie(`# Unit's program is a state machine
+
+when spawned {
+    send_notification("ya rodilsya")
+    engine.move(navigator.random)
+}
 
 command move(position to) {
     navigator.find_route(to)

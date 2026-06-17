@@ -118,7 +118,7 @@ export function createCPUStateTracker(unitId: () => UnitId | null) {
         setCpuPtr(cpu.ptr >= cpu.program.instructions.length ? 0 : cpu.ptr);
         setStateName(cpu.state);
         setCpuIsWaiting(cpu.waitingForReturn?.system ?? '--');
-        setCpuVars({ ...cpu.variables });
+        setCpuVars(Object.fromEntries(cpu.memory.map((value, i) => [cpu.memoryVarnames[i], value])));
     };
 
     createEffect(() => {

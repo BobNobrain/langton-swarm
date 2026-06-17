@@ -1,27 +1,22 @@
 import { getProcessorEnergyConsumption, getProcessorTickRate, type UnitConfiguration } from '@/game/config';
 import type { GameNots } from '@/game/nots';
-import {
-    type BsmlValue,
-    type CompiledInstruction,
-    isTruthy,
-    namedArguments,
-    renderValue,
-    getCommandStateName,
-} from '@/game/program';
+import type { BsmlValue, CompiledInstruction } from '@/game/program';
+import { isTruthy, renderValue, getCommandStateName } from '@/game/program/utils';
 import type { UnitCommand, UnitCommandCall, UnitId } from '@/game/types';
 import { absurd } from '@/lib/errors';
+import type { AssemblerSystemController } from '../assembler';
 import type { EnergySystemController } from '../energy';
 import { createUnitEvent, type UnitEvent } from '../events';
 import { UnitSystem, type UnitSystemTickContext } from '../UnitSystem';
 import type { UnitSystemOrchestrator, SpawnOptions } from '../types';
 import { binop } from './binop';
+import { CPU_EVENT_MESSAGE_NAME, CPU_RETURN_MESSAGE_NAME, CpuEvent, UPGRADE_DELAY_TICKS } from './constants';
 import { CPU_FNS } from './fns';
 import type { CPUData, CPUFunctionsDeps, CPUSystemController } from './types';
 import { unop } from './unop';
-import { popStack, pushToStack, setState, toErrorState } from './utils';
+import { invokeEventHandler, popStack, pushToStack, restoreAfterEvent, setState, toErrorState } from './utils';
 
 const CPU_SYSTEM_NAME = 'cpu';
-const UPGRADE_DELAY_TICKS = 50;
 
 export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemController {
     readonly updated: UnitEvent<CPUData>;
@@ -31,13 +26,18 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
         opts: UnitSystemOrchestrator,
         private battery: EnergySystemController,
         nots: GameNots,
+        {
+            assembler,
+        }: {
+            assembler: AssemblerSystemController;
+        },
     ) {
         super(CPU_SYSTEM_NAME, opts);
 
         this.registerEvent((this.updated = createUnitEvent()));
         this.deps = { nots };
 
-        this.registerMessageHandler<{ value: BsmlValue | null }>('return', (payload, ctx) => {
+        this.registerMessageHandler<{ value: BsmlValue | null }>(CPU_RETURN_MESSAGE_NAME, (payload, ctx) => {
             const cpu = ctx.systemData;
             if (!cpu.waitingForReturn) {
                 return;
@@ -55,10 +55,10 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
             return;
         });
 
-        this.registerMessageHandler<{ name: string }>('event', (payload, ctx) => {
-            // const cpu = ctx.systemData;
-            // TODO
-            // this.activate(ctx.unitId)
+        this.registerMessageHandler<{ name: string }>(CPU_EVENT_MESSAGE_NAME, (payload, ctx) => {
+            const cpu = ctx.systemData;
+            cpu.eventQueue.push({ name: payload.name });
+            this.activate(ctx.unitId);
 
             return;
         });
@@ -71,10 +71,19 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
 
             this.activate(unitId);
         });
+
+        // events that can potentially be catched in a program
+        battery.drained.subToAll(({ unitId }) => {
+            this.triggerEvent(unitId, CpuEvent.BatteryLow);
+        });
+
+        assembler.queueUpdated.subToAll(({ unitId }) => {
+            this.triggerEvent(unitId, CpuEvent.AssemblerQueueUpdated);
+        });
     }
 
     upgrade(unitIds: UnitId[], { program }: Required<Pick<UnitConfiguration, 'program'>>): void {
-        const { commands, defaultState } = program.compiled;
+        const { defaultState } = program.compiled;
 
         for (const unitId of unitIds) {
             const cpu = this.getData(unitId);
@@ -83,18 +92,18 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
             }
 
             this.activate(unitId, UPGRADE_DELAY_TICKS);
-            cpu.isUpgrading = true;
+            cpu.upgradeEnds = this.currentTick() + UPGRADE_DELAY_TICKS;
             cpu.program = program.compiled;
-            cpu.commands = commands;
-            setState(cpu, defaultState);
+            setState(cpu, defaultState, [], []);
+            cpu.eventQueue.push({ name: CpuEvent.Upgraded });
         }
     }
     triggerEvent(unitId: UnitId, event: string): void {
-        this.sendMessage(CPU_SYSTEM_NAME, { event: 'event', payload: { name: event }, unitId });
+        this.sendMessage(CPU_SYSTEM_NAME, { event: CPU_EVENT_MESSAGE_NAME, payload: { name: event }, unitId });
     }
     queryCommands(unitId: UnitId): UnitCommand[] {
         const cpu = this.getData(unitId);
-        return cpu?.commands ?? [];
+        return cpu?.program.commands ?? [];
     }
     executeCommand(unitId: UnitId, call: UnitCommandCall): void {
         const cpu = this.getData(unitId);
@@ -102,18 +111,16 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
             return;
         }
 
-        const cmd = cpu.commands.find((cmd) => cmd.name === call.name);
+        const cmd = cpu.program.commands.find((cmd) => cmd.name === call.name);
         if (!cmd) {
             return;
         }
 
-        setState(cpu, getCommandStateName(call.name));
-        Object.assign(
-            cpu.variables,
-            namedArguments(
-                cmd.args.map((arg) => arg.name),
-                call.args,
-            ),
+        setState(
+            cpu,
+            getCommandStateName(call.name),
+            call.args,
+            cmd.args.map((arg) => arg.name),
         );
 
         this.activate(unitId);
@@ -127,35 +134,54 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
             return null;
         }
 
-        this.triggerEvent(unitId, 'spawned');
-
         return {
             program: program.compiled,
-            commands: program.compiled.commands,
             energyConsumption: getProcessorEnergyConsumption(config),
             tickRate: getProcessorTickRate(config),
 
             state: program.compiled.defaultState,
-            ptr: 0,
+            ptr: program.compiled.stateStarts[program.compiled.defaultState] ?? -1,
+            waitingForReturn: null,
+            upgradeEnds: -1,
+
             stack: [],
             stackSources: [],
-            variables: {},
-            waitingForReturn: null,
-            isUpgrading: false,
+            memory: [],
+            memoryVarnames: [],
+
+            eventQueue: [{ name: CpuEvent.Spawned }],
+            programSavedState: null,
         };
     }
 
     protected onTick(ctx: UnitSystemTickContext<CPUData>): void {
         const cpu = ctx.systemData;
         const instructions = cpu.program.instructions;
+        const tick = this.currentTick();
 
-        if (cpu.isUpgrading) {
-            this.triggerEvent(ctx.unitId, 'upgraded');
-            cpu.isUpgrading = false;
+        if (cpu.upgradeEnds > tick) {
+            this.sleep(ctx.unitId, cpu.upgradeEnds - tick);
             return;
         }
 
-        if (!instructions || !instructions.length || cpu.ptr < 0) {
+        if (cpu.waitingForReturn) {
+            this.sleep(ctx.unitId);
+            return;
+        }
+
+        if (!cpu.programSavedState && cpu.eventQueue.length) {
+            while (cpu.eventQueue.length) {
+                const nextEvent = cpu.eventQueue.shift()!;
+                const handlerStart = cpu.program.eventStarts[nextEvent.name];
+                if (handlerStart !== undefined) {
+                    invokeEventHandler(cpu, handlerStart);
+                    break;
+                }
+            }
+        }
+
+        if (cpu.ptr < 0) {
+            // idle state
             this.sleep(ctx.unitId);
             return;
         }
@@ -164,12 +190,13 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
 
         if (cpu.ptr >= instructions.length) {
             toErrorState(cpu, 'Instruction pointer went out of bounds');
+            return;
         }
 
         this.sleep(ctx.unitId, cpu.tickRate);
         if (!this.battery.withdraw(ctx.unitId, 1)) {
             this.sleep(ctx.unitId);
-            setState(cpu, cpu.program.defaultState);
+            setState(cpu, cpu.program.defaultState, [], []);
             return;
         }
 
@@ -188,13 +215,15 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
                     break;
                 }
 
-                cpu.variables[instruction.name] = value;
+                cpu.memory[instruction.memptr] = value;
+                cpu.memoryVarnames[instruction.memptr] = instruction.debugVarName;
                 break;
             }
 
             case 'call': {
                 const argv = popStack(cpu, instruction.nargs);
                 if (argv.length !== instruction.nargs) {
+                    toErrorState(cpu, 'Not enough values in stack for function call');
                     break;
                 }
 
@@ -231,10 +260,13 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
                 break;
 
             case 'read': {
-                const value = cpu.variables[instruction.name];
-                if (value) {
-                    pushToStack(cpu, value, instruction.name);
+                const value = cpu.memory[instruction.memptr];
+                if (!value) {
+                    toErrorState(cpu, 'Invalid memory access');
+                    break;
                 }
+
+                pushToStack(cpu, value, instruction.debugVarName);
                 break;
             }
 
@@ -249,14 +281,7 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
                     break;
                 }
 
-                setState(cpu, targetState.value);
-
-                if (argv.length) {
-                    const argNames = cpu.program.stateArgNames[targetState.value];
-                    if (argNames) {
-                        Object.assign(cpu.variables, namedArguments(argNames, argv));
-                    }
-                }
+                setState(cpu, targetState.value, argv, cpu.program.stateArgNames[targetState.value] ?? []);
                 break;
             }
 
@@ -283,6 +308,10 @@ export class CPUSystem extends UnitSystem<CPUData> implements CPUSystemControlle
                 }
 
                 pushToStack(cpu, result, `(calculation result)`);
+                break;
+
+            case 'ret':
+                restoreAfterEvent(cpu);
                 break;
 
             default:
